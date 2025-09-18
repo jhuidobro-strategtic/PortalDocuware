@@ -137,7 +137,7 @@ const Login = (props: any) => {
                     className="montserrat-bold display-4 fw-bold fade-in-scale delay-2"
                     style={{ color: "white" }}
                   >
-                    STRATEGTIC
+                    DOCUWARE
                   </h1>
                   <div className="w-50 border-top border-white mt-4 fade-in-scale delay-3"></div>
                 </div>
