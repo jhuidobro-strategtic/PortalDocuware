@@ -93,7 +93,7 @@ const Login = (props: any) => {
         }
     }, [dispatch, errorMsg]);
 
-    document.title = "Login - StrategTIC";
+    document.title = "Login - DOCUWARE";
     return (
         <React.Fragment>
       <div className="auth-page-content">
@@ -106,9 +106,9 @@ const Login = (props: any) => {
                   className="h-100 w-100 position-absolute"
                   style={{
                     backgroundImage: `url(${fondoCayala})`,
-                    backgroundSize: "cover",       // <- asegura que cubra todo
-                    backgroundPosition: "center",  // <- centra la imagen
-                    backgroundRepeat: "no-repeat", // <- evita repeticiones
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
                     zIndex: 1,
                     top: 0,
                     left: 0,
