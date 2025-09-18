@@ -103,9 +103,12 @@ const Login = (props: any) => {
             <Col md={6} className="d-none d-md-block position-relative">
               <div className="auth-image-container h-100 w-100 position-relative">
                 <div
-                  className="h-100 w-100 bg-cover bg-center position-absolute"
+                  className="h-100 w-100 position-absolute"
                   style={{
                     backgroundImage: `url(${fondoCayala})`,
+                    backgroundSize: "cover",       // <- asegura que cubra todo
+                    backgroundPosition: "center",  // <- centra la imagen
+                    backgroundRepeat: "no-repeat", // <- evita repeticiones
                     zIndex: 1,
                     top: 0,
                     left: 0,
