@@ -1,5 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardBody, Col, Container, Input, Label, Row, Button, Form, FormFeedback, Alert, Spinner } from 'reactstrap';
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardBody,
+  Col,
+  Container,
+  Input,
+  Label,
+  Row,
+  Button,
+  Form,
+  FormFeedback,
+  Alert,
+  Spinner,
+} from "reactstrap";
 // import ParticlesAuth from "../AuthenticationInner/ParticlesAuth";
 import ParticlesJS from "../AuthenticationInner/ParticlesJS";
 
@@ -16,86 +29,84 @@ import { useFormik } from "formik";
 import { loginUser, socialLogin, resetLoginFlag } from "../../slices/thunks";
 
 // import logoLight from "../../assets/images/logo-light.png";
-import { createSelector } from 'reselect';
+import { createSelector } from "reselect";
 //import images
 import logologin from "../../assets/images/Grupo_Cayala_Color.png";
 import fondoCayala from "../../assets/images/cayala.jpg";
-
+import { motion } from "framer-motion";
 const Login = (props: any) => {
-    const dispatch: any = useDispatch();
+  const dispatch: any = useDispatch();
 
-    const selectLayoutState = (state: any) => state;
-    const loginpageData = createSelector(
-        selectLayoutState,
-        (state) => ({
-            user: state.Account.user,
-            error: state.Login.error,
-            errorMsg: state.Login.errorMsg,
-        })
-    );
-    // Inside your component
-    const {
-        user, error, errorMsg
-    } = useSelector(loginpageData);
+  const selectLayoutState = (state: any) => state;
+  const loginpageData = createSelector(selectLayoutState, (state) => ({
+    user: state.Account.user,
+    error: state.Login.error,
+    errorMsg: state.Login.errorMsg,
+  }));
+  // Inside your component
+  const { user, error, errorMsg } = useSelector(loginpageData);
 
-    const [userLogin, setUserLogin] = useState<any>([]);
-    const [passwordShow, setPasswordShow] = useState<boolean>(false);
+  const [userLogin, setUserLogin] = useState<any>([]);
+  const [passwordShow, setPasswordShow] = useState<boolean>(false);
 
-    const [loader, setLoader] = useState<boolean>(false);
+  const [loader, setLoader] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (user && user) {
+      const updatedUserData =
+        process.env.REACT_APP_DEFAULTAUTH === "firebase"
+          ? user.multiFactor.user.email
+          : user.email;
+      const updatedUserPassword =
+        process.env.REACT_APP_DEFAULTAUTH === "firebase"
+          ? ""
+          : user.confirm_password;
+      setUserLogin({
+        email: updatedUserData,
+        password: updatedUserPassword,
+      });
+    }
+  }, [user]);
 
-    useEffect(() => {
-        if (user && user) {
-            const updatedUserData = process.env.REACT_APP_DEFAULTAUTH === "firebase" ? user.multiFactor.user.email : user.email;
-            const updatedUserPassword = process.env.REACT_APP_DEFAULTAUTH === "firebase" ? "" : user.confirm_password;
-            setUserLogin({
-                email: updatedUserData,
-                password: updatedUserPassword
-            });
-        }
-    }, [user]);
+  const validation: any = useFormik({
+    // enableReinitialize : use this flag when initial values needs to be changed
+    enableReinitialize: true,
 
-    const validation: any = useFormik({
-        // enableReinitialize : use this flag when initial values needs to be changed
-        enableReinitialize: true,
+    initialValues: {
+      email: userLogin.email || "osmar@test.com" || "",
+      password: userLogin.password || "123456" || "",
+    },
+    validationSchema: Yup.object({
+      email: Yup.string().required("Please Enter Your Email"),
+      password: Yup.string().required("Please Enter Your Password"),
+    }),
+    onSubmit: (values) => {
+      dispatch(loginUser(values, props.router.navigate));
+      setLoader(true);
+    },
+  });
 
-        initialValues: {
-            email: userLogin.email || "osmar@test.com" || '',
-            password: userLogin.password || "123456" || '',
-        },
-        validationSchema: Yup.object({
-            email: Yup.string().required("Please Enter Your Email"),
-            password: Yup.string().required("Please Enter Your Password"),
-        }),
-        onSubmit: (values) => {
-            dispatch(loginUser(values, props.router.navigate));
-            setLoader(true)
-        }
-    });
+  const signIn = (type: any) => {
+    dispatch(socialLogin(type, props.router.navigate));
+  };
 
-    const signIn = (type: any) => {
-        dispatch(socialLogin(type, props.router.navigate));
-    };
+  //for facebook and google authentication
+  const socialResponse = (type: any) => {
+    signIn(type);
+  };
 
+  useEffect(() => {
+    if (errorMsg) {
+      setTimeout(() => {
+        dispatch(resetLoginFlag());
+        setLoader(false);
+      }, 3000);
+    }
+  }, [dispatch, errorMsg]);
 
-    //for facebook and google authentication
-    const socialResponse = (type: any) => {
-        signIn(type);
-    };
-
-
-    useEffect(() => {
-        if (errorMsg) {
-            setTimeout(() => {
-                dispatch(resetLoginFlag());
-                setLoader(false)
-            }, 3000);
-        }
-    }, [dispatch, errorMsg]);
-
-    document.title = "Login - DOCUWARE";
-    return (
-        <React.Fragment>
+  document.title = "Login - DOCUWARE";
+  return (
+    <React.Fragment>
       <div className="auth-page-content">
         <Container fluid className="px-0">
           <Row className="min-vh-100 g-0">
@@ -127,22 +138,39 @@ const Login = (props: any) => {
 
                 <div
                   className="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white text-center"
-                  style={{ zIndex: 3, color: "white" }}
+                  style={{ zIndex: 3 }}
                 >
-                  <div className="w-50 border-top border-white mb-4 fade-in-scale"></div>
-                  <h3
-                    className="montserrat fs-3.5 fs-lg-1 mb-2 fade-in-scale delay-1"
-                    style={{ color: "white" }}
+                  <motion.div
+                    className="w-50 border-top border-white mb-4"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  />
+
+                  <motion.h3
+                    className="montserrat fs-3.5 fs-lg-1 mb-2 text-white"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
                   >
                     BIENVENIDO A
-                  </h3>
-                  <h1
-                    className="montserrat-bold display-4 fw-bold fade-in-scale delay-2"
-                    style={{ color: "white" }}
+                  </motion.h3>
+
+                  <motion.h1
+                    className="montserrat-bold display-4 fw-bold text-white"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
                   >
                     DOCUWARE
-                  </h1>
-                  <div className="w-50 border-top border-white mt-4 fade-in-scale delay-3"></div>
+                  </motion.h1>
+
+                  <motion.div
+                    className="w-50 border-top border-white mt-4"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.8 }}
+                  />
                 </div>
 
                 <div
@@ -267,7 +295,7 @@ const Login = (props: any) => {
         </Container>
       </div>
     </React.Fragment>
-    );
+  );
 };
 
 export default withRouter(Login);
