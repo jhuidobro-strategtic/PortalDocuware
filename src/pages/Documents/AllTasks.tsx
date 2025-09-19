@@ -15,6 +15,13 @@ import {
   Pagination,
   PaginationItem,
   PaginationLink,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Form,
+  FormGroup,
+  Label,
 } from "reactstrap";
 import moment from "moment";
 import Flatpickr from "react-flatpickr";
@@ -44,13 +51,22 @@ const DocumentList: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 📌 Vista previa
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+
+  // 📌 Edición
+  const [editModal, setEditModal] = useState(false);
+  const [editDoc, setEditDoc] = useState<Document | null>(null);
+
+  // 📌 Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<Date[]>([]);
   const startDate = dateRange[0];
   const endDate = dateRange[1];
 
+  // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
@@ -75,21 +91,17 @@ const DocumentList: React.FC = () => {
     fetchDocuments();
   }, []);
 
-  // 📌 Obtiene el ID del archivo de Google Drive
+  // 📌 Google Drive helpers
   const extractDriveId = (url: string) => {
     const match = url.match(/\/d\/(.*?)\//);
     return match ? match[1] : null;
   };
 
-  // 📌 URL para previsualizar en iframe
   const getPreviewUrl = (url: string) => {
     const fileId = extractDriveId(url);
-    return fileId
-      ? `https://drive.google.com/file/d/${fileId}/preview`
-      : url;
+    return fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
   };
 
-  // 📌 URL para descargar
   const getDownloadUrl = (url: string) => {
     const fileId = extractDriveId(url);
     return fileId
@@ -97,6 +109,7 @@ const DocumentList: React.FC = () => {
       : url;
   };
 
+  // 📌 Filtrado
   const filteredDocuments = documents.filter((doc) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -121,6 +134,35 @@ const DocumentList: React.FC = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // 📌 Guardar cambios con PATCH
+  const handleUpdate = async () => {
+    if (!editDoc) return;
+    try {
+      const res = await fetch(
+        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents/${editDoc.documentid}/`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editDoc),
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setDocuments((prev) =>
+          prev.map((doc) =>
+            doc.documentid === editDoc.documentid ? { ...doc, ...editDoc } : doc
+          )
+        );
+        setEditModal(false);
+      } else {
+        alert(data.message || "Error al actualizar");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error en el servidor");
+    }
+  };
 
   if (loading)
     return (
@@ -208,7 +250,7 @@ const DocumentList: React.FC = () => {
                   <tbody>
                     {paginatedDocuments.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="text-center">
+                        <td colSpan={10} className="text-center">
                           No se encontraron registros
                         </td>
                       </tr>
@@ -240,6 +282,7 @@ const DocumentList: React.FC = () => {
                         </td>
                         <td>
                           <div className="hstack gap-2">
+                            {/* Ver */}
                             <Button
                               size="sm"
                               color="info"
@@ -247,6 +290,18 @@ const DocumentList: React.FC = () => {
                               onClick={() => setSelectedDoc(doc)}
                             >
                               <i className="ri-eye-fill align-bottom" />
+                            </Button>
+                            {/* Editar */}
+                            <Button
+                              size="sm"
+                              color="warning"
+                              outline
+                              onClick={() => {
+                                setEditDoc(doc);
+                                setEditModal(true);
+                              }}
+                            >
+                              <i className="ri-edit-line align-bottom" />
                             </Button>
                           </div>
                         </td>
@@ -290,7 +345,7 @@ const DocumentList: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 📌 Columna derecha solo aparece si hay documento seleccionado */}
+        {/* 📌 Vista previa PDF */}
         {selectedDoc && (
           <Col lg={5}>
             <Card>
@@ -319,7 +374,7 @@ const DocumentList: React.FC = () => {
 
                 <iframe
                   src={getPreviewUrl(selectedDoc.documenturl)}
-                  style={{ width: "100%", height: "64vh", border: "none" }}
+                  style={{ width: "100%", height: "66vh", border: "none" }}
                   title="Visor PDF"
                 />
               </CardBody>
@@ -327,6 +382,73 @@ const DocumentList: React.FC = () => {
           </Col>
         )}
       </Row>
+
+      {/* 📌 Modal Editar */}
+      <Modal isOpen={editModal} toggle={() => setEditModal(false)} centered>
+        <ModalHeader toggle={() => setEditModal(false)}>
+          Editar Documento
+        </ModalHeader>
+        <ModalBody>
+          {editDoc && (
+            <Form>
+              <FormGroup>
+                <Label>Serie</Label>
+                <Input
+                  value={editDoc.documentserial}
+                  onChange={(e) =>
+                    setEditDoc({ ...editDoc, documentserial: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Número</Label>
+                <Input
+                  value={editDoc.documentnumber}
+                  onChange={(e) =>
+                    setEditDoc({ ...editDoc, documentnumber: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Proveedor</Label>
+                <Input
+                  value={editDoc.suppliernumber}
+                  onChange={(e) =>
+                    setEditDoc({ ...editDoc, suppliernumber: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Nombre Proveedor</Label>
+                <Input
+                  value={editDoc.suppliername}
+                  onChange={(e) =>
+                    setEditDoc({ ...editDoc, suppliername: e.target.value })
+                  }
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Notas</Label>
+                <Input
+                  type="textarea"
+                  value={editDoc.notes}
+                  onChange={(e) =>
+                    setEditDoc({ ...editDoc, notes: e.target.value })
+                  }
+                />
+              </FormGroup>
+            </Form>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={() => setEditModal(false)}>
+            Cancelar
+          </Button>
+          <Button color="primary" onClick={handleUpdate}>
+            Guardar Cambios
+          </Button>
+        </ModalFooter>
+      </Modal>
     </Container>
   );
 };
