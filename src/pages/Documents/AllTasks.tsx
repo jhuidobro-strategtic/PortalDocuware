@@ -249,23 +249,13 @@ const DocumentList: React.FC = () => {
                               href={doc.documenturl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn btn-sm btn-info"
+                              className="btn btn-sm btn-info outline-info"
+                              style={{ backgroundColor: 'transparent' }}
                             >
                               <i className="ri-eye-fill align-bottom" />
                             </a>
                             <Button size="sm" color="warning" outline>
                               <i className="ri-pencil-fill align-bottom" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              color="danger"
-                              outline
-                              onClick={() => {
-                                setSelectedDoc(doc);
-                                setDeleteModal(true);
-                              }}
-                            >
-                              <i className="ri-delete-bin-fill align-bottom" />
                             </Button>
                           </div>
                         </td>
@@ -311,26 +301,6 @@ const DocumentList: React.FC = () => {
           </Card>
         </Col>
       </Row>
-
-      {/* 📌 Modal eliminar */}
-      <Modal isOpen={deleteModal} toggle={() => setDeleteModal(!deleteModal)}>
-        <ModalHeader toggle={() => setDeleteModal(!deleteModal)}>
-          Confirmar eliminación
-        </ModalHeader>
-        <ModalBody>
-          ¿Estás seguro de eliminar el documento{" "}
-          <b>#{selectedDoc?.documentid}</b> ({selectedDoc?.documentserial}-
-          {selectedDoc?.documentnumber})?
-        </ModalBody>
-        <ModalFooter>
-          <Button color="light" onClick={() => setDeleteModal(false)}>
-            Cancelar
-          </Button>
-          <Button color="danger" onClick={handleDelete}>
-            Eliminar
-          </Button>
-        </ModalFooter>
-      </Modal>
     </Container>
   );
 };
