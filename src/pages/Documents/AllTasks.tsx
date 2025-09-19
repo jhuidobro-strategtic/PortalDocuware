@@ -25,6 +25,7 @@ interface Document {
   documentserial: string;
   documentnumber: string;
   suppliernumber: string;
+  suppliername: string;
   documenttype: number;
   documentdate: string;
   amount: string;
@@ -196,6 +197,7 @@ const DocumentList: React.FC = () => {
                       <th>Serie</th>
                       <th>Número</th>
                       <th>Proveedor</th>
+                      <th>Nombre Proveedor</th>
                       <th>Tipo</th>
                       <th>Fecha</th>
                       <th>Total</th>
@@ -219,6 +221,7 @@ const DocumentList: React.FC = () => {
                         <td>{doc.documentserial}</td>
                         <td>{doc.documentnumber}</td>
                         <td>{doc.suppliernumber}</td>
+                        <td>{doc.suppliername}</td>
                         <td>{doc.documenttype}</td>
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
