@@ -135,62 +135,61 @@ const DocumentList: React.FC = () => {
           <Card>
             <CardBody>
               {/* 📌 Barra de búsqueda, filtros y rango de fechas */}
-<div className="d-flex justify-content-between align-items-center mb-4">
-  <h4 className="mb-0">Lista de Documentos</h4>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h4 className="mb-0">Lista de Documentos</h4>
 
-  <div className="d-flex align-items-center gap-2">
-    {/* Buscador */}
-    <InputGroup style={{ maxWidth: "250px" }}>
-      <InputGroupText>
-        <i className="ri-search-line" />
-      </InputGroupText>
-      <Input
-        placeholder="Buscar..."
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          setCurrentPage(1);
-        }}
-      />
-    </InputGroup>
+                <div className="d-flex align-items-center gap-2">
+                  {/* Buscador */}
+                  <InputGroup style={{ maxWidth: "250px" }}>
+                    <InputGroupText>
+                      <i className="ri-search-line" />
+                    </InputGroupText>
+                    <Input
+                      placeholder="Buscar..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    />
+                  </InputGroup>
 
-    {/* Filtro Estado */}
-    <Input
-      type="select"
-      value={statusFilter}
-      onChange={(e) => {
-        setStatusFilter(e.target.value);
-        setCurrentPage(1);
-      }}
-      style={{ maxWidth: "180px" }}
-    >
-      <option value="all">Todos</option>
-      <option value="active">Activos</option>
-      <option value="pending">Pendientes</option>
-    </Input>
+                  {/* Filtro Estado */}
+                  <Input
+                    type="select"
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    style={{ maxWidth: "180px" }}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="active">Activos</option>
+                    <option value="pending">Pendientes</option>
+                  </Input>
 
-    {/* Filtro rango de fechas con Flatpickr */}
-    <InputGroup style={{ maxWidth: "280px" }}>
-      <InputGroupText>
-        <i className="ri-calendar-line" />
-      </InputGroupText>
-      <Flatpickr
-        className="form-control"
-        options={{
-          mode: "range",
-          dateFormat: "Y-m-d",
-        }}
-        value={dateRange}
-        onChange={(selectedDates: Date[]) => {
-          setDateRange(selectedDates);
-          setCurrentPage(1);
-        }}
-        placeholder="Filtrar por fecha"
-      />
-    </InputGroup>
-  </div>
-</div>
-
+                  {/* Filtro rango de fechas con Flatpickr */}
+                  <InputGroup style={{ maxWidth: "280px" }}>
+                    <InputGroupText>
+                      <i className="ri-calendar-line" />
+                    </InputGroupText>
+                    <Flatpickr
+                      className="form-control"
+                      options={{
+                        mode: "range",
+                        dateFormat: "Y-m-d",
+                      }}
+                      value={dateRange}
+                      onChange={(selectedDates: Date[]) => {
+                        setDateRange(selectedDates);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="Filtrar por fecha"
+                    />
+                  </InputGroup>
+                </div>
+              </div>
 
               {/* 📌 Tabla de documentos */}
               <div className="table-responsive">
