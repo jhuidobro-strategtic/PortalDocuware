@@ -9,10 +9,6 @@ import {
   Spinner,
   Alert,
   Button,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Input,
   InputGroup,
   InputGroupText,
@@ -22,7 +18,7 @@ import {
 } from "reactstrap";
 import moment from "moment";
 import Flatpickr from "react-flatpickr";
-import "flatpickr/dist/themes/material_blue.css"; // 👈 puedes cambiar el tema si quieres
+import "flatpickr/dist/themes/material_blue.css";
 
 interface Document {
   documentid: number;
@@ -47,17 +43,13 @@ const DocumentList: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteModal, setDeleteModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  // 📌 Filtro por rango de fechas
-  const [dateRange, setDateRange] = useState<Date[]>([]); // 👈 sin null
+  const [dateRange, setDateRange] = useState<Date[]>([]);
   const startDate = dateRange[0];
   const endDate = dateRange[1];
 
-  // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
@@ -82,17 +74,6 @@ const DocumentList: React.FC = () => {
     fetchDocuments();
   }, []);
 
-  const handleDelete = () => {
-    if (selectedDoc) {
-      setDocuments(
-        documents.filter((d) => d.documentid !== selectedDoc.documentid)
-      );
-      setSelectedDoc(null);
-      setDeleteModal(false);
-    }
-  };
-
-  // 📌 Filtrar documentos
   const filteredDocuments = documents.filter((doc) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -112,7 +93,6 @@ const DocumentList: React.FC = () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  // 📌 Calcular páginas
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
   const paginatedDocuments = filteredDocuments.slice(
     (currentPage - 1) * itemsPerPage,
@@ -131,15 +111,14 @@ const DocumentList: React.FC = () => {
   return (
     <Container fluid className="mt-4">
       <Row>
-        <Col lg={12}>
+        {/* 📌 Tabla ocupa todo el ancho si no hay PDF seleccionado */}
+        <Col lg={selectedDoc ? 7 : 12}>
           <Card>
             <CardBody>
-              {/* 📌 Barra de búsqueda, filtros y rango de fechas */}
+              {/* 📌 Filtros */}
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h4 className="mb-0">Lista de Documentos</h4>
-
                 <div className="d-flex align-items-center gap-2">
-                  {/* Buscador */}
                   <InputGroup style={{ maxWidth: "250px" }}>
                     <InputGroupText>
                       <i className="ri-search-line" />
@@ -154,7 +133,6 @@ const DocumentList: React.FC = () => {
                     />
                   </InputGroup>
 
-                  {/* Filtro Estado */}
                   <Input
                     type="select"
                     value={statusFilter}
@@ -169,17 +147,13 @@ const DocumentList: React.FC = () => {
                     <option value="pending">Pendientes</option>
                   </Input>
 
-                  {/* Filtro rango de fechas con Flatpickr */}
                   <InputGroup style={{ maxWidth: "280px" }}>
                     <InputGroupText>
                       <i className="ri-calendar-line" />
                     </InputGroupText>
                     <Flatpickr
                       className="form-control"
-                      options={{
-                        mode: "range",
-                        dateFormat: "Y-m-d",
-                      }}
+                      options={{ mode: "range", dateFormat: "Y-m-d" }}
                       value={dateRange}
                       onChange={(selectedDates: Date[]) => {
                         setDateRange(selectedDates);
@@ -191,7 +165,7 @@ const DocumentList: React.FC = () => {
                 </div>
               </div>
 
-              {/* 📌 Tabla de documentos */}
+              {/* 📌 Tabla */}
               <div className="table-responsive">
                 <Table className="table align-middle table-nowrap mb-0">
                   <thead className="table-light">
@@ -202,8 +176,6 @@ const DocumentList: React.FC = () => {
                       <th>Proveedor</th>
                       <th>Tipo</th>
                       <th>Fecha</th>
-                      <th>Subtotal</th>
-                      <th>IGV</th>
                       <th>Total</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -212,7 +184,7 @@ const DocumentList: React.FC = () => {
                   <tbody>
                     {paginatedDocuments.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="text-center">
+                        <td colSpan={9} className="text-center">
                           No se encontraron registros
                         </td>
                       </tr>
@@ -229,8 +201,6 @@ const DocumentList: React.FC = () => {
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
                         </td>
-                        <td>S/ {doc.amount}</td>
-                        <td>S/ {doc.taxamount}</td>
                         <td>
                           <b>S/ {doc.totalamount}</b>
                         </td>
@@ -245,17 +215,13 @@ const DocumentList: React.FC = () => {
                         </td>
                         <td>
                           <div className="hstack gap-2">
-                            <a
-                              href={doc.documenturl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-sm btn-info outline-info"
-                              style={{ backgroundColor: 'transparent' }}
+                            <Button
+                              size="sm"
+                              color="info"
+                              outline
+                              onClick={() => setSelectedDoc(doc)}
                             >
                               <i className="ri-eye-fill align-bottom" />
-                            </a>
-                            <Button size="sm" color="warning" outline>
-                              <i className="ri-pencil-fill align-bottom" />
                             </Button>
                           </div>
                         </td>
@@ -277,7 +243,6 @@ const DocumentList: React.FC = () => {
                         }
                       />
                     </PaginationItem>
-
                     {Array.from({ length: totalPages }, (_, i) => (
                       <PaginationItem key={i} active={currentPage === i + 1}>
                         <PaginationLink onClick={() => setCurrentPage(i + 1)}>
@@ -285,7 +250,6 @@ const DocumentList: React.FC = () => {
                         </PaginationLink>
                       </PaginationItem>
                     ))}
-
                     <PaginationItem disabled={currentPage === totalPages}>
                       <PaginationLink
                         next
@@ -300,6 +264,41 @@ const DocumentList: React.FC = () => {
             </CardBody>
           </Card>
         </Col>
+
+        {/* 📌 Columna derecha solo aparece si hay documento seleccionado */}
+        {selectedDoc && (
+          <Col lg={5}>
+            <Card>
+              <CardBody>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h5 className="mb-0">Vista previa del documento</h5>
+                  <div className="d-flex gap-2">
+                    <a
+                      href={selectedDoc.documenturl}
+                      download
+                      className="btn btn-sm btn-success"
+                    >
+                      <i className="ri-download-2-line" /> Descargar
+                    </a>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      onClick={() => setSelectedDoc(null)}
+                    >
+                      <i className="ri-close-line" /> Cerrar
+                    </Button>
+                  </div>
+                </div>
+
+                <iframe
+                  src={selectedDoc.documenturl}
+                  style={{ width: "100%", height: "80vh", border: "none" }}
+                  title="Visor PDF"
+                />
+              </CardBody>
+            </Card>
+          </Col>
+        )}
       </Row>
     </Container>
   );
