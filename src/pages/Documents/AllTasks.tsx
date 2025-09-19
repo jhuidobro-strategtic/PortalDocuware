@@ -74,6 +74,28 @@ const DocumentList: React.FC = () => {
     fetchDocuments();
   }, []);
 
+  // 📌 Obtiene el ID del archivo de Google Drive
+  const extractDriveId = (url: string) => {
+    const match = url.match(/\/d\/(.*?)\//);
+    return match ? match[1] : null;
+  };
+
+  // 📌 URL para previsualizar en iframe
+  const getPreviewUrl = (url: string) => {
+    const fileId = extractDriveId(url);
+    return fileId
+      ? `https://drive.google.com/file/d/${fileId}/preview`
+      : url;
+  };
+
+  // 📌 URL para descargar
+  const getDownloadUrl = (url: string) => {
+    const fileId = extractDriveId(url);
+    return fileId
+      ? `https://drive.google.com/uc?export=download&id=${fileId}`
+      : url;
+  };
+
   const filteredDocuments = documents.filter((doc) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -274,9 +296,11 @@ const DocumentList: React.FC = () => {
                   <h5 className="mb-0">Vista previa del documento</h5>
                   <div className="d-flex gap-2">
                     <a
-                      href={selectedDoc.documenturl}
+                      href={getDownloadUrl(selectedDoc.documenturl)}
                       download
                       className="btn btn-sm btn-success"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       <i className="ri-download-2-line" /> Descargar
                     </a>
@@ -291,7 +315,7 @@ const DocumentList: React.FC = () => {
                 </div>
 
                 <iframe
-                  src={selectedDoc.documenturl}
+                  src={getPreviewUrl(selectedDoc.documenturl)}
                   style={{ width: "100%", height: "80vh", border: "none" }}
                   title="Visor PDF"
                 />
