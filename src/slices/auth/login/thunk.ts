@@ -9,48 +9,27 @@ import { loginSuccess, logoutUserSuccess, apiError, reset_login_flag } from './r
 
 export const loginUser = (user : any, history : any) => async (dispatch : any) => {
   try {
-    let response;
-    if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-      let fireBaseBackend : any = getFirebaseBackend();
-      response = fireBaseBackend.loginUser(
-        user.email,
-        user.password
-      );
-    } else if (process.env.REACT_APP_DEFAULTAUTH === "jwt") {
-      response = postJwtLogin({
-        email: user.email,
-        password: user.password
-      });
-
-    } else if (process.env.REACT_APP_DEFAULTAUTH) {
-      response = postFakeLogin({
-        email: user.email,
-        password: user.password,
-      });
-    }
-
-    var data = await response;
-
-    if (data) {
-      sessionStorage.setItem("authUser", JSON.stringify(data));
-      if (process.env.REACT_APP_DEFAULTAUTH === "fake") {
-        var finallogin : any = JSON.stringify(data);
-        finallogin = JSON.parse(finallogin)
-        
-        // Adaptación para la nueva API
-        if (finallogin.success === true) {
-          // Usar el formato de respuesta de la nueva API
-          const userData = finallogin.data;
-          dispatch(loginSuccess(userData));
-          history('/dashboard')
-        } 
-        else {
-          dispatch(apiError(finallogin));
-        }
-      } else {
-        dispatch(loginSuccess(data));
-        history('/dashboard')
-      }
+    dispatch(reset_login_flag());
+    
+    // Usar la API de DocuWare para el login
+    const response: any = await postFakeLogin({
+      username: user.username, // Enviando username como espera la API
+      password: user.password,
+    });
+    
+    // La respuesta ya viene procesada por el interceptor en api_helper.ts
+    if (response && response.success === true) {
+      // Guardar los datos del usuario en sessionStorage
+      sessionStorage.setItem("authUser", JSON.stringify(response));
+      
+      // Usar el formato de respuesta de la API de DocuWare
+      const userData = response.data;
+      dispatch(loginSuccess(userData));
+      history('/dashboard');
+    } 
+    else {
+      // Manejar el caso de error
+      dispatch(apiError(response?.message || "Error de autenticación"));
     }
   } catch (error) {
     dispatch(apiError(error));

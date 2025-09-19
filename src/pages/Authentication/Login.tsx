@@ -55,14 +55,14 @@ const Login = (props: any) => {
     if (user && user) {
       const updatedUserData =
         process.env.REACT_APP_DEFAULTAUTH === "firebase"
-          ? user.multiFactor.user.email
-          : user.email;
+          ? user.multiFactor.user.username
+          : user.username;
       const updatedUserPassword =
         process.env.REACT_APP_DEFAULTAUTH === "firebase"
           ? ""
           : user.confirm_password;
       setUserLogin({
-        email: updatedUserData,
+        username: updatedUserData,
         password: updatedUserPassword,
       });
     }
@@ -73,12 +73,12 @@ const Login = (props: any) => {
     enableReinitialize: true,
 
     initialValues: {
-      email: userLogin.email || "osmar@test.com" || "",
-      password: userLogin.password || "123456" || "",
+      username: userLogin.username || "" || "",
+      password: userLogin.password || "" || "",
     },
     validationSchema: Yup.object({
-      email: Yup.string().required("Please Enter Your Email"),
-      password: Yup.string().required("Please Enter Your Password"),
+      username: Yup.string().required("Por favor ingrese su username"),
+      password: Yup.string().required("Por favor ingrese su contraseña"),
     }),
     onSubmit: (values) => {
       dispatch(loginUser(values, props.router.navigate));
@@ -193,7 +193,7 @@ const Login = (props: any) => {
                     <div className="text-center mt-2">
                       <img src={logologin} alt="Cayalá Logo" height="135" />
                     </div>
-                    {error && <Alert color="danger">{error}</Alert>}
+                    {error && <Alert color="danger">{typeof error === 'string' ? error : "Error de autenticación. Verifique sus credenciales."}</Alert>}
 
                     <Form
                       className="mt-4"
@@ -208,23 +208,23 @@ const Login = (props: any) => {
                           Usuario
                         </Label>
                         <Input
-                          name="email"
+                          name="username"
                           type="text"
                           placeholder="Ingrese su usuario"
-                          value={validation.values.email || ""}
+                          value={validation.values.username || ""}
                           onChange={validation.handleChange}
                           onBlur={validation.handleBlur}
                           invalid={
                             !!(
-                              validation.touched.email &&
-                              validation.errors.email
+                              validation.touched.username &&
+                              validation.errors.username
                             )
                           }
                         />
-                        {validation.touched.email &&
-                          validation.errors.email && (
+                        {validation.touched.username &&
+                          validation.errors.username && (
                             <FormFeedback type="invalid">
-                              {validation.errors.email}
+                              {validation.errors.username}
                             </FormFeedback>
                           )}
                       </div>
