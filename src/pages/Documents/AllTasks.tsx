@@ -316,7 +316,7 @@ const DocumentList: React.FC = () => {
 
                 <iframe
                   src={getPreviewUrl(selectedDoc.documenturl)}
-                  style={{ width: "100%", height: "80vh", border: "none" }}
+                  style={{ width: "100%", height: "64vh", border: "none" }}
                   title="Visor PDF"
                 />
               </CardBody>
