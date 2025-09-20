@@ -164,6 +164,39 @@ const DocumentList: React.FC = () => {
     }
   };
 
+  // 📌 Consultar RUC en Factiliza
+  const handleSearchRuc = async () => {
+    if (!editDoc?.suppliernumber) {
+      alert("Ingrese un RUC válido");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success && data.data?.nombre_o_razon_social) {
+        setEditDoc((prev) =>
+          prev ? { ...prev, suppliername: data.data.nombre_o_razon_social } : prev
+        );
+      } else {
+        alert(data.message || "No se encontró información del RUC");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error al consultar RUC");
+    }
+  };
+
   if (loading)
     return (
       <div className="text-center my-5">
@@ -386,68 +419,197 @@ const DocumentList: React.FC = () => {
       </Row>
 
       {/* 📌 Modal Editar */}
-      <Modal isOpen={editModal} toggle={() => setEditModal(false)} centered>
+      <Modal
+        isOpen={editModal}
+        toggle={() => setEditModal(false)}
+        size="xl"
+        centered
+      >
         <ModalHeader toggle={() => setEditModal(false)}>
           Editar Documento
         </ModalHeader>
         <ModalBody>
           {editDoc && (
             <Form>
-              <FormGroup>
-                <Label>Serie</Label>
-                <Input
-                  value={editDoc.documentserial}
-                  onChange={(e) =>
-                    setEditDoc({ ...editDoc, documentserial: e.target.value })
-                  }
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Número</Label>
-                <Input
-                  value={editDoc.documentnumber}
-                  onChange={(e) =>
-                    setEditDoc({ ...editDoc, documentnumber: e.target.value })
-                  }
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Proveedor</Label>
-                <Input
-                  value={editDoc.suppliernumber}
-                  onChange={(e) =>
-                    setEditDoc({ ...editDoc, suppliernumber: e.target.value })
-                  }
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Nombre Proveedor</Label>
-                <Input
-                  value={editDoc.suppliername}
-                  onChange={(e) =>
-                    setEditDoc({ ...editDoc, suppliername: e.target.value })
-                  }
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Notas</Label>
-                <Input
-                  type="textarea"
-                  value={editDoc.notes}
-                  onChange={(e) =>
-                    setEditDoc({ ...editDoc, notes: e.target.value })
-                  }
-                />
-              </FormGroup>
+              <Row>
+                {/* RUC + Lupa */}
+                <Col md="6">
+                  <FormGroup>
+                    <Label>RUC</Label>
+                    <InputGroup>
+                      <Input
+                        value={editDoc.suppliernumber}
+                        onChange={(e) =>
+                          setEditDoc({
+                            ...editDoc,
+                            suppliernumber: e.target.value,
+                          })
+                        }
+                        placeholder="Ingrese RUC"
+                      />
+                      <Button color="info" onClick={handleSearchRuc}>
+                        <i className="ri-search-line" />
+                      </Button>
+                    </InputGroup>
+                  </FormGroup>
+                </Col>
+
+                {/* Razón Social */}
+                <Col md="6">
+                  <FormGroup>
+                    <Label>Razón Social</Label>
+                    <Input
+                      value={editDoc.suppliername}
+                      onChange={(e) =>
+                        setEditDoc({ ...editDoc, suppliername: e.target.value })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
+
+              <Row>
+                {/* Tipo Documento */}
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Tipo Documento</Label>
+                    <Input
+                      type="select"
+                      value={editDoc.documenttype}
+                      onChange={(e) =>
+                        setEditDoc({
+                          ...editDoc,
+                          documenttype: Number(e.target.value),
+                        })
+                      }
+                    >
+                      <option value={1}>Factura</option>
+                      <option value={3}>Boleta</option>
+                      <option value={7}>Nota de Crédito</option>
+                      <option value={8}>Nota de Débito</option>
+                    </Input>
+                  </FormGroup>
+                </Col>
+
+                {/* Nro Serie */}
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Nro Serie</Label>
+                    <Input
+                      value={editDoc.documentserial}
+                      onChange={(e) =>
+                        setEditDoc({
+                          ...editDoc,
+                          documentserial: e.target.value,
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+
+                {/* Nro Documento */}
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Nro Documento</Label>
+                    <Input
+                      value={editDoc.documentnumber}
+                      onChange={(e) =>
+                        setEditDoc({
+                          ...editDoc,
+                          documentnumber: e.target.value,
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
+
+              <Row>
+                {/* Fecha Emisión */}
+                <Col md="3">
+                  <FormGroup>
+                    <Label>Fecha Emisión</Label>
+                    <Flatpickr
+                      className="form-control"
+                      options={{ dateFormat: "Y-m-d" }}
+                      value={editDoc.documentdate}
+                      onChange={(dates: Date[]) =>
+                        setEditDoc({
+                          ...editDoc,
+                          documentdate: moment(dates[0]).format("YYYY-MM-DD"),
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+
+                {/* SubTotal */}
+                <Col md="3">
+                  <FormGroup>
+                    <Label>Subtotal</Label>
+                    <Input
+                      type="number"
+                      value={editDoc.amount}
+                      onChange={(e) =>
+                        setEditDoc({ ...editDoc, amount: e.target.value })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+
+                {/* IGV */}
+                <Col md="3">
+                  <FormGroup>
+                    <Label>IGV</Label>
+                    <Input
+                      type="number"
+                      value={editDoc.taxamount}
+                      onChange={(e) =>
+                        setEditDoc({ ...editDoc, taxamount: e.target.value })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+
+                {/* Total */}
+                <Col md="3">
+                  <FormGroup>
+                    <Label>Total</Label>
+                    <Input
+                      type="number"
+                      value={editDoc.totalamount}
+                      onChange={(e) =>
+                        setEditDoc({ ...editDoc, totalamount: e.target.value })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
+
+              <Row>
+                {/* Notas ocupa todo el ancho */}
+                <Col md="12">
+                  <FormGroup>
+                    <Label>Notas</Label>
+                    <Input
+                      type="textarea"
+                      value={editDoc.notes}
+                      onChange={(e) =>
+                        setEditDoc({ ...editDoc, notes: e.target.value })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
             </Form>
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setEditModal(false)}>
-            Cancelar
-          </Button>
           <Button color="primary" onClick={handleUpdate}>
             Guardar Cambios
+          </Button>
+          <Button color="secondary" onClick={() => setEditModal(false)}>
+            Cancelar
           </Button>
         </ModalFooter>
       </Modal>
