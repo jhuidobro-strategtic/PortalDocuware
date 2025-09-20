@@ -69,6 +69,8 @@ const DocumentList: React.FC = () => {
   // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
+  // 📌 Estado para spinner RUC
+  const [loadingRuc, setLoadingRuc] = useState(false);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -171,6 +173,7 @@ const DocumentList: React.FC = () => {
       return;
     }
 
+    setLoadingRuc(true);
     try {
       const res = await fetch(
         `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
@@ -186,7 +189,9 @@ const DocumentList: React.FC = () => {
 
       if (data.success && data.data?.nombre_o_razon_social) {
         setEditDoc((prev) =>
-          prev ? { ...prev, suppliername: data.data.nombre_o_razon_social } : prev
+          prev
+            ? { ...prev, suppliername: data.data.nombre_o_razon_social }
+            : prev
         );
       } else {
         alert(data.message || "No se encontró información del RUC");
@@ -194,6 +199,8 @@ const DocumentList: React.FC = () => {
     } catch (error) {
       console.error(error);
       alert("Error al consultar RUC");
+    } finally {
+      setLoadingRuc(false);
     }
   };
 
@@ -271,10 +278,10 @@ const DocumentList: React.FC = () => {
                       <th>ID</th>
                       <th>Serie</th>
                       <th>Número</th>
-                      <th>Proveedor</th>
-                      <th>Nombre Proveedor</th>
-                      <th>Tipo</th>
-                      <th>Fecha</th>
+                      <th>RUC</th>
+                      <th>RAZÓN SOCIAL</th>
+                      <th>Tipo Documento</th>
+                      <th>Fecha Emisión</th>
                       <th>Total</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -297,7 +304,12 @@ const DocumentList: React.FC = () => {
                         <td>{doc.documentnumber}</td>
                         <td>{doc.suppliernumber}</td>
                         <td>{doc.suppliername}</td>
-                        <td>{doc.documenttype}</td>
+                        <td>
+                          {doc.documenttype === 1 && "Factura"}
+                          {doc.documenttype === 3 && "Boleta"}
+                          {doc.documenttype === 7 && "Nota de Crédito"}
+                          {doc.documenttype === 8 && "Nota de Débito"}
+                        </td>
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
                         </td>
@@ -447,8 +459,16 @@ const DocumentList: React.FC = () => {
                         }
                         placeholder="Ingrese RUC"
                       />
-                      <Button color="info" onClick={handleSearchRuc}>
-                        <i className="ri-search-line" />
+                      <Button
+                        color="info"
+                        onClick={handleSearchRuc}
+                        disabled={loadingRuc}
+                      >
+                        {loadingRuc ? (
+                          <Spinner size="sm" color="light" />
+                        ) : (
+                          <i className="ri-search-line" />
+                        )}
                       </Button>
                     </InputGroup>
                   </FormGroup>
