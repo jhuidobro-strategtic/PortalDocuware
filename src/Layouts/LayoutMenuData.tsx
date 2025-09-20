@@ -143,7 +143,7 @@ const Navdata = () => {
         },
         {
             id: "dashboard",
-            label: "Dashboards",
+            label: "Document management",
             icon: "ri-dashboard-2-line",
             link: "/#",
             stateVariables: isDashboard,
@@ -160,12 +160,12 @@ const Navdata = () => {
                     link: "/documents",
                     parentId: "dashboard",
                 },
-                // {
-                //     id: "analytics",
-                //     label: "Analytics",
-                //     link: "/dashboard-analytics",
-                //     parentId: "dashboard",
-                // },
+                {
+                    id: "files",
+                    label: "Files",
+                    link: "/files",
+                    parentId: "dashboard",
+                },
                 // {
                 //     id: "crm",
                 //     label: "CRM",

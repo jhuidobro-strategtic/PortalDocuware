@@ -26,7 +26,6 @@ import {
 import moment from "moment";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
-import "./Documents.css";
 
 interface Document {
   documentid: number;
@@ -48,7 +47,7 @@ interface Document {
   updated_at?: string | null;
 }
 
-const DocumentList: React.FC = () => {
+const FileList: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -215,7 +214,7 @@ const DocumentList: React.FC = () => {
   if (error) return <Alert color="danger">{error}</Alert>;
 
   return (
-    <Container fluid className="mt-4 small-text">
+    <Container fluid className="mt-4">
       <Row>
         {/* 📌 Tabla ocupa todo el ancho si no hay PDF seleccionado */}
         <Col lg={selectedDoc ? 7 : 12}>
@@ -638,4 +637,4 @@ const DocumentList: React.FC = () => {
   );
 };
 
-export default DocumentList;
+export default FileList;
