@@ -289,7 +289,8 @@ const DocumentList: React.FC = () => {
                               outline
                               onClick={() => setSelectedDoc(doc)}
                             >
-                              <i className="ri-eye-fill align-bottom" />
+                              <i className="ri-eye-line align-bottom" />
+                              <span> Ver</span>
                             </Button>
                             {/* Editar */}
                             <Button
@@ -301,7 +302,8 @@ const DocumentList: React.FC = () => {
                                 setEditModal(true);
                               }}
                             >
-                              <i className="ri-edit-line align-bottom" />
+                              <i className="ri-edit-box-line align-bottom" />
+                              <span> Editar</span>
                             </Button>
                           </div>
                         </td>
