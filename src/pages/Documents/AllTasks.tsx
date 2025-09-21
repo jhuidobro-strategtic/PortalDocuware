@@ -649,7 +649,7 @@ const DocumentList: React.FC = () => {
         </ModalBody>
         <ModalFooter>
           <Button color="primary" onClick={handleUpdate}>
-            Guardar Cambios
+            Guardar
           </Button>
           <Button color="secondary" onClick={() => setEditModal(false)}>
             Cancelar
