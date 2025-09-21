@@ -34,7 +34,7 @@ interface Document {
   documentnumber: string;
   suppliernumber: string;
   suppliername: string;
-  documenttype: number;
+  documenttype: number | { tipoid: number; tipo: string };
   documentdate: string;
   amount: string;
   taxamount: string;
@@ -48,6 +48,11 @@ interface Document {
   updated_at?: string | null;
 }
 
+interface TipoDocumento {
+  tipoid: number;
+  tipo: string;
+}
+
 const DocumentList: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +64,9 @@ const DocumentList: React.FC = () => {
   // 📌 Edición
   const [editModal, setEditModal] = useState(false);
   const [editDoc, setEditDoc] = useState<Document | null>(null);
+
+  // 📌 Tipos de documento
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
 
   // 📌 Filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,7 +99,23 @@ const DocumentList: React.FC = () => {
         setLoading(false);
       }
     };
+
+    const fetchTiposDocumento = async () => {
+      try {
+        const res = await fetch(
+          "https://docuware-api-a09ab977636d.herokuapp.com/api/tipo-documento"
+        );
+        const data = await res.json();
+        if (data.success) {
+          setTiposDocumento(data.data);
+        }
+      } catch (error) {
+        console.error("Error al cargar tipos de documento:", error);
+      }
+    };
+
     fetchDocuments();
+    fetchTiposDocumento();
   }, []);
 
   // 📌 Google Drive helpers
@@ -165,6 +189,19 @@ const DocumentList: React.FC = () => {
       console.error(error);
       alert("Error en el servidor");
     }
+  };
+
+  const getTipoDocumentoNombre = (
+    docType: number | { tipoid: number; tipo: string }
+  ): string => {
+    if (typeof docType === "number") {
+      const tipo = tiposDocumento.find((t) => t.tipoid === docType);
+      return tipo ? tipo.tipo : String(docType);
+    }
+    if (typeof docType === "object" && docType !== null) {
+      return docType.tipo;
+    }
+    return "Desconocido";
   };
 
   // 📌 Consultar RUC en Factiliza
@@ -305,12 +342,7 @@ const DocumentList: React.FC = () => {
                         <td>{doc.documentnumber}</td>
                         <td>{doc.suppliernumber}</td>
                         <td>{doc.suppliername}</td>
-                        <td>
-                          {doc.documenttype === 1 && "Factura"}
-                          {doc.documenttype === 3 && "Boleta"}
-                          {doc.documenttype === 7 && "Nota de Crédito"}
-                          {doc.documenttype === 8 && "Nota de Débito"}
-                        </td>
+                        <td>{getTipoDocumentoNombre(doc.documenttype)}</td>
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
                         </td>
@@ -496,7 +528,11 @@ const DocumentList: React.FC = () => {
                     <Label className="form-label">Tipo Documento</Label>
                     <Input
                       type="select"
-                      value={editDoc.documenttype}
+                      value={
+                        typeof editDoc.documenttype === "object"
+                          ? editDoc.documenttype.tipoid
+                          : editDoc.documenttype
+                      }
                       onChange={(e) =>
                         setEditDoc({
                           ...editDoc,
@@ -504,10 +540,12 @@ const DocumentList: React.FC = () => {
                         })
                       }
                     >
-                      <option value={1}>Factura</option>
-                      <option value={3}>Boleta</option>
-                      <option value={7}>Nota de Crédito</option>
-                      <option value={8}>Nota de Débito</option>
+                      <option value="">Seleccione...</option>
+                      {tiposDocumento.map((tipo) => (
+                        <option key={tipo.tipoid} value={tipo.tipoid}>
+                          {tipo.tipo}
+                        </option>
+                      ))}
                     </Input>
                   </FormGroup>
                 </Col>
