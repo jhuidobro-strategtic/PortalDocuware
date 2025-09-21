@@ -280,7 +280,7 @@ const DocumentList: React.FC = () => {
                       <th>Serie</th>
                       <th>Número</th>
                       <th>RUC</th>
-                      <th>RAZÓN SOCIAL</th>
+                      <th>Razón Social</th>
                       <th>Tipo Documento</th>
                       <th>Fecha Emisión</th>
                       <th>Total</th>
@@ -435,8 +435,9 @@ const DocumentList: React.FC = () => {
       <Modal
         isOpen={editModal}
         toggle={() => setEditModal(false)}
-        size="xl"
+        size="lg"
         centered
+        className="custom-modal small-text"
       >
         <ModalHeader toggle={() => setEditModal(false)}>
           Editar Documento
@@ -445,10 +446,10 @@ const DocumentList: React.FC = () => {
           {editDoc && (
             <Form>
               <Row>
-                {/* RUC + Lupa */}
-                <Col md="6">
+                {/* RUC */}
+                <Col md="4">
                   <FormGroup>
-                    <Label>RUC</Label>
+                    <Label className="form-label">RUC</Label>
                     <InputGroup>
                       <Input
                         value={editDoc.suppliernumber}
@@ -461,7 +462,7 @@ const DocumentList: React.FC = () => {
                         placeholder="Ingrese RUC"
                       />
                       <Button
-                        color="info"
+                        color="secondary"
                         onClick={handleSearchRuc}
                         disabled={loadingRuc}
                       >
@@ -476,14 +477,13 @@ const DocumentList: React.FC = () => {
                 </Col>
 
                 {/* Razón Social */}
-                <Col md="6">
+                <Col md="8">
                   <FormGroup>
-                    <Label>Razón Social</Label>
+                    <Label className="form-label">Razón Social</Label>
                     <Input
                       value={editDoc.suppliername}
-                      onChange={(e) =>
-                        setEditDoc({ ...editDoc, suppliername: e.target.value })
-                      }
+                      disabled
+                      placeholder="Razón Social"
                     />
                   </FormGroup>
                 </Col>
@@ -493,7 +493,7 @@ const DocumentList: React.FC = () => {
                 {/* Tipo Documento */}
                 <Col md="4">
                   <FormGroup>
-                    <Label>Tipo Documento</Label>
+                    <Label className="form-label">Tipo Documento</Label>
                     <Input
                       type="select"
                       value={editDoc.documenttype}
@@ -515,7 +515,7 @@ const DocumentList: React.FC = () => {
                 {/* Nro Serie */}
                 <Col md="4">
                   <FormGroup>
-                    <Label>Nro Serie</Label>
+                    <Label className="form-label">Nro Serie</Label>
                     <Input
                       value={editDoc.documentserial}
                       onChange={(e) =>
@@ -524,6 +524,7 @@ const DocumentList: React.FC = () => {
                           documentserial: e.target.value,
                         })
                       }
+                      placeholder="Ej: F001"
                     />
                   </FormGroup>
                 </Col>
@@ -531,7 +532,7 @@ const DocumentList: React.FC = () => {
                 {/* Nro Documento */}
                 <Col md="4">
                   <FormGroup>
-                    <Label>Nro Documento</Label>
+                    <Label className="form-label">Nro Documento</Label>
                     <Input
                       value={editDoc.documentnumber}
                       onChange={(e) =>
@@ -540,6 +541,7 @@ const DocumentList: React.FC = () => {
                           documentnumber: e.target.value,
                         })
                       }
+                      placeholder="Ej: 000123"
                     />
                   </FormGroup>
                 </Col>
@@ -549,7 +551,7 @@ const DocumentList: React.FC = () => {
                 {/* Fecha Emisión */}
                 <Col md="3">
                   <FormGroup>
-                    <Label>Fecha Emisión</Label>
+                    <Label className="form-label">Fecha Emisión</Label>
                     <Flatpickr
                       className="form-control"
                       options={{ dateFormat: "Y-m-d" }}
@@ -564,16 +566,25 @@ const DocumentList: React.FC = () => {
                   </FormGroup>
                 </Col>
 
-                {/* SubTotal */}
+                {/* Subtotal */}
                 <Col md="3">
                   <FormGroup>
-                    <Label>Subtotal</Label>
+                    <Label className="form-label">Subtotal</Label>
                     <Input
                       type="number"
                       value={editDoc.amount}
-                      onChange={(e) =>
-                        setEditDoc({ ...editDoc, amount: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const newAmount = e.target.value;
+                        const newTotal =
+                          parseFloat(newAmount || "0") +
+                          parseFloat(editDoc.taxamount || "0");
+                        setEditDoc({
+                          ...editDoc,
+                          amount: newAmount,
+                          totalamount: newTotal.toFixed(2),
+                        });
+                      }}
+                      placeholder="0.00"
                     />
                   </FormGroup>
                 </Col>
@@ -581,13 +592,22 @@ const DocumentList: React.FC = () => {
                 {/* IGV */}
                 <Col md="3">
                   <FormGroup>
-                    <Label>IGV</Label>
+                    <Label className="form-label">IGV</Label>
                     <Input
                       type="number"
                       value={editDoc.taxamount}
-                      onChange={(e) =>
-                        setEditDoc({ ...editDoc, taxamount: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const newTax = e.target.value;
+                        const newTotal =
+                          parseFloat(editDoc.amount || "0") +
+                          parseFloat(newTax || "0");
+                        setEditDoc({
+                          ...editDoc,
+                          taxamount: newTax,
+                          totalamount: newTotal.toFixed(2),
+                        });
+                      }}
+                      placeholder="0.00"
                     />
                   </FormGroup>
                 </Col>
@@ -595,29 +615,31 @@ const DocumentList: React.FC = () => {
                 {/* Total */}
                 <Col md="3">
                   <FormGroup>
-                    <Label>Total</Label>
+                    <Label className="form-label">Total</Label>
                     <Input
                       type="number"
                       value={editDoc.totalamount}
-                      onChange={(e) =>
-                        setEditDoc({ ...editDoc, totalamount: e.target.value })
-                      }
+                      readOnly
+                      disabled
+                      placeholder="0.00"
                     />
                   </FormGroup>
                 </Col>
               </Row>
 
               <Row>
-                {/* Notas ocupa todo el ancho */}
+                {/* Notas */}
                 <Col md="12">
                   <FormGroup>
-                    <Label>Notas</Label>
+                    <Label className="form-label">Notas</Label>
                     <Input
                       type="textarea"
+                      rows={3}
                       value={editDoc.notes}
                       onChange={(e) =>
                         setEditDoc({ ...editDoc, notes: e.target.value })
                       }
+                      placeholder="Ingrese observaciones..."
                     />
                   </FormGroup>
                 </Col>
