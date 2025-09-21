@@ -34,7 +34,7 @@ interface Document {
   documentnumber: string;
   suppliernumber: string;
   suppliername: string;
-  documenttype: number | { tipoid: number; tipo: string };
+  documenttype: number | { tipoid: number; tipo: string } | null;
   documentdate: string;
   amount: string;
   taxamount: string;
@@ -342,7 +342,11 @@ const DocumentList: React.FC = () => {
                         <td>{doc.documentnumber}</td>
                         <td>{doc.suppliernumber}</td>
                         <td>{doc.suppliername}</td>
-                        <td>{getTipoDocumentoNombre(doc.documenttype)}</td>
+                        <td>
+                          {doc.documenttype
+                            ? getTipoDocumentoNombre(doc.documenttype)
+                            : "N/A"}
+                        </td>
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
                         </td>
@@ -488,7 +492,9 @@ const DocumentList: React.FC = () => {
                         onChange={(e) =>
                           setEditDoc({
                             ...editDoc,
-                            suppliernumber: e.target.value,
+                            documenttype: e.target.value
+                              ? Number(e.target.value)
+                              : null,
                           })
                         }
                         placeholder="Ingrese RUC"
@@ -529,14 +535,17 @@ const DocumentList: React.FC = () => {
                     <Input
                       type="select"
                       value={
+                        editDoc.documenttype &&
                         typeof editDoc.documenttype === "object"
                           ? editDoc.documenttype.tipoid
-                          : editDoc.documenttype
+                          : editDoc.documenttype ?? ""
                       }
                       onChange={(e) =>
                         setEditDoc({
                           ...editDoc,
-                          documenttype: Number(e.target.value),
+                          documenttype: e.target.value
+                            ? Number(e.target.value)
+                            : null,
                         })
                       }
                     >
