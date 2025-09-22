@@ -179,20 +179,39 @@ const DocumentList: React.FC = () => {
   // 📌 Guardar cambios con PATCH
   const handleUpdate = async () => {
     if (!editDoc) return;
+
+    // 🔥 Validar si todos los campos están completos
+    const isValid =
+      editDoc.documentserial.trim() !== "" &&
+      editDoc.documentnumber.trim() !== "" &&
+      editDoc.suppliernumber.trim() !== "" &&
+      editDoc.suppliername.trim() !== "" &&
+      editDoc.documenttype !== null &&
+      editDoc.documentdate.trim() !== "" &&
+      parseFloat(editDoc.amount) > 0 &&
+      parseFloat(editDoc.taxamount) > 0 &&
+      parseFloat(editDoc.totalamount) > 0;
+
+    // 🔄 Actualizar status en base a la validación
+    const updatedDoc = { ...editDoc, status: isValid };
+
     try {
       const res = await fetch(
         `https://docuware-api-a09ab977636d.herokuapp.com/api/documents/${editDoc.documentid}/`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editDoc),
+          body: JSON.stringify(updatedDoc),
         }
       );
       const data = await res.json();
+
       if (data.success) {
         setDocuments((prev) =>
           prev.map((doc) =>
-            doc.documentid === editDoc.documentid ? { ...doc, ...editDoc } : doc
+            doc.documentid === editDoc.documentid
+              ? { ...doc, ...updatedDoc }
+              : doc
           )
         );
         setEditModal(false);
