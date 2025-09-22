@@ -154,9 +154,9 @@ const DocumentList: React.FC = () => {
   const filteredDocuments = documents.filter((doc) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
-      doc.documentserial.toLowerCase().includes(term) ||
-      doc.documentnumber.toLowerCase().includes(term) ||
-      doc.suppliernumber.toLowerCase().includes(term);
+  (doc.documentserial ?? "").toLowerCase().includes(term) ||
+  (doc.documentnumber ?? "").toLowerCase().includes(term) ||
+  (doc.suppliernumber ?? "").toLowerCase().includes(term);
 
     const matchesStatus =
       statusFilter === "all" ||
