@@ -81,6 +81,20 @@ const DocumentList: React.FC = () => {
   // 📌 Estado para spinner RUC
   const [loadingRuc, setLoadingRuc] = useState(false);
 
+  const [notifications, setNotifications] = useState<
+    { id: number; type: string; message: string }[]
+  >([]);
+
+  const addNotification = (type: string, message: string) => {
+    const id = Date.now();
+    setNotifications((prev) => [...prev, { id, type, message }]);
+
+    // 🔥 Se elimina automáticamente después de 5s
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 5000);
+  };
+
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
@@ -182,12 +196,13 @@ const DocumentList: React.FC = () => {
           )
         );
         setEditModal(false);
+        addNotification("success", "Documento actualizado correctamente");
       } else {
-        alert(data.message || "Error al actualizar");
+        addNotification("danger", data.message || "Error al actualizar");
       }
     } catch (error) {
       console.error(error);
-      alert("Error en el servidor");
+      addNotification("danger", "Error en el servidor");
     }
   };
 
@@ -207,7 +222,7 @@ const DocumentList: React.FC = () => {
   // 📌 Consultar RUC en Factiliza
   const handleSearchRuc = async () => {
     if (!editDoc?.suppliernumber) {
-      alert("Ingrese un RUC válido");
+      addNotification("danger", "Ingrese un RUC válido");
       return;
     }
 
@@ -231,12 +246,16 @@ const DocumentList: React.FC = () => {
             ? { ...prev, suppliername: data.data.nombre_o_razon_social }
             : prev
         );
+        addNotification("success", "RUC encontrado correctamente");
       } else {
-        alert(data.message || "No se encontró información del RUC");
+        addNotification(
+          "danger",
+          data.message || "No se encontró información del RUC"
+        );
       }
     } catch (error) {
       console.error(error);
-      alert("Error al consultar RUC");
+      addNotification("danger", "Error al consultar RUC");
     } finally {
       setLoadingRuc(false);
     }
@@ -253,6 +272,36 @@ const DocumentList: React.FC = () => {
 
   return (
     <Container fluid className="mt-4 small-text">
+      {/* 📌 Notificaciones flotantes */}
+      <div className="notification-container">
+        {notifications.map((n) => (
+          <div
+            key={n.id}
+            className={`alert alert-${n.type} alert-dismissible fade show notification-fade d-flex align-items-center`}
+            role="alert"
+          >
+            {/* ✅ Ícono según tipo */}
+            {n.type === "success" && <i className="ri-check-line me-2"></i>}
+            {n.type === "danger" && (
+              <i className="ri-error-warning-line me-2"></i>
+            )}
+            {n.type === "warning" && <i className="ri-alert-line me-2"></i>}
+            {n.type === "info" && <i className="ri-information-line me-2"></i>}
+
+            {/* Mensaje */}
+            <span>{n.message}</span>
+
+            {/* Botón cerrar */}
+            <button
+              type="button"
+              className="btn-close ms-auto"
+              onClick={() =>
+                setNotifications((prev) => prev.filter((x) => x.id !== n.id))
+              }
+            ></button>
+          </div>
+        ))}
+      </div>
       <Row>
         {/* 📌 Tabla ocupa todo el ancho si no hay PDF seleccionado */}
         <Col lg={selectedDoc ? 7 : 12}>
