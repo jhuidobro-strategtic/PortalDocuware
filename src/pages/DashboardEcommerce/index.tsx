@@ -45,7 +45,7 @@ const DashboardEcommerce = () => {
                 </Row>
               </div>
             </Col>
-            <RecentActivity rightColumn={rightColumn} hideRightColumn={toggleRightColumn} />
+            {/* <RecentActivity rightColumn={rightColumn} hideRightColumn={toggleRightColumn} /> */}
           </Row>
         </Container>
       </div>
