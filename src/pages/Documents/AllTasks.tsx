@@ -77,7 +77,7 @@ const DocumentList: React.FC = () => {
 
   // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
+  const itemsPerPage = 20;
   // 📌 Estado para spinner RUC
   const [loadingRuc, setLoadingRuc] = useState(false);
 
@@ -492,13 +492,12 @@ const DocumentList: React.FC = () => {
                         onChange={(e) =>
                           setEditDoc({
                             ...editDoc,
-                            documenttype: e.target.value
-                              ? Number(e.target.value)
-                              : null,
+                            suppliernumber: e.target.value,
                           })
                         }
                         placeholder="Ingrese RUC"
                       />
+
                       <Button
                         color="secondary"
                         onClick={handleSearchRuc}
