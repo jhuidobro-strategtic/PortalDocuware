@@ -396,6 +396,8 @@ const DocumentList: React.FC = () => {
                       <th>Razón Social</th>
                       <th>Tipo Documento</th>
                       <th>Fecha Emisión</th>
+                      <th>Sub Total</th>
+                      <th>IGV</th>
                       <th>Total</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -426,6 +428,8 @@ const DocumentList: React.FC = () => {
                         <td>
                           {moment(doc.documentdate).format("DD MMM YYYY")}
                         </td>
+                        <td>{doc.amount}</td>
+                        <td>{doc.taxamount}</td>
                         <td>
                           <b>S/ {doc.totalamount}</b>
                         </td>
