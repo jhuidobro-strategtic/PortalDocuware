@@ -78,6 +78,7 @@ const DocumentList: React.FC = () => {
   // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
   // 📌 Estado para spinner RUC
   const [loadingRuc, setLoadingRuc] = useState(false);
 
@@ -154,9 +155,16 @@ const DocumentList: React.FC = () => {
   const filteredDocuments = documents.filter((doc) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
-  (doc.documentserial ?? "").toLowerCase().includes(term) ||
-  (doc.documentnumber ?? "").toLowerCase().includes(term) ||
-  (doc.suppliernumber ?? "").toLowerCase().includes(term);
+      (doc.documentserial ?? "").toLowerCase().includes(term) ||
+      (doc.documentnumber ?? "").toLowerCase().includes(term) ||
+      (doc.suppliernumber ?? "").toLowerCase().includes(term) ||
+      (doc.suppliername ?? "").toLowerCase().includes(term) ||
+      (typeof doc.documenttype === "object" &&
+        doc.documenttype !== null &&
+        doc.documenttype.tipoid?.toString().toLowerCase().includes(term)) ||
+      (typeof doc.documenttype === "object" &&
+        doc.documenttype !== null &&
+        doc.documenttype.tipo?.toLowerCase().includes(term));
 
     const matchesStatus =
       statusFilter === "all" ||
@@ -425,9 +433,7 @@ const DocumentList: React.FC = () => {
                             ? getTipoDocumentoNombre(doc.documenttype)
                             : "N/A"}
                         </td>
-                        <td>
-                          {moment(doc.documentdate).format("DD MMM YYYY")}
-                        </td>
+                        <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
                         <td>{doc.amount}</td>
                         <td>{doc.taxamount}</td>
                         <td>
