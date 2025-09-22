@@ -192,8 +192,16 @@ const DocumentList: React.FC = () => {
       parseFloat(editDoc.taxamount) > 0 &&
       parseFloat(editDoc.totalamount) > 0;
 
-    // 🔄 Actualizar status en base a la validación
-    const updatedDoc = { ...editDoc, status: isValid };
+    // 📌 Mapeo para enviar documenttype_id al backend
+    const updatedDoc = {
+      ...editDoc,
+      status: isValid,
+      documenttype_id:
+        typeof editDoc.documenttype === "object" &&
+        editDoc.documenttype !== null
+          ? editDoc.documenttype.tipoid
+          : editDoc.documenttype, // si es número lo deja tal cual
+    };
 
     try {
       const res = await fetch(
@@ -210,7 +218,7 @@ const DocumentList: React.FC = () => {
         setDocuments((prev) =>
           prev.map((doc) =>
             doc.documentid === editDoc.documentid
-              ? { ...doc, ...updatedDoc }
+              ? { ...doc, ...editDoc, status: isValid }
               : doc
           )
         );
