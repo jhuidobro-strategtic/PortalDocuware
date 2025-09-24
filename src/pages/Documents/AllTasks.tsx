@@ -27,6 +27,7 @@ import moment from "moment";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import "./Documents.css";
+import Draggable from "react-draggable";
 
 interface Document {
   documentid: number;
@@ -558,235 +559,247 @@ const DocumentList: React.FC = () => {
         isOpen={editModal}
         toggle={() => setEditModal(false)}
         size="lg"
-        centered
-        className="custom-modal small-text"
+        centered={false}
+        // backdrop={false}
+        contentClassName="p-0 border-0 shadow-none bg-transparent"
       >
-        <ModalHeader toggle={() => setEditModal(false)}>
-          Editar Documento
-        </ModalHeader>
-        <ModalBody>
-          {editDoc && (
-            <Form>
-              <Row>
-                {/* RUC */}
-                <Col md="4">
-                  <FormGroup>
-                    <Label className="form-label">RUC</Label>
-                    <InputGroup>
-                      <Input
-                        value={editDoc.suppliernumber}
-                        onChange={(e) =>
-                          setEditDoc({
-                            ...editDoc,
-                            suppliernumber: e.target.value,
-                          })
-                        }
-                        placeholder="Ingrese RUC"
-                      />
+        <Draggable handle=".modal-header">
+          <div className="modal-dialog modal-lg" style={{ margin: 0 }}>
+            <div className="modal-content">
+              <ModalHeader
+                toggle={() => setEditModal(false)}
+                className="modal-header"
+              >
+                Editar Documento
+              </ModalHeader>
+              <ModalBody>
+                {editDoc && (
+                  <Form>
+                    <Row>
+                      {/* RUC */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label className="form-label">RUC</Label>
+                          <InputGroup>
+                            <Input
+                              value={editDoc.suppliernumber}
+                              onChange={(e) =>
+                                setEditDoc({
+                                  ...editDoc,
+                                  suppliernumber: e.target.value,
+                                })
+                              }
+                              placeholder="Ingrese RUC"
+                            />
 
-                      <Button
-                        color="secondary"
-                        onClick={handleSearchRuc}
-                        disabled={loadingRuc}
-                      >
-                        {loadingRuc ? (
-                          <Spinner size="sm" color="light" />
-                        ) : (
-                          <i className="ri-search-line" />
-                        )}
-                      </Button>
-                    </InputGroup>
-                  </FormGroup>
-                </Col>
+                            <Button
+                              color="secondary"
+                              onClick={handleSearchRuc}
+                              disabled={loadingRuc}
+                            >
+                              {loadingRuc ? (
+                                <Spinner size="sm" color="light" />
+                              ) : (
+                                <i className="ri-search-line" />
+                              )}
+                            </Button>
+                          </InputGroup>
+                        </FormGroup>
+                      </Col>
 
-                {/* Razón Social */}
-                <Col md="8">
-                  <FormGroup>
-                    <Label className="form-label">Razón Social</Label>
-                    <Input
-                      value={editDoc.suppliername}
-                      disabled
-                      placeholder="Razón Social"
-                    />
-                  </FormGroup>
-                </Col>
-              </Row>
+                      {/* Razón Social */}
+                      <Col md="8">
+                        <FormGroup>
+                          <Label className="form-label">Razón Social</Label>
+                          <Input
+                            value={editDoc.suppliername}
+                            disabled
+                            placeholder="Razón Social"
+                          />
+                        </FormGroup>
+                      </Col>
+                    </Row>
 
-              <Row>
-                {/* Tipo Documento */}
-                <Col md="4">
-                  <FormGroup>
-                    <Label className="form-label">Tipo Documento</Label>
-                    <Input
-                      type="select"
-                      value={
-                        editDoc.documenttype &&
-                        typeof editDoc.documenttype === "object"
-                          ? editDoc.documenttype.tipoid
-                          : editDoc.documenttype ?? ""
-                      }
-                      onChange={(e) =>
-                        setEditDoc({
-                          ...editDoc,
-                          documenttype: e.target.value
-                            ? Number(e.target.value)
-                            : null,
-                        })
-                      }
-                    >
-                      <option value="">Seleccione...</option>
-                      {tiposDocumento.map((tipo) => (
-                        <option key={tipo.tipoid} value={tipo.tipoid}>
-                          {tipo.tipo}
-                        </option>
-                      ))}
-                    </Input>
-                  </FormGroup>
-                </Col>
+                    <Row>
+                      {/* Tipo Documento */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label className="form-label">Tipo Documento</Label>
+                          <Input
+                            type="select"
+                            value={
+                              editDoc.documenttype &&
+                              typeof editDoc.documenttype === "object"
+                                ? editDoc.documenttype.tipoid
+                                : editDoc.documenttype ?? ""
+                            }
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                documenttype: e.target.value
+                                  ? Number(e.target.value)
+                                  : null,
+                              })
+                            }
+                          >
+                            <option value="">Seleccione...</option>
+                            {tiposDocumento.map((tipo) => (
+                              <option key={tipo.tipoid} value={tipo.tipoid}>
+                                {tipo.tipo}
+                              </option>
+                            ))}
+                          </Input>
+                        </FormGroup>
+                      </Col>
 
-                {/* Nro Serie */}
-                <Col md="4">
-                  <FormGroup>
-                    <Label className="form-label">Nro Serie</Label>
-                    <Input
-                      value={editDoc.documentserial}
-                      onChange={(e) =>
-                        setEditDoc({
-                          ...editDoc,
-                          documentserial: e.target.value,
-                        })
-                      }
-                      placeholder="Ej: F001"
-                    />
-                  </FormGroup>
-                </Col>
+                      {/* Nro Serie */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label className="form-label">Nro Serie</Label>
+                          <Input
+                            value={editDoc.documentserial}
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                documentserial: e.target.value,
+                              })
+                            }
+                            placeholder="Ej: F001"
+                          />
+                        </FormGroup>
+                      </Col>
 
-                {/* Nro Documento */}
-                <Col md="4">
-                  <FormGroup>
-                    <Label className="form-label">Nro Documento</Label>
-                    <Input
-                      value={editDoc.documentnumber}
-                      onChange={(e) =>
-                        setEditDoc({
-                          ...editDoc,
-                          documentnumber: e.target.value,
-                        })
-                      }
-                      placeholder="Ej: 000123"
-                    />
-                  </FormGroup>
-                </Col>
-              </Row>
+                      {/* Nro Documento */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label className="form-label">Nro Documento</Label>
+                          <Input
+                            value={editDoc.documentnumber}
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                documentnumber: e.target.value,
+                              })
+                            }
+                            placeholder="Ej: 000123"
+                          />
+                        </FormGroup>
+                      </Col>
+                    </Row>
 
-              <Row>
-                {/* Fecha Emisión */}
-                <Col md="3">
-                  <FormGroup>
-                    <Label className="form-label">Fecha Emisión</Label>
-                    <Flatpickr
-                      className="form-control"
-                      options={{ dateFormat: "Y-m-d" }}
-                      value={editDoc.documentdate}
-                      onChange={(dates: Date[]) =>
-                        setEditDoc({
-                          ...editDoc,
-                          documentdate: moment(dates[0]).format("YYYY-MM-DD"),
-                        })
-                      }
-                    />
-                  </FormGroup>
-                </Col>
+                    <Row>
+                      {/* Fecha Emisión */}
+                      <Col md="3">
+                        <FormGroup>
+                          <Label className="form-label">Fecha Emisión</Label>
+                          <Flatpickr
+                            className="form-control"
+                            options={{ dateFormat: "Y-m-d" }}
+                            value={editDoc.documentdate}
+                            onChange={(dates: Date[]) =>
+                              setEditDoc({
+                                ...editDoc,
+                                documentdate: moment(dates[0]).format(
+                                  "YYYY-MM-DD"
+                                ),
+                              })
+                            }
+                          />
+                        </FormGroup>
+                      </Col>
 
-                {/* Subtotal */}
-                <Col md="3">
-                  <FormGroup>
-                    <Label className="form-label">Subtotal</Label>
-                    <Input
-                      type="number"
-                      value={editDoc.amount}
-                      onChange={(e) => {
-                        const newAmount = e.target.value;
-                        const newTotal =
-                          parseFloat(newAmount || "0") +
-                          parseFloat(editDoc.taxamount || "0");
-                        setEditDoc({
-                          ...editDoc,
-                          amount: newAmount,
-                          totalamount: newTotal.toFixed(2),
-                        });
-                      }}
-                      placeholder="0.00"
-                    />
-                  </FormGroup>
-                </Col>
+                      {/* Subtotal */}
+                      <Col md="3">
+                        <FormGroup>
+                          <Label className="form-label">Subtotal</Label>
+                          <Input
+                            type="number"
+                            value={editDoc.amount}
+                            onChange={(e) => {
+                              const newAmount = e.target.value;
+                              const newTotal =
+                                parseFloat(newAmount || "0") +
+                                parseFloat(editDoc.taxamount || "0");
+                              setEditDoc({
+                                ...editDoc,
+                                amount: newAmount,
+                                totalamount: newTotal.toFixed(2),
+                              });
+                            }}
+                            placeholder="0.00"
+                          />
+                        </FormGroup>
+                      </Col>
 
-                {/* IGV */}
-                <Col md="3">
-                  <FormGroup>
-                    <Label className="form-label">IGV</Label>
-                    <Input
-                      type="number"
-                      value={editDoc.taxamount}
-                      onChange={(e) => {
-                        const newTax = e.target.value;
-                        const newTotal =
-                          parseFloat(editDoc.amount || "0") +
-                          parseFloat(newTax || "0");
-                        setEditDoc({
-                          ...editDoc,
-                          taxamount: newTax,
-                          totalamount: newTotal.toFixed(2),
-                        });
-                      }}
-                      placeholder="0.00"
-                    />
-                  </FormGroup>
-                </Col>
+                      {/* IGV */}
+                      <Col md="3">
+                        <FormGroup>
+                          <Label className="form-label">IGV</Label>
+                          <Input
+                            type="number"
+                            value={editDoc.taxamount}
+                            onChange={(e) => {
+                              const newTax = e.target.value;
+                              const newTotal =
+                                parseFloat(editDoc.amount || "0") +
+                                parseFloat(newTax || "0");
+                              setEditDoc({
+                                ...editDoc,
+                                taxamount: newTax,
+                                totalamount: newTotal.toFixed(2),
+                              });
+                            }}
+                            placeholder="0.00"
+                          />
+                        </FormGroup>
+                      </Col>
 
-                {/* Total */}
-                <Col md="3">
-                  <FormGroup>
-                    <Label className="form-label">Total</Label>
-                    <Input
-                      type="number"
-                      value={editDoc.totalamount}
-                      readOnly
-                      disabled
-                      placeholder="0.00"
-                    />
-                  </FormGroup>
-                </Col>
-              </Row>
+                      {/* Total */}
+                      <Col md="3">
+                        <FormGroup>
+                          <Label className="form-label">Total</Label>
+                          <Input
+                            type="number"
+                            value={editDoc.totalamount}
+                            readOnly
+                            disabled
+                            placeholder="0.00"
+                          />
+                        </FormGroup>
+                      </Col>
+                    </Row>
 
-              <Row>
-                {/* Notas */}
-                <Col md="12">
-                  <FormGroup>
-                    <Label className="form-label">Notas</Label>
-                    <Input
-                      type="textarea"
-                      rows={3}
-                      value={editDoc.notes}
-                      onChange={(e) =>
-                        setEditDoc({ ...editDoc, notes: e.target.value })
-                      }
-                      placeholder="Ingrese observaciones..."
-                    />
-                  </FormGroup>
-                </Col>
-              </Row>
-            </Form>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <Button color="primary" onClick={handleUpdate}>
-            Guardar
-          </Button>
-          <Button color="secondary" onClick={() => setEditModal(false)}>
-            Cancelar
-          </Button>
-        </ModalFooter>
+                    <Row>
+                      {/* Notas */}
+                      <Col md="12">
+                        <FormGroup>
+                          <Label className="form-label">Notas</Label>
+                          <Input
+                            type="textarea"
+                            rows={3}
+                            value={editDoc.notes}
+                            onChange={(e) =>
+                              setEditDoc({ ...editDoc, notes: e.target.value })
+                            }
+                            placeholder="Ingrese observaciones..."
+                          />
+                        </FormGroup>
+                      </Col>
+                    </Row>
+                  </Form>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button color="primary" onClick={handleUpdate}>
+                  Guardar
+                </Button>
+                <Button color="secondary" onClick={() => setEditModal(false)}>
+                  Cancelar
+                </Button>
+              </ModalFooter>
+            </div>
+          </div>
+        </Draggable>
       </Modal>
     </Container>
   );

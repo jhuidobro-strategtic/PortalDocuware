@@ -42,3 +42,12 @@ input, select, textarea {
   to { opacity: 0; transform: translateX(50px); }
 }
 
+.custom-modal .modal-content {
+  width: auto;
+  margin: 0; /* evita centrado automático */
+}
+
+.modal-header {
+  cursor: move; /* ✅ indica que se puede arrastrar */
+}
+

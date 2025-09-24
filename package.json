@@ -64,6 +64,7 @@
     "react-csv": "^2.2.2",
     "react-datepicker": "^8.7.0",
     "react-dom": "^18.2.0",
+    "react-draggable": "^4.5.0",
     "react-dragula": "^1.1.17",
     "react-dropzone": "^14.2.9",
     "react-dual-listbox": "^6.0.3",
