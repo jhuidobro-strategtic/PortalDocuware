@@ -28,6 +28,8 @@ import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import "./Documents.css";
 import Draggable from "react-draggable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface Document {
   documentid: number;
@@ -300,6 +302,39 @@ const DocumentList: React.FC = () => {
     }
   };
 
+  // 📌 Generar Excel
+  const exportToExcel = () => {
+    // Usamos los documentos filtrados para exportar
+    const dataToExport = filteredDocuments.map((doc) => ({
+      ID: doc.documentid,
+      Serie: doc.documentserial,
+      Número: doc.documentnumber,
+      RUC: doc.suppliernumber,
+      "Razón Social": doc.suppliername,
+      "Tipo Documento": doc.documenttype
+        ? getTipoDocumentoNombre(doc.documenttype)
+        : "N/A",
+      "Fecha Emisión": moment(doc.documentdate).format("DD/MM/YYYY"),
+      "Sub Total": doc.amount,
+      IGV: doc.taxamount,
+      Total: doc.totalamount,
+      Estado: doc.status ? "Activo" : "Pendiente",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Documentos");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const data = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(data, `Documentos_${moment().format("YYYYMMDD_HHmmss")}.xlsx`);
+  };
+
   if (loading)
     return (
       <div className="text-center my-5">
@@ -395,6 +430,9 @@ const DocumentList: React.FC = () => {
                       placeholder="Filtrar por fecha"
                     />
                   </InputGroup>
+                  <Button color="success" onClick={exportToExcel}>
+                    <i className="ri-file-excel-2-line"></i>
+                  </Button>
                 </div>
               </div>
 
@@ -792,10 +830,10 @@ const DocumentList: React.FC = () => {
                       <Col md={3}>
                         <FormGroup>
                           <Label>IGV</Label>
-                          <InputGroup>                            
+                          <InputGroup>
                             <Input
                               type="select"
-                              style={{width: '30px'}}
+                              style={{ width: "30px" }}
                               onChange={(e) => {
                                 const igvPercent = parseFloat(e.target.value);
                                 const tax = (
@@ -822,7 +860,7 @@ const DocumentList: React.FC = () => {
                             <Input
                               type="number"
                               value={editDoc.taxamount}
-                              style={{width: '80px'}}
+                              style={{ width: "80px" }}
                               disabled
                               readOnly
                             />

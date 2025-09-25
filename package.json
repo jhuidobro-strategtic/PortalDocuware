@@ -41,6 +41,7 @@
     "echarts-for-react": "^3.0.2",
     "emoji-picker-react": "^4.12.0",
     "feather-icons-react": "^0.7.0",
+    "file-saver": "^2.0.5",
     "filepond": "^4.31.4",
     "filepond-plugin-image-exif-orientation": "^1.0.11",
     "filepond-plugin-image-preview": "^4.6.12",
@@ -91,6 +92,7 @@
     "swiper": "^11.1.14",
     "typescript": "^5.6.3",
     "web-vitals": "^4.2.3",
+    "xlsx": "^0.18.5",
     "yet-another-react-lightbox": "^3.21.6",
     "yup": "^1.4.0"
   },
@@ -123,6 +125,7 @@
   },
   "devDependencies": {
     "@types/feather-icons": "^4.29.4",
+    "@types/file-saver": "^2.0.7",
     "@types/react-datepicker": "^6.2.0"
   },
   "overrides": {
