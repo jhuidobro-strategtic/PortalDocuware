@@ -522,7 +522,7 @@ const DocumentList: React.FC = () => {
                                   const percent = Math.round((tax / amt) * 100);
                                   setEditIgvPercent(percent);
                                 } else {
-                                  setEditIgvPercent(18); // default
+                                  setEditIgvPercent(0); // default
                                 }
 
                                 setEditModal(true);
