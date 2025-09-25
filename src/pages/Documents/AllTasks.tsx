@@ -790,6 +790,7 @@ const DocumentList: React.FC = () => {
                           <InputGroup>                            
                             <Input
                               type="select"
+                              style={{width: '30px'}}
                               onChange={(e) => {
                                 const igvPercent = parseFloat(e.target.value);
                                 const tax = (
@@ -816,6 +817,7 @@ const DocumentList: React.FC = () => {
                             <Input
                               type="number"
                               value={editDoc.taxamount}
+                              style={{width: '80px'}}
                               disabled
                               readOnly
                             />
