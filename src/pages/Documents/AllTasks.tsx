@@ -88,6 +88,9 @@ const DocumentList: React.FC = () => {
   // 📌 Estado para spinner RUC
   const [loadingRuc, setLoadingRuc] = useState(false);
 
+  // 📌 Estado adicional para IGV %
+  const [editIgvPercent, setEditIgvPercent] = useState<number>(18);
+
   const [notifications, setNotifications] = useState<
     { id: number; type: string; message: string }[]
   >([]);
@@ -511,6 +514,17 @@ const DocumentList: React.FC = () => {
                               outline
                               onClick={() => {
                                 setEditDoc(doc);
+
+                                // Calcular IGV % dinámicamente
+                                const amt = parseFloat(doc.amount || "0");
+                                const tax = parseFloat(doc.taxamount || "0");
+                                if (amt > 0 && tax > 0) {
+                                  const percent = Math.round((tax / amt) * 100);
+                                  setEditIgvPercent(percent);
+                                } else {
+                                  setEditIgvPercent(18); // default
+                                }
+
                                 setEditModal(true);
                               }}
                             >
@@ -831,37 +845,38 @@ const DocumentList: React.FC = () => {
                         <FormGroup>
                           <Label>IGV</Label>
                           <InputGroup>
+                            {/* Select de porcentaje */}
                             <Input
                               type="select"
-                              style={{ width: "30px" }}
+                              value={editIgvPercent}
                               onChange={(e) => {
-                                const igvPercent = parseFloat(e.target.value);
-                                const tax = (
-                                  parseFloat(editDoc.amount || "0") *
-                                  (igvPercent / 100)
-                                ).toFixed(2);
-                                const total = (
-                                  parseFloat(editDoc.amount || "0") +
-                                  parseFloat(tax)
-                                ).toFixed(2);
+                                const percent = parseFloat(e.target.value);
+                                setEditIgvPercent(percent);
 
-                                setEditDoc({
-                                  ...editDoc,
-                                  taxamount: tax,
-                                  totalamount: total,
-                                });
+                                if (editDoc) {
+                                  const amt = parseFloat(editDoc.amount || "0");
+                                  const newTax = (amt * percent) / 100;
+                                  const newTotal = amt + newTax;
+
+                                  setEditDoc({
+                                    ...editDoc,
+                                    taxamount: newTax.toFixed(2),
+                                    totalamount: newTotal.toFixed(2),
+                                  });
+                                }
                               }}
                             >
-                              <option value="0">0%</option>
-                              <option value="2">2%</option>
-                              <option value="8">8%</option>
-                              <option value="16">16%</option>
-                              <option value="18">18%</option>
+                              <option value={0}>0%</option>
+                              <option value={2}>2%</option>
+                              <option value={8}>8%</option>
+                              <option value={16}>16%</option>
+                              <option value={18}>18%</option>
                             </Input>
+
+                            {/* Input que muestra el monto en soles */}
                             <Input
                               type="number"
-                              value={editDoc.taxamount}
-                              style={{ width: "80px" }}
+                              value={editDoc?.taxamount || "0.00"}
                               disabled
                               readOnly
                             />
