@@ -854,6 +854,7 @@ const DocumentList: React.FC = () => {
                             >
                               <option value="0">0%</option>
                               <option value="2">2%</option>
+                              <option value="8">8%</option>
                               <option value="16">16%</option>
                               <option value="18">18%</option>
                             </Input>
