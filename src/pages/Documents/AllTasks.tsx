@@ -61,6 +61,9 @@ const DocumentList: React.FC = () => {
 
   // 📌 Vista previa
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const rotateLeft = () => setRotation((prev) => prev - 90);
+  const rotateRight = () => setRotation((prev) => prev + 90);
 
   // 📌 Edición
   const [editModal, setEditModal] = useState(false);
@@ -345,7 +348,10 @@ const DocumentList: React.FC = () => {
             <CardBody>
               {/* 📌 Filtros */}
               <div className="d-flex justify-content-between align-items-center mb-4">
-                <h4 className="mb-0">Lista de Documentos</h4>
+                {/* <h4 className="mb-0">Lista de Documentos</h4> */}
+                <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>
+                  Lista de Documentos
+                </h4>
                 <div className="d-flex align-items-center gap-2">
                   <InputGroup style={{ maxWidth: "250px" }}>
                     <InputGroupText>
@@ -522,7 +528,7 @@ const DocumentList: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="mb-0">Vista previa del documento</h5>
+                  <h5 className="mb-0 small-text">Vista previa del documento</h5>
                   <div className="d-flex gap-2">
                     <a
                       href={getDownloadUrl(selectedDoc.documenturl)}
@@ -531,23 +537,69 @@ const DocumentList: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <i className="ri-download-2-line" /> Descargar
+                      <i className="ri-download-2-line" /> 
+                      <span className="d-none d-md-inline"> Descargar</span>
                     </a>
+                    
+                    <div className="d-flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => setRotation((r) => r - 90)}
+                      >
+                        <i className="ri-arrow-go-back-line" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setRotation((r) => r + 90)}
+                      >
+                        <i className="ri-arrow-go-forward-line" />
+                      </Button>
+                    </div>
                     <Button
                       size="sm"
                       color="danger"
                       onClick={() => setSelectedDoc(null)}
                     >
-                      <i className="ri-close-line" /> Cerrar
+                      <i className="ri-close-line" /> 
+                      <span className="d-none d-md-inline"> Cerrar</span>
                     </Button>
                   </div>
                 </div>
 
-                <iframe
-                  src={getPreviewUrl(selectedDoc.documenturl)}
-                  style={{ width: "100%", height: "66vh", border: "none" }}
-                  title="Visor PDF"
-                />
+                <div
+                  style={{
+                    width: "100%",
+                    height: "66vh",
+                    overflow: "auto", // Permite scroll si se descuadra
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    background: "#f8f9fa",
+                  }}
+                >
+                  <div
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      transformOrigin: "center center", // Gira desde el centro
+                      transition: "transform 0.3s ease",
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <iframe
+                      src={getPreviewUrl(selectedDoc.documenturl)}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        border: "none",
+                      }}
+                      title="Visor PDF"
+                    />
+                  </div>
+                </div>
               </CardBody>
             </Card>
           </Col>
