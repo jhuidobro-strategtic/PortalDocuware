@@ -348,7 +348,6 @@ const DocumentList: React.FC = () => {
             <CardBody>
               {/* 📌 Filtros */}
               <div className="d-flex justify-content-between align-items-center mb-4">
-                {/* <h4 className="mb-0">Lista de Documentos</h4> */}
                 <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>
                   Lista de Documentos
                 </h4>
@@ -528,7 +527,9 @@ const DocumentList: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="mb-0 small-text">Vista previa del documento</h5>
+                  <h5 className="mb-0 small-text">
+                    Vista previa del documento
+                  </h5>
                   <div className="d-flex gap-2">
                     <a
                       href={getDownloadUrl(selectedDoc.documenturl)}
@@ -537,10 +538,10 @@ const DocumentList: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <i className="ri-download-2-line" /> 
+                      <i className="ri-download-2-line" />
                       <span className="d-none d-md-inline"> Descargar</span>
                     </a>
-                    
+
                     <div className="d-flex gap-2">
                       <Button
                         size="sm"
@@ -560,7 +561,7 @@ const DocumentList: React.FC = () => {
                       color="danger"
                       onClick={() => setSelectedDoc(null)}
                     >
-                      <i className="ri-close-line" /> 
+                      <i className="ri-close-line" />
                       <span className="d-none d-md-inline"> Cerrar</span>
                     </Button>
                   </div>
@@ -760,62 +761,77 @@ const DocumentList: React.FC = () => {
                         </FormGroup>
                       </Col>
 
-                      {/* Subtotal */}
-                      <Col md="3">
+                      {/* Sub Total */}
+                      <Col md={3}>
                         <FormGroup>
-                          <Label className="form-label">Subtotal</Label>
+                          <Label>Sub Total</Label>
                           <Input
                             type="number"
                             value={editDoc.amount}
                             onChange={(e) => {
                               const newAmount = e.target.value;
-                              const newTotal =
-                                parseFloat(newAmount || "0") +
-                                parseFloat(editDoc.taxamount || "0");
                               setEditDoc({
                                 ...editDoc,
                                 amount: newAmount,
-                                totalamount: newTotal.toFixed(2),
+                                totalamount: (
+                                  parseFloat(newAmount || "0") +
+                                  parseFloat(editDoc.taxamount || "0")
+                                ).toFixed(2),
                               });
                             }}
-                            placeholder="0.00"
                           />
                         </FormGroup>
                       </Col>
 
-                      {/* IGV */}
-                      <Col md="3">
+                      {/* Select IGV + Input bloqueado */}
+                      <Col md={3}>
                         <FormGroup>
-                          <Label className="form-label">IGV</Label>
-                          <Input
-                            type="number"
-                            value={editDoc.taxamount}
-                            onChange={(e) => {
-                              const newTax = e.target.value;
-                              const newTotal =
-                                parseFloat(editDoc.amount || "0") +
-                                parseFloat(newTax || "0");
-                              setEditDoc({
-                                ...editDoc,
-                                taxamount: newTax,
-                                totalamount: newTotal.toFixed(2),
-                              });
-                            }}
-                            placeholder="0.00"
-                          />
+                          <Label>IGV</Label>
+                          <InputGroup>                            
+                            <Input
+                              type="select"
+                              onChange={(e) => {
+                                const igvPercent = parseFloat(e.target.value);
+                                const tax = (
+                                  parseFloat(editDoc.amount || "0") *
+                                  (igvPercent / 100)
+                                ).toFixed(2);
+                                const total = (
+                                  parseFloat(editDoc.amount || "0") +
+                                  parseFloat(tax)
+                                ).toFixed(2);
+
+                                setEditDoc({
+                                  ...editDoc,
+                                  taxamount: tax,
+                                  totalamount: total,
+                                });
+                              }}
+                            >
+                              <option value="0">0%</option>
+                              <option value="2">2%</option>
+                              <option value="16">16%</option>
+                              <option value="18">18%</option>
+                            </Input>
+                            <Input
+                              type="number"
+                              value={editDoc.taxamount}
+                              disabled
+                              readOnly
+                            />
+                          </InputGroup>
                         </FormGroup>
                       </Col>
 
                       {/* Total */}
-                      <Col md="3">
+                      <Col md={3}>
                         <FormGroup>
-                          <Label className="form-label">Total</Label>
+                          <Label>Total</Label>
                           <Input
                             type="number"
                             value={editDoc.totalamount}
-                            readOnly
                             disabled
-                            placeholder="0.00"
+                            readOnly
                           />
                         </FormGroup>
                       </Col>
