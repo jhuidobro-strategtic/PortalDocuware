@@ -745,19 +745,24 @@ const DocumentList: React.FC = () => {
                       <Col md="3">
                         <FormGroup>
                           <Label className="form-label">Fecha Emisión</Label>
-                          <Flatpickr
-                            className="form-control"
-                            options={{ dateFormat: "Y-m-d" }}
-                            value={editDoc.documentdate}
-                            onChange={(dates: Date[]) =>
-                              setEditDoc({
-                                ...editDoc,
-                                documentdate: moment(dates[0]).format(
-                                  "YYYY-MM-DD"
-                                ),
-                              })
-                            }
-                          />
+                          <InputGroup>
+                            <InputGroupText>
+                              <i className="ri-calendar-line" />
+                            </InputGroupText>
+                            <Flatpickr
+                              className="form-control"
+                              options={{ dateFormat: "Y-m-d" }}
+                              value={editDoc.documentdate}
+                              onChange={(dates: Date[]) =>
+                                setEditDoc({
+                                  ...editDoc,
+                                  documentdate: moment(dates[0]).format(
+                                    "YYYY-MM-DD"
+                                  ),
+                                })
+                              }
+                            />
+                          </InputGroup>
                         </FormGroup>
                       </Col>
 
