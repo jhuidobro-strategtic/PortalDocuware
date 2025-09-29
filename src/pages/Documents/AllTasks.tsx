@@ -28,7 +28,7 @@ import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import "./Documents.css";
 import Draggable from "react-draggable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
 interface Document {
@@ -306,36 +306,114 @@ const DocumentList: React.FC = () => {
   };
 
   // 📌 Generar Excel
-  const exportToExcel = () => {
-    // Usamos los documentos filtrados para exportar
-    const dataToExport = filteredDocuments.map((doc) => ({
-      ID: doc.documentid,
-      Serie: doc.documentserial,
-      Número: doc.documentnumber,
-      RUC: doc.suppliernumber,
-      "Razón Social": doc.suppliername,
-      "Tipo Documento": doc.documenttype
-        ? getTipoDocumentoNombre(doc.documenttype)
-        : "N/A",
-      "Fecha Emisión": moment(doc.documentdate).format("DD/MM/YYYY"),
-      "Sub Total": doc.amount,
-      IGV: doc.taxamount,
-      Total: doc.totalamount,
-      Estado: doc.status ? "Activo" : "Pendiente",
-    }));
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Documentos");
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Documentos");
+    // 🔹 Estilo del título
+    worksheet.mergeCells("A1:K2");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = "REPORTE DE DOCUMENTOS";
+    titleCell.alignment = { vertical: "middle", horizontal: "center" };
+    titleCell.font = { size: 14, bold: true };
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "D9E1F2" },
+    };
 
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
+    // 🔹 Encabezados
+    const headers = [
+      "ID",
+      "Serie",
+      "Número",
+      "RUC",
+      "Razón Social",
+      "Tipo Documento",
+      "Fecha Emisión",
+      "Sub Total",
+      "IGV",
+      "Total",
+      "Estado",
+    ];
+    worksheet.addRow(headers);
+
+    const headerRow = worksheet.getRow(3);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "F2F2F2" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
     });
-    const data = new Blob([excelBuffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+    // 🔹 Datos
+    filteredDocuments.forEach((doc) => {
+      const row = worksheet.addRow([
+        doc.documentid,
+        doc.documentserial,
+        doc.documentnumber,
+        doc.suppliernumber,
+        doc.suppliername,
+        getTipoDocumentoNombre(doc.documenttype || { tipoid: 0, tipo: "" }),
+        moment(doc.documentdate).format("DD/MM/YYYY"),
+        parseFloat(doc.amount),
+        parseFloat(doc.taxamount),
+        parseFloat(doc.totalamount),
+        doc.status ? "Activo" : "Pendiente",
+      ]);
+
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        if (colNumber === 11) {
+          cell.font = {
+            color: { argb: doc.status ? "008000" : "FF0000" },
+            bold: true,
+          };
+        }
+        if ([8, 9, 10].includes(colNumber)) {
+          cell.alignment = { horizontal: "right" };
+          cell.numFmt = "#,##0.00";
+        }
+      });
     });
-    saveAs(data, `Documentos_${moment().format("YYYYMMDD_HHmmss")}.xlsx`);
+
+    // 🔹 Ajustar anchos
+    worksheet.columns = [
+      { width: 6 }, // ID
+      { width: 10 }, // Serie
+      { width: 12 }, // Número
+      { width: 15 }, // RUC
+      { width: 35 }, // Razón Social
+      { width: 20 }, // Tipo Documento
+      { width: 15 }, // Fecha
+      { width: 12 }, // Sub Total
+      { width: 12 }, // IGV
+      { width: 12 }, // Total
+      { width: 15 }, // Estado
+    ];
+
+    // 🔹 Generar y descargar
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `Documentos_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
+    );
   };
 
   if (loading)
