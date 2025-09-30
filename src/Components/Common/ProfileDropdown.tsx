@@ -68,7 +68,7 @@ const ProfileDropdown = () => {
                             <span className="align-middle">Profile</span>
                         </Link>
                     </DropdownItem>
-                    <DropdownItem className='p-0'>
+                    {/* <DropdownItem className='p-0'>
                         <Link to="/apps-chat" className="dropdown-item">
                             <i className="mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i> <span
                                 className="align-middle">Messages</span>
@@ -86,9 +86,9 @@ const ProfileDropdown = () => {
                                 className="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i> <span
                                     className="align-middle">Help</span>
                         </Link>
-                    </DropdownItem>
+                    </DropdownItem> */}
                     <div className="dropdown-divider"></div>
-                    <DropdownItem className='p-0'>
+                    {/* <DropdownItem className='p-0'>
                         <Link to="/pages-profile" className="dropdown-item">
                             <i
                                 className="mdi mdi-wallet text-muted fs-16 align-middle me-1"></i> <span
@@ -108,7 +108,7 @@ const ProfileDropdown = () => {
                             <i
                                 className="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> <span className="align-middle">Lock screen</span>
                         </Link>
-                    </DropdownItem>
+                    </DropdownItem> */}
                     <DropdownItem className='p-0'>
                         <Link to="/logout" className="dropdown-item">
                             <i
