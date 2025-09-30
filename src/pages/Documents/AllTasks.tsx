@@ -30,6 +30,7 @@ import "./Documents.css";
 import Draggable from "react-draggable";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import LogoDocuware from "../../assets/images/LogoDocuware.png";
 
 interface Document {
   documentid: number;
@@ -215,7 +216,7 @@ const DocumentList: React.FC = () => {
       status: isValid,
       documenttype_id:
         typeof editDoc.documenttype === "object" &&
-        editDoc.documenttype !== null
+          editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype, // si es número lo deja tal cual
     };
@@ -310,9 +311,20 @@ const DocumentList: React.FC = () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Documentos");
 
-    // 🔹 Estilo del título
-    worksheet.mergeCells("A1:K2");
-    const titleCell = worksheet.getCell("A1");
+    // 🔹 Insertar logo (en B1:D2)
+    const response = await fetch(LogoDocuware);
+    const imageBuffer = await response.arrayBuffer();
+
+    const imageId = workbook.addImage({
+      buffer: imageBuffer,
+      extension: "png",
+    });
+
+    worksheet.addImage(imageId, "B1:D2");
+
+    // 🔹 Estilo del título (E1:K2)
+    worksheet.mergeCells("E1:K2");
+    const titleCell = worksheet.getCell("E1");
     titleCell.value = "REPORTE DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
     titleCell.font = { size: 14, bold: true };
@@ -322,7 +334,16 @@ const DocumentList: React.FC = () => {
       fgColor: { argb: "D9E1F2" },
     };
 
-    // 🔹 Encabezados
+    // 🔹 Fondo también en celdas del logo (B1:D2)
+    ["A1","A2","B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
+      worksheet.getCell(cell).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "D9E1F2" },
+      };
+    });
+
+    // 🔹 Encabezados en fila 3
     const headers = [
       "ID",
       "Serie",
@@ -336,10 +357,10 @@ const DocumentList: React.FC = () => {
       "Total",
       "Estado",
     ];
-    worksheet.addRow(headers);
 
-    const headerRow = worksheet.getRow(3);
-    headerRow.eachCell((cell) => {
+    headers.forEach((header, i) => {
+      const cell = worksheet.getCell(3, i + 1); // fila 3, columna i+1
+      cell.value = header;
       cell.font = { bold: true };
       cell.alignment = { vertical: "middle", horizontal: "center" };
       cell.fill = {
@@ -355,7 +376,7 @@ const DocumentList: React.FC = () => {
       };
     });
 
-    // 🔹 Datos
+    // 🔹 Datos (empiezan en fila 4)
     filteredDocuments.forEach((doc) => {
       const row = worksheet.addRow([
         doc.documentid,
@@ -393,7 +414,7 @@ const DocumentList: React.FC = () => {
 
     // 🔹 Ajustar anchos
     worksheet.columns = [
-      { width: 6 }, // ID
+      { width: 6 },  // ID
       { width: 10 }, // Serie
       { width: 12 }, // Número
       { width: 15 }, // RUC
@@ -566,9 +587,8 @@ const DocumentList: React.FC = () => {
                         </td>
                         <td>
                           <span
-                            className={`badge ${
-                              doc.status ? "bg-success" : "bg-warning"
-                            }`}
+                            className={`badge ${doc.status ? "bg-success" : "bg-warning"
+                              }`}
                           >
                             {doc.status ? "Activo" : "Pendiente"}
                           </span>
@@ -812,7 +832,7 @@ const DocumentList: React.FC = () => {
                             type="select"
                             value={
                               editDoc.documenttype &&
-                              typeof editDoc.documenttype === "object"
+                                typeof editDoc.documenttype === "object"
                                 ? editDoc.documenttype.tipoid
                                 : editDoc.documenttype ?? ""
                             }
