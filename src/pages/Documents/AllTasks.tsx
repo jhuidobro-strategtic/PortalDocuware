@@ -57,10 +57,30 @@ interface TipoDocumento {
   tipo: string;
 }
 
+interface DocumentDetail {
+  detailid: number;
+  documentserial: string;
+  documentnumber: string;
+  suppliernumber: string;
+  unit_measure_description: string;
+  description: string;
+  quantity: number;
+  unit_value: string;
+  tax_value: string;
+  total_value: string;
+  status: boolean;
+  created_by: number;
+  created_at: string;
+  updated_by?: number | null;
+  updated_at?: string | null;
+}
+
 const DocumentList: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [docDetails, setDocDetails] = useState<DocumentDetail[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // 📌 Vista previa
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
@@ -216,7 +236,7 @@ const DocumentList: React.FC = () => {
       status: isValid,
       documenttype_id:
         typeof editDoc.documenttype === "object" &&
-          editDoc.documenttype !== null
+        editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype, // si es número lo deja tal cual
     };
@@ -306,6 +326,37 @@ const DocumentList: React.FC = () => {
     }
   };
 
+  const fetchDetails = async (doc: Document) => {
+    setLoadingDetails(true);
+    try {
+      const query = new URLSearchParams({
+        suppliernumber: doc.suppliernumber,
+        documentserial: doc.documentserial,
+        documentnumber: doc.documentnumber,
+      });
+
+      const res = await fetch(
+        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Error HTTP: ${res.status}`);
+      }
+
+      const data = await res.json();
+      setDocDetails(data || []);
+    } catch (err) {
+      console.error("Error cargando detalles:", err);
+      setDocDetails([]);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   // 📌 Generar Excel
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -335,7 +386,7 @@ const DocumentList: React.FC = () => {
     };
 
     // 🔹 Fondo también en celdas del logo (B1:D2)
-    ["A1","A2","B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
+    ["A1", "A2", "B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
       worksheet.getCell(cell).fill = {
         type: "pattern",
         pattern: "solid",
@@ -414,7 +465,7 @@ const DocumentList: React.FC = () => {
 
     // 🔹 Ajustar anchos
     worksheet.columns = [
-      { width: 6 },  // ID
+      { width: 6 }, // ID
       { width: 10 }, // Serie
       { width: 12 }, // Número
       { width: 15 }, // RUC
@@ -587,8 +638,9 @@ const DocumentList: React.FC = () => {
                         </td>
                         <td>
                           <span
-                            className={`badge ${doc.status ? "bg-success" : "bg-warning"
-                              }`}
+                            className={`badge ${
+                              doc.status ? "bg-success" : "bg-warning"
+                            }`}
                           >
                             {doc.status ? "Activo" : "Pendiente"}
                           </span>
@@ -613,15 +665,17 @@ const DocumentList: React.FC = () => {
                               onClick={() => {
                                 setEditDoc(doc);
 
-                                // Calcular IGV % dinámicamente
+                                // calcular IGV %
                                 const amt = parseFloat(doc.amount || "0");
                                 const tax = parseFloat(doc.taxamount || "0");
-                                if (amt > 0 && tax > 0) {
-                                  const percent = Math.round((tax / amt) * 100);
-                                  setEditIgvPercent(percent);
-                                } else {
-                                  setEditIgvPercent(0); // default
-                                }
+                                setEditIgvPercent(
+                                  amt > 0 && tax > 0
+                                    ? Math.round((tax / amt) * 100)
+                                    : 0
+                                );
+
+                                // traer detalles
+                                fetchDetails(doc);
 
                                 setEditModal(true);
                               }}
@@ -832,7 +886,7 @@ const DocumentList: React.FC = () => {
                             type="select"
                             value={
                               editDoc.documenttype &&
-                                typeof editDoc.documenttype === "object"
+                              typeof editDoc.documenttype === "object"
                                 ? editDoc.documenttype.tipoid
                                 : editDoc.documenttype ?? ""
                             }
@@ -1013,6 +1067,49 @@ const DocumentList: React.FC = () => {
                         </FormGroup>
                       </Col>
                     </Row>
+                    <h5 className="mt-3">Detalles de Factura</h5>
+                    {loadingDetails ? (
+                      <div className="text-center my-3">
+                        <Spinner color="primary" />
+                      </div>
+                    ) : (
+                      <div className="table-responsive">
+                        <Table className="table table-sm table-bordered">
+                          <thead className="table-light">
+                            <tr>
+                              <th>NRO</th>
+                              <th>Descripción</th>
+                              <th>Unidad</th>
+                              <th>Cantidad</th>
+                              <th>V. Unitario</th>
+                              <th>IGV</th>
+                              <th>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {docDetails.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} className="text-center">
+                                  No hay detalles disponibles
+                                </td>
+                              </tr>
+                            ) : (
+                              docDetails.map((d) => (
+                                <tr key={d.detailid}>
+                                  <td>{d.detailid}</td>
+                                  <td>{d.description}</td>
+                                  <td>{d.unit_measure_description}</td>
+                                  <td>{d.quantity}</td>
+                                  <td>{d.unit_value}</td>
+                                  <td>{d.tax_value}</td>
+                                  <td>{d.total_value}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </Table>
+                      </div>
+                    )}
                   </Form>
                 )}
               </ModalBody>
