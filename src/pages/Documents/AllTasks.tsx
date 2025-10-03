@@ -218,7 +218,7 @@ const DocumentList: React.FC = () => {
   const handleUpdate = async () => {
     if (!editDoc) return;
 
-    // 🔥 Validar si todos los campos están completos
+    // 🔹 Validación básica
     const isValid =
       editDoc.documentserial.trim() !== "" &&
       editDoc.documentnumber.trim() !== "" &&
@@ -230,19 +230,92 @@ const DocumentList: React.FC = () => {
       parseFloat(editDoc.taxamount) > 0 &&
       parseFloat(editDoc.totalamount) > 0;
 
-    // 📌 Mapeo para enviar documenttype_id al backend
-    const updatedDoc = {
-      ...editDoc,
-      status: isValid,
-      documenttype_id:
-        typeof editDoc.documenttype === "object" &&
-        editDoc.documenttype !== null
-          ? editDoc.documenttype.tipoid
-          : editDoc.documenttype, // si es número lo deja tal cual
-    };
+    if (!isValid) {
+      addNotification("danger", "Complete todos los campos correctamente");
+      return;
+    }
 
     try {
-      const res = await fetch(
+      setLoadingDetails(true);
+
+      // 🔹 1️⃣ Verificar si existen detalles en documents-detail
+      const query = new URLSearchParams({
+        suppliernumber: editDoc.suppliernumber,
+        documentserial: editDoc.documentserial,
+        documentnumber: editDoc.documentnumber,
+      });
+
+      const resGet = await fetch(
+        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
+      );
+      const dataGet = await resGet.json();
+      const hasDetails = dataGet && dataGet.length > 0;
+
+      // 🔹 2️⃣ Si no existen detalles, llamar a SUNAT
+      let sunatPayload: any = null;
+      if (!hasDetails) {
+        const sunatRes = await fetch(
+          "https://dev.apisunat.pe/api/v1/sunat/comprobante",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tipo_comprobante: editDoc.documenttype === 1 ? "01" : "03", // ejemplo
+              ruc_emisor: editDoc.suppliernumber,
+              serie: editDoc.documentserial,
+              numero: editDoc.documentnumber,
+            }),
+          }
+        );
+        const sunatData = await sunatRes.json();
+
+        if (!sunatData.success) {
+          addNotification("danger", "Error al consultar SUNAT");
+          return;
+        }
+
+        sunatPayload = sunatData.payload;
+
+        // 🔹 3️⃣ Registrar items en backend
+        const itemsToRegister = sunatPayload.items || [];
+        for (const item of itemsToRegister) {
+          await fetch("http://127.0.0.1:8000/api/documents-detail/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              documentserial: sunatPayload.detalle.serie,
+              documentnumber: sunatPayload.detalle.numero,
+              suppliernumber: sunatPayload.emisor.ruc,
+              unit_measure_description: item.unidad_medida_descripcion,
+              description: item.descripcion,
+              quantity: parseFloat(item.cantidad),
+              unit_value: item.valor_unitario,
+              tax_value: item.impuesto_valor,
+              total_value: item.precio_unitario,
+              status: false,
+              created_by: 1,
+              created_at: new Date().toISOString(),
+              updated_by: null,
+              updated_at: null,
+            }),
+          });
+        }
+
+        addNotification("success", "Items registrados desde SUNAT");
+      }
+
+      // 🔹 4️⃣ Actualizar documento con PATCH
+      const updatedDoc = {
+        ...editDoc,
+        status: isValid,
+        documenttype_id:
+          typeof editDoc.documenttype === "object" &&
+          editDoc.documenttype !== null
+            ? editDoc.documenttype.tipoid
+            : editDoc.documenttype,
+      };
+
+      const resPatch = await fetch(
         `https://docuware-api-a09ab977636d.herokuapp.com/api/documents/${editDoc.documentid}/`,
         {
           method: "PATCH",
@@ -250,9 +323,9 @@ const DocumentList: React.FC = () => {
           body: JSON.stringify(updatedDoc),
         }
       );
-      const data = await res.json();
+      const dataPatch = await resPatch.json();
 
-      if (data.success) {
+      if (dataPatch.success) {
         setDocuments((prev) =>
           prev.map((doc) =>
             doc.documentid === editDoc.documentid
@@ -263,11 +336,13 @@ const DocumentList: React.FC = () => {
         setEditModal(false);
         addNotification("success", "Documento actualizado correctamente");
       } else {
-        addNotification("danger", data.message || "Error al actualizar");
+        addNotification("danger", dataPatch.message || "Error al actualizar");
       }
     } catch (error) {
       console.error(error);
-      addNotification("danger", "Error en el servidor");
+      addNotification("danger", "Error en el proceso de actualización");
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -1077,13 +1152,13 @@ const DocumentList: React.FC = () => {
                         <Table className="table table-sm table-bordered">
                           <thead className="table-light">
                             <tr>
-                              <th>NRO</th>
-                              <th>Descripción</th>
-                              <th>Unidad</th>
-                              <th>Cantidad</th>
-                              <th>V. Unitario</th>
-                              <th>IGV</th>
-                              <th>Total</th>
+                              <th className="text-center">Nro</th>
+                              <th className="text-center">Descripción</th>
+                              <th className="text-center">Unidad</th>
+                              <th className="text-center">Cantidad</th>
+                              <th className="text-center">V. Unitario</th>
+                              <th className="text-center">IGV</th>
+                              <th className="text-center">Total</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1096,13 +1171,13 @@ const DocumentList: React.FC = () => {
                             ) : (
                               docDetails.map((d) => (
                                 <tr key={d.detailid}>
-                                  <td>{d.detailid}</td>
-                                  <td>{d.description}</td>
-                                  <td>{d.unit_measure_description}</td>
-                                  <td>{d.quantity}</td>
-                                  <td>{d.unit_value}</td>
-                                  <td>{d.tax_value}</td>
-                                  <td>{d.total_value}</td>
+                                  <td className="text-center">{d.detailid}</td>
+                                  <td className="text-center">{d.description}</td>
+                                  <td className="text-center">{d.unit_measure_description}</td>
+                                  <td className="text-center">{d.quantity}</td>
+                                  <td className="text-center">{d.unit_value}</td>
+                                  <td className="text-center">{d.tax_value}</td>
+                                  <td className="text-center">{d.total_value}</td>
                                 </tr>
                               ))
                             )}
