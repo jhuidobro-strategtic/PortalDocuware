@@ -26,7 +26,7 @@ const DashboardEcommerce = () => {
             <Col>
               <div className="h-100">
                 <Section rightClickBtn={toggleRightColumn} />
-                <Row>
+                {/* <Row>
                   <Widget />
                 </Row>
                 <Row>
@@ -42,7 +42,7 @@ const DashboardEcommerce = () => {
                 <Row>
                   <StoreVisits />
                   <RecentOrders />
-                </Row>
+                </Row> */}
               </div>
             </Col>
             {/* <RecentActivity rightColumn={rightColumn} hideRightColumn={toggleRightColumn} /> */}
