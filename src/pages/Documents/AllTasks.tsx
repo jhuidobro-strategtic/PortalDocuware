@@ -710,12 +710,27 @@ const DocumentList: React.FC = () => {
                         </td>
                         <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
                         <td>S/ $</td>
-                        <td>{doc.amount}</td>
-                        <td>{doc.taxamount}</td>
-                        <td>
-                          <b>{doc.totalamount}</b>
+                        <td className="text-end">
+                          {Number(doc.amount).toLocaleString("es-PE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </td>
-                        <td>
+                        <td className="text-end">
+                          {Number(doc.taxamount).toLocaleString("es-PE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="text-end">
+                          <b>
+                            {Number(doc.totalamount).toLocaleString("es-PE", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </b>
+                        </td>
+                        <td className="text-center">
                           <span
                             className={`badge ${
                               doc.status ? "bg-success" : "bg-warning"
