@@ -27,6 +27,7 @@ import moment from "moment";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import "./Documents.css";
+import CurrencyDropdown from "./CurrencyDropdown";
 import Draggable from "react-draggable";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -50,6 +51,7 @@ interface Document {
   created_at: string;
   updated_by?: number | null;
   updated_at?: string | null;
+  currency: string;
 }
 
 interface TipoDocumento {
@@ -676,6 +678,7 @@ const DocumentList: React.FC = () => {
                       <th>Razón Social</th>
                       <th>Tipo Documento</th>
                       <th>Fecha Emisión</th>
+                      <th>Moneda</th>
                       <th>Sub Total</th>
                       <th>IGV</th>
                       <th>Total</th>
@@ -706,10 +709,11 @@ const DocumentList: React.FC = () => {
                             : "N/A"}
                         </td>
                         <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
+                        <td>S/ $</td>
                         <td>{doc.amount}</td>
                         <td>{doc.taxamount}</td>
                         <td>
-                          <b>S/ {doc.totalamount}</b>
+                          <b>{doc.totalamount}</b>
                         </td>
                         <td>
                           <span
@@ -1045,8 +1049,21 @@ const DocumentList: React.FC = () => {
                         </FormGroup>
                       </Col>
 
+                      {/* Moneda */}
+                      <Col md={2}>
+                        <FormGroup>
+                          <Label>Moneda</Label>
+                          <CurrencyDropdown
+                            value={editDoc?.currency || "PEN"}
+                            onChange={(val) =>
+                              setEditDoc({ ...editDoc!, currency: val })
+                            }
+                          />
+                        </FormGroup>
+                      </Col>
+
                       {/* Sub Total */}
-                      <Col md={3}>
+                      <Col md={2}>
                         <FormGroup>
                           <Label>Sub Total</Label>
                           <Input
@@ -1112,7 +1129,7 @@ const DocumentList: React.FC = () => {
                       </Col>
 
                       {/* Total */}
-                      <Col md={3}>
+                      <Col md={2}>
                         <FormGroup>
                           <Label>Total</Label>
                           <Input
@@ -1152,9 +1169,9 @@ const DocumentList: React.FC = () => {
                         <Table className="table table-sm table-bordered">
                           <thead className="table-light">
                             <tr>
-                              <th className="text-center">Nro</th>
-                              <th className="text-center">Descripción</th>
+                              {/* <th className="text-center">Nro</th> */}                              
                               <th className="text-center">Unidad</th>
+                              <th className="text-center">Descripción</th>
                               <th className="text-center">Cantidad</th>
                               <th className="text-center">V. Unitario</th>
                               <th className="text-center">IGV</th>
@@ -1171,13 +1188,21 @@ const DocumentList: React.FC = () => {
                             ) : (
                               docDetails.map((d) => (
                                 <tr key={d.detailid}>
-                                  <td className="text-center">{d.detailid}</td>
-                                  <td className="text-center">{d.description}</td>
-                                  <td className="text-center">{d.unit_measure_description}</td>
+                                  {/* <td className="text-center">{d.detailid}</td> */}
+                                  <td className="text-center">
+                                    {d.unit_measure_description}
+                                  </td>
+                                  <td className="text-center">
+                                    {d.description}
+                                  </td>
                                   <td className="text-center">{d.quantity}</td>
-                                  <td className="text-center">{d.unit_value}</td>
+                                  <td className="text-center">
+                                    {d.unit_value}
+                                  </td>
                                   <td className="text-center">{d.tax_value}</td>
-                                  <td className="text-center">{d.total_value}</td>
+                                  <td className="text-center">
+                                    {d.total_value}
+                                  </td>
                                 </tr>
                               ))
                             )}
