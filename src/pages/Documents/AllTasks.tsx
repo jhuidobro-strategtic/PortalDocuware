@@ -1168,8 +1168,7 @@ const DocumentList: React.FC = () => {
                       <div className="table-responsive">
                         <Table className="table table-sm table-bordered">
                           <thead className="table-light">
-                            <tr>
-                              {/* <th className="text-center">Nro</th> */}                              
+                            <tr>                   
                               <th className="text-center">Unidad</th>
                               <th className="text-center">Descripción</th>
                               <th className="text-center">Cantidad</th>
@@ -1186,25 +1185,40 @@ const DocumentList: React.FC = () => {
                                 </td>
                               </tr>
                             ) : (
-                              docDetails.map((d) => (
-                                <tr key={d.detailid}>
-                                  {/* <td className="text-center">{d.detailid}</td> */}
-                                  <td className="text-center">
-                                    {d.unit_measure_description}
+                              <>
+                                {docDetails.map((d) => (
+                                  <tr key={d.detailid}>                                  
+                                    <td className="text-center">
+                                      {d.unit_measure_description}
+                                    </td>
+                                    <td className="text-center">
+                                      {d.description}
+                                    </td>
+                                    <td className="text-center">{d.quantity}</td>
+                                    <td className="text-center">
+                                      {d.unit_value}
+                                    </td>
+                                    <td className="text-center">{d.tax_value}</td>
+                                    <td className="text-center">
+                                      {d.total_value}
+                                    </td>
+                                  </tr>
+                                ))}
+                                <tr>
+                                  <td colSpan={5} className="text-end fw-bold">
+                                    Suma Total:
                                   </td>
-                                  <td className="text-center">
-                                    {d.description}
-                                  </td>
-                                  <td className="text-center">{d.quantity}</td>
-                                  <td className="text-center">
-                                    {d.unit_value}
-                                  </td>
-                                  <td className="text-center">{d.tax_value}</td>
-                                  <td className="text-center">
-                                    {d.total_value}
+                                  <td className="text-center fw-bold">
+                                    {docDetails
+                                      .reduce(
+                                        (sum, d) =>
+                                          sum + parseFloat(d.total_value || "0"),
+                                        0
+                                      )
+                                      .toFixed(2)}
                                   </td>
                                 </tr>
-                              ))
+                              </>
                             )}
                           </tbody>
                         </Table>
