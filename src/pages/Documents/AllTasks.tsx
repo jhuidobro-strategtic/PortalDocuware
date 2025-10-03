@@ -253,7 +253,7 @@ const DocumentList: React.FC = () => {
       const dataGet = await resGet.json();
       const hasDetails = dataGet && dataGet.length > 0;
 
-      // 🔹 2️⃣ Si no existen detalles, llamar a SUNAT
+      // 🔹 Si no existen detalles, llamar a SUNAT
       let sunatPayload: any = null;
       if (!hasDetails) {
         const sunatRes = await fetch(
@@ -262,7 +262,7 @@ const DocumentList: React.FC = () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              tipo_comprobante: editDoc.documenttype === 1 ? "01" : "03", // ejemplo
+              tipo_comprobante: editDoc.documenttype === 1 ? "01" : "03",
               ruc_emisor: editDoc.suppliernumber,
               serie: editDoc.documentserial,
               numero: editDoc.documentnumber,
@@ -278,7 +278,7 @@ const DocumentList: React.FC = () => {
 
         sunatPayload = sunatData.payload;
 
-        // 🔹 3️⃣ Registrar items en backend
+        // 🔹  Registrar items en backend
         const itemsToRegister = sunatPayload.items || [];
         for (const item of itemsToRegister) {
           await fetch("http://127.0.0.1:8000/api/documents-detail/", {
@@ -306,7 +306,7 @@ const DocumentList: React.FC = () => {
         addNotification("success", "Items registrados desde SUNAT");
       }
 
-      // 🔹 4️⃣ Actualizar documento con PATCH
+      // 🔹  Actualizar documento con PATCH
       const updatedDoc = {
         ...editDoc,
         status: isValid,
@@ -1183,7 +1183,7 @@ const DocumentList: React.FC = () => {
                       <div className="table-responsive">
                         <Table className="table table-sm table-bordered">
                           <thead className="table-light">
-                            <tr>                   
+                            <tr>
                               <th className="text-center">Unidad</th>
                               <th className="text-center">Descripción</th>
                               <th className="text-center">Cantidad</th>
@@ -1201,25 +1201,33 @@ const DocumentList: React.FC = () => {
                             ) : (
                               <>
                                 {docDetails.map((d) => (
-                                  <tr key={d.detailid}>                                  
+                                  <tr key={d.detailid}>
                                     <td className="text-center">
                                       {d.unit_measure_description}
                                     </td>
                                     <td className="text-center">
                                       {d.description}
                                     </td>
-                                    <td className="text-center">{d.quantity}</td>
-                                    <td className="text-end">
-                                      {Number(d.unit_value).toLocaleString("es-PE", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}
+                                    <td className="text-center">
+                                      {d.quantity}
                                     </td>
                                     <td className="text-end">
-                                      {Number(d.total_value).toLocaleString("es-PE", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}
+                                      {Number(d.unit_value).toLocaleString(
+                                        "es-PE",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </td>
+                                    <td className="text-end">
+                                      {Number(d.total_value).toLocaleString(
+                                        "es-PE",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
                                     </td>
                                   </tr>
                                 ))}
@@ -1231,7 +1239,8 @@ const DocumentList: React.FC = () => {
                                     {docDetails
                                       .reduce(
                                         (sum, d) =>
-                                          sum + parseFloat(d.total_value || "0"),
+                                          sum +
+                                          parseFloat(d.total_value || "0"),
                                         0
                                       )
                                       .toLocaleString("es-PE", {
