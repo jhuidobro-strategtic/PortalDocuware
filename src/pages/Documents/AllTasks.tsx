@@ -1173,7 +1173,6 @@ const DocumentList: React.FC = () => {
                               <th className="text-center">Descripción</th>
                               <th className="text-center">Cantidad</th>
                               <th className="text-center">V. Unitario</th>
-                              <th className="text-center">IGV</th>
                               <th className="text-center">Total</th>
                             </tr>
                           </thead>
@@ -1195,27 +1194,71 @@ const DocumentList: React.FC = () => {
                                       {d.description}
                                     </td>
                                     <td className="text-center">{d.quantity}</td>
-                                    <td className="text-center">
-                                      {d.unit_value}
+                                    <td className="text-end">
+                                      {Number(d.unit_value).toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
                                     </td>
-                                    <td className="text-center">{d.tax_value}</td>
-                                    <td className="text-center">
-                                      {d.total_value}
+                                    <td className="text-end">
+                                      {Number(d.total_value).toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
                                     </td>
                                   </tr>
                                 ))}
                                 <tr>
-                                  <td colSpan={5} className="text-end fw-bold">
-                                    Suma Total:
+                                  <td colSpan={4} className="text-end fw-bold">
+                                    SubTotal:
                                   </td>
-                                  <td className="text-center fw-bold">
+                                  <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
                                         (sum, d) =>
                                           sum + parseFloat(d.total_value || "0"),
                                         0
                                       )
-                                      .toFixed(2)}
+                                      .toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td colSpan={4} className="text-end fw-bold">
+                                    IGV:
+                                  </td>
+                                  <td className="text-end fw-bold">
+                                    {docDetails
+                                      .reduce(
+                                        (sum, d) =>
+                                          sum + parseFloat(d.tax_value || "0"),
+                                        0
+                                      )
+                                      .toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td colSpan={4} className="text-end fw-bold">
+                                    Total:
+                                  </td>
+                                  <td className="text-end fw-bold">
+                                    {docDetails
+                                      .reduce(
+                                        (sum, d) =>
+                                          sum +
+                                          parseFloat(d.total_value || "0") +
+                                          parseFloat(d.tax_value || "0"),
+                                        0
+                                      )
+                                      .toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
                                   </td>
                                 </tr>
                               </>
