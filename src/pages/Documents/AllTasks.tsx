@@ -237,6 +237,9 @@ const DocumentList: React.FC = () => {
       return;
     }
 
+    // 🔹 Función para redondear a 2 decimales
+    const round2 = (num: any) => Number(parseFloat(num).toFixed(2));
+
     try {
       setLoadingDetails(true);
 
@@ -253,22 +256,39 @@ const DocumentList: React.FC = () => {
       const dataGet = await resGet.json();
       const hasDetails = dataGet && dataGet.length > 0;
 
-      // 🔹 Si no existen detalles, llamar a SUNAT
+      // 🔹 Normalizar documenttype
+      const docTypeValue =
+        typeof editDoc.documenttype === "object" &&
+        editDoc.documenttype !== null
+          ? editDoc.documenttype.tipoid
+          : editDoc.documenttype;
+
+      const tipoComprobante = docTypeValue
+        ? String(docTypeValue).padStart(2, "0")
+        : null;
+
       let sunatPayload: any = null;
+
+      // 🔹 2️⃣ Si no existen detalles, llamar a SUNAT
       if (!hasDetails) {
         const sunatRes = await fetch(
           "https://dev.apisunat.pe/api/v1/sunat/comprobante",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization:
+                "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
+            },
             body: JSON.stringify({
-              tipo_comprobante: editDoc.documenttype === 1 ? "01" : "03",
+              tipo_comprobante: tipoComprobante,
               ruc_emisor: editDoc.suppliernumber,
               serie: editDoc.documentserial,
               numero: editDoc.documentnumber,
             }),
           }
         );
+
         const sunatData = await sunatRes.json();
 
         if (!sunatData.success) {
@@ -278,43 +298,42 @@ const DocumentList: React.FC = () => {
 
         sunatPayload = sunatData.payload;
 
-        // 🔹  Registrar items en backend
+        // 🔹 Registrar items en backend (Heroku)
         const itemsToRegister = sunatPayload.items || [];
         for (const item of itemsToRegister) {
-          await fetch("http://127.0.0.1:8000/api/documents-detail/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              documentserial: sunatPayload.detalle.serie,
-              documentnumber: sunatPayload.detalle.numero,
-              suppliernumber: sunatPayload.emisor.ruc,
-              unit_measure_description: item.unidad_medida_descripcion,
-              description: item.descripcion,
-              quantity: parseFloat(item.cantidad),
-              unit_value: item.valor_unitario,
-              tax_value: item.impuesto_valor,
-              total_value: item.precio_unitario,
-              status: false,
-              created_by: 1,
-              created_at: new Date().toISOString(),
-              updated_by: null,
-              updated_at: null,
-            }),
-          });
+          await fetch(
+            "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                documentserial: sunatPayload.detalle.serie,
+                documentnumber: sunatPayload.detalle.numero,
+                suppliernumber: sunatPayload.emisor.ruc,
+                unit_measure_description: item.unidad_medida_descripcion,
+                description: item.descripcion,
+                quantity: round2(item.cantidad),
+                unit_value: round2(item.valor_unitario),
+                tax_value: round2(item.impuesto_valor),
+                total_value: round2(item.precio_unitario),
+                status: false,
+                created_by: 1,
+                created_at: new Date().toISOString(),
+                updated_by: null,
+                updated_at: null,
+              }),
+            }
+          );
         }
 
         addNotification("success", "Items registrados desde SUNAT");
       }
 
-      // 🔹  Actualizar documento con PATCH
+      // 🔹 3️⃣ Actualizar documento con PATCH
       const updatedDoc = {
         ...editDoc,
         status: isValid,
-        documenttype_id:
-          typeof editDoc.documenttype === "object" &&
-          editDoc.documenttype !== null
-            ? editDoc.documenttype.tipoid
-            : editDoc.documenttype,
+        documenttype_id: docTypeValue,
       };
 
       const resPatch = await fetch(
