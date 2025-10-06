@@ -728,7 +728,27 @@ const DocumentList: React.FC = () => {
                             : "N/A"}
                         </td>
                         <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
-                        <td>S/ $</td>
+                        <td>
+                          {doc.currency === "PEN" && (
+                            <img
+                              src="https://flagcdn.com/w40/pe.png"
+                              alt="Perú"
+                              width={20}
+                              height={15}
+                              className="me-2"
+                            />
+                          )}
+                          {doc.currency === "USD" && (
+                            <img
+                              src="https://flagcdn.com/w40/us.png"
+                              alt="USA"
+                              width={20}
+                              height={15}
+                              className="me-2"
+                            />
+                          )}
+                          {doc.currency}
+                        </td>
                         <td className="text-end">
                           {Number(doc.amount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
