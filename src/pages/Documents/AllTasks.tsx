@@ -1290,29 +1290,7 @@ const DocumentList: React.FC = () => {
                                       {d.description}
                                     </td>
                                     <td className="text-center">
-                                      {(() => {
-                                        const texto = d.description || "";
-                                        let textoLimpio = texto
-                                          .replace(/<b>/gi, " ")
-                                          .replace(/<\/b>/gi, " ")
-                                          .replace(/<br>/gi, " ")
-                                          .replace(/br/gi, " ")
-                                          .replace(/\\\//g, " ")
-                                          .replace(/-/g, "");
-
-                                        let match =
-                                          textoLimpio.match(/PLACA[:]? *([A-Z]{3,6}[0-9]{0,3})/i) ||
-                                          textoLimpio.match(/\b([A-Z]{3}[0-9]{3})\b/i) ||
-                                          textoLimpio.match(/\b([A-Z]{3}[A-Z0-9]{2,3})\b/i);
-
-                                        const placa = match ? match[1].toUpperCase() : "";
-
-                                        // 💾 Guardar el valor en d.vehicle_no
-                                        d.vehicle_no = placa;
-
-                                        return placa;
-                                      })()}
-
+                                      {d.vehicle_no}
                                     </td>
                                     <td className="text-center">
                                       {d.quantity}
