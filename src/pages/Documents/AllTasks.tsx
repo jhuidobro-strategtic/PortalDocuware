@@ -66,6 +66,7 @@ interface DocumentDetail {
   suppliernumber: string;
   unit_measure_description: string;
   description: string;
+  vehicle_no: string;
   quantity: number;
   unit_value: string;
   tax_value: string;
@@ -1225,6 +1226,7 @@ const DocumentList: React.FC = () => {
                             <tr>
                               <th className="text-center">Unidad</th>
                               <th className="text-center">Descripción</th>
+                              <th className="text-center">Placa</th>
                               <th className="text-center">Cantidad</th>
                               <th className="text-center">V. Unitario</th>
                               <th className="text-center">Total</th>
@@ -1246,6 +1248,9 @@ const DocumentList: React.FC = () => {
                                     </td>
                                     <td className="text-center">
                                       {d.description}
+                                    </td>
+                                    <td className="text-center">
+                                      {d.vehicle_no}
                                     </td>
                                     <td className="text-center">
                                       {d.quantity}
@@ -1271,16 +1276,14 @@ const DocumentList: React.FC = () => {
                                   </tr>
                                 ))}
                                 <tr>
-                                  <td colSpan={4} className="text-end fw-bold">
+                                  <td colSpan={5} className="text-end fw-bold">
                                     SubTotal:
                                   </td>
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
                                         (sum, d) =>
-                                          sum +
-                                          parseFloat(d.total_value || "0"),
-                                        0
+                                          sum + parseFloat(d.unit_value || "0"),0
                                       )
                                       .toLocaleString("es-PE", {
                                         minimumFractionDigits: 2,
@@ -1289,15 +1292,14 @@ const DocumentList: React.FC = () => {
                                   </td>
                                 </tr>
                                 <tr>
-                                  <td colSpan={4} className="text-end fw-bold">
+                                  <td colSpan={5} className="text-end fw-bold">
                                     IGV:
                                   </td>
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
                                         (sum, d) =>
-                                          sum + parseFloat(d.tax_value || "0"),
-                                        0
+                                          sum + parseFloat(d.tax_value || "0"),0
                                       )
                                       .toLocaleString("es-PE", {
                                         minimumFractionDigits: 2,
@@ -1306,7 +1308,7 @@ const DocumentList: React.FC = () => {
                                   </td>
                                 </tr>
                                 <tr>
-                                  <td colSpan={4} className="text-end fw-bold">
+                                  <td colSpan={5} className="text-end fw-bold">
                                     Total:
                                   </td>
                                   <td className="text-end fw-bold">
@@ -1314,7 +1316,7 @@ const DocumentList: React.FC = () => {
                                       .reduce(
                                         (sum, d) =>
                                           sum +
-                                          parseFloat(d.total_value || "0") +
+                                          parseFloat(d.unit_value || "0") +
                                           parseFloat(d.tax_value || "0"),
                                         0
                                       )
