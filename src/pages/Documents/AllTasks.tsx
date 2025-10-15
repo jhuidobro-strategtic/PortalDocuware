@@ -259,8 +259,7 @@ const DocumentList: React.FC = () => {
 
       // 🔹 Normalizar documenttype
       const docTypeValue =
-        typeof editDoc.documenttype === "object" &&
-        editDoc.documenttype !== null
+        typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype;
 
@@ -302,6 +301,23 @@ const DocumentList: React.FC = () => {
         // 🔹 Registrar items en backend (Heroku)
         const itemsToRegister = sunatPayload.items || [];
         for (const item of itemsToRegister) {
+
+        // 📍 Buscar placa dentro de la descripción
+        let texto = item.descripcion || "";
+        let textoLimpio = texto
+          .replace(/<b>/gi, " ")
+          .replace(/<\/b>/gi, " ")
+          .replace(/<br>/gi, " ")
+          .replace(/br/gi, " ")
+          .replace(/\\\//g, " ")
+          .replace(/-/g, "");
+
+        let match =
+          textoLimpio.match(/PLACA[:]? *([A-Z]{3,6}[0-9]{0,3})/i) ||
+          textoLimpio.match(/\b([A-Z]{3}[0-9]{3})\b/i) ||
+          textoLimpio.match(/\b([A-Z]{3}[A-Z0-9]{2,3})\b/i);
+
+        const placa = match ? match[1].toUpperCase() : "";
           await fetch(
             "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
             {
@@ -313,6 +329,7 @@ const DocumentList: React.FC = () => {
                 suppliernumber: sunatPayload.emisor.ruc,
                 unit_measure_description: item.unidad_medida_descripcion,
                 description: item.descripcion,
+                vehicle_no: placa,
                 quantity: round2(item.cantidad),
                 unit_value: round2(item.valor_unitario),
                 tax_value: round2(item.impuesto_valor),
@@ -347,6 +364,29 @@ const DocumentList: React.FC = () => {
       );
       const dataPatch = await resPatch.json();
 
+      // 🔹 4️⃣ Actualizar las placas detectadas (vehicle_no) en backend
+      try {
+        if (docDetails.length > 0) {
+          for (const detail of docDetails) {
+            if (detail.vehicle_no && detail.detailid) {
+              await fetch(
+                `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/${detail.detailid}/`,
+                {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ vehicle_no: detail.vehicle_no }),
+                }
+              );
+            }
+          }
+          addNotification("info", "Placas actualizadas correctamente");
+        }
+      } catch (placaError) {
+        console.error("Error actualizando placas:", placaError);
+        addNotification("warning", "Algunas placas no pudieron actualizarse");
+      }
+
+      // 🔹 5️⃣ Continuar flujo normal
       if (dataPatch.success) {
         setDocuments((prev) =>
           prev.map((doc) =>
@@ -1260,20 +1300,20 @@ const DocumentList: React.FC = () => {
                                           .replace(/\\\//g, " ")
                                           .replace(/-/g, "");
 
-                                        let match = textoLimpio.match(/PLACA[:]? *([A-Z]{3,6}[0-9]{0,3})/i);
-                                        if (!match) {
-                                          match = textoLimpio.match(/\b([A-Z]{3}[0-9]{3})\b/i);
-                                        }
-                                        if (!match) {
-                                          match = textoLimpio.match(/\b([A-Z]{3}[A-Z0-9]{2,3})\b/i);
-                                        }
+                                        let match =
+                                          textoLimpio.match(/PLACA[:]? *([A-Z]{3,6}[0-9]{0,3})/i) ||
+                                          textoLimpio.match(/\b([A-Z]{3}[0-9]{3})\b/i) ||
+                                          textoLimpio.match(/\b([A-Z]{3}[A-Z0-9]{2,3})\b/i);
 
-                                        return match ? match[1].toUpperCase() : "";
+                                        const placa = match ? match[1].toUpperCase() : "";
+
+                                        // 💾 Guardar el valor en d.vehicle_no
+                                        d.vehicle_no = placa;
+
+                                        return placa;
                                       })()}
+
                                     </td>
-                                    {/* <td className="text-center">
-                                      {d.vehicle_no}
-                                    </td> */}
                                     <td className="text-center">
                                       {d.quantity}
                                     </td>
