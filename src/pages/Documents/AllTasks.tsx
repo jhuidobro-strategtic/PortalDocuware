@@ -304,20 +304,26 @@ const DocumentList: React.FC = () => {
 
         // 📍 Buscar placa dentro de la descripción
         let texto = item.descripcion || "";
+        // 1. Limpieza controlada: eliminar etiquetas HTML y normalizar espacios
         let textoLimpio = texto
-          .replace(/<b>/gi, " ")
-          .replace(/<\/b>/gi, " ")
-          .replace(/<br>/gi, " ")
-          .replace(/br/gi, " ")
-          .replace(/\\\//g, " ")
-          .replace(/-/g, "");
+          .replace(/<[^>]*>/g, " ")      // elimina cualquier etiqueta HTML
+          .replace(/\s+/g, " ")          // reemplaza múltiples espacios por uno
+          .trim();
 
-        let match =
-          textoLimpio.match(/PLACA[:]? *([A-Z]{3,6}[0-9]{0,3})/i) ||
-          textoLimpio.match(/\b([A-Z]{3}[0-9]{3})\b/i) ||
-          textoLimpio.match(/\b([A-Z]{3}[A-Z0-9]{2,3})\b/i);
+        // 2. Buscar después de la palabra "PLACA" o "PLACA:"
+        let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9]{5,7})\b/i);
 
-        const placa = match ? match[1].toUpperCase() : "";
+        if (!match) {
+          // 3. Buscar formatos comunes de placas peruanas: 3 letras + 3 dígitos, o combinaciones alfanuméricas
+          match = textoLimpio.match(/\b([A-Z]{3}\d{3})\b/i);
+        }
+
+        if (!match) {
+          // 4. Buscar combinaciones mixtas (letras y números, total 5-7 caracteres)
+          match = textoLimpio.match(/\b([A-Z0-9]{5,7})\b/i);
+        }
+
+        const placa = match ? match[1].toUpperCase() : null;
           await fetch(
             "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
             {
