@@ -304,26 +304,41 @@ const DocumentList: React.FC = () => {
 
         // 📍 Buscar placa dentro de la descripción
         let texto = item.descripcion || "";
-        // 1. Limpieza controlada: eliminar etiquetas HTML y normalizar espacios
+        // 1. Limpieza del texto: eliminar etiquetas HTML y normalizar espacios/saltos
         let textoLimpio = texto
-          .replace(/<[^>]*>/g, " ")      // elimina cualquier etiqueta HTML
-          .replace(/\s+/g, " ")          // reemplaza múltiples espacios por uno
+          .replace(/<[^>]*>/g, " ")   // elimina etiquetas HTML
+          .replace(/\s+/g, " ")       // reemplaza múltiples espacios/saltos por uno
           .trim();
 
-        // 2. Buscar después de la palabra "PLACA" o "PLACA:"
-        let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9]{5,7})\b/i);
+        // 2. Buscar directamente tras la palabra "PLACA"
+        let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
 
         if (!match) {
-          // 3. Buscar formatos comunes de placas peruanas: 3 letras + 3 dígitos, o combinaciones alfanuméricas
-          match = textoLimpio.match(/\b([A-Z]{3}\d{3})\b/i);
+          // 3. Si no hay "PLACA", buscar un patrón de posible placa (5-7 caracteres, alfanuméricos)
+          // pero con al menos una letra y un número
+          const posibles = textoLimpio.match(/\b[A-Z0-9-]{5,8}\b/g);
+          if (posibles) {
+            match = posibles.find((c: string) =>
+              /[A-Z]/i.test(c) && /\d/.test(c) // debe tener letra y número
+            );
+          }
         }
 
-        if (!match) {
-          // 4. Buscar combinaciones mixtas (letras y números, total 5-7 caracteres)
-          match = textoLimpio.match(/\b([A-Z0-9]{5,7})\b/i);
-        }
+        let placa = null;
+        if (match) {
+          const candidata = (typeof match === "string" ? match : match[1])
+            .toUpperCase()
+            .replace(/-/g, ""); // eliminar guiones
 
-        const placa = match ? match[1].toUpperCase() : null;
+          if (
+            candidata.length >= 5 &&
+            candidata.length <= 7 &&
+            /[A-Z]/.test(candidata) &&
+            /\d/.test(candidata)
+          ) {
+            placa = candidata;
+          }
+        }
           await fetch(
             "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
             {
