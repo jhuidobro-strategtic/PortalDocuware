@@ -421,47 +421,103 @@ const DocumentList: React.FC = () => {
     return "Desconocido";
   };
 
-  // 📌 Consultar RUC en Factiliza
-  const handleSearchRuc = async () => {
-    if (!editDoc?.suppliernumber) {
-      addNotification("danger", "Ingrese un RUC válido");
+  // 📌 Consultar RUC en Factiliza + obtener datos desde SUNAT
+const handleSearchRuc = async () => {
+  if (!editDoc?.suppliernumber) {
+    addNotification("danger", "Ingrese un RUC válido");
+    return;
+  }
+
+  setLoadingRuc(true);
+  try {
+    // 🔹 1️⃣ Consultar RUC en Factiliza
+    const factilizaRes = await fetch(
+      `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
+      {
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
+        },
+      }
+    );
+    const factilizaData = await factilizaRes.json();
+
+    if (factilizaData.success && factilizaData.data?.nombre_o_razon_social) {
+      setEditDoc((prev) =>
+        prev
+          ? { ...prev, suppliername: factilizaData.data.nombre_o_razon_social }
+          : prev
+      );
+      addNotification("success", "RUC encontrado correctamente");
+    }
+
+    // 🔹 2️⃣ Consultar comprobante en SUNAT
+    const tipoComprobante =
+      typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
+        ? String(editDoc.documenttype.tipoid).padStart(2, "0")
+        : String(editDoc.documenttype).padStart(2, "0");
+
+    if (!tipoComprobante || !editDoc.documentserial || !editDoc.documentnumber) {
+      addNotification(
+        "warning",
+        "Complete Tipo, Serie y Número antes de consultar SUNAT"
+      );
       return;
     }
 
-    setLoadingRuc(true);
-    try {
-      const res = await fetch(
-        `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
-          },
-        }
-      );
+    const sunatRes = await fetch("https://dev.apisunat.pe/api/v1/sunat/comprobante", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
+      },
+      body: JSON.stringify({
+        tipo_comprobante: tipoComprobante,
+        ruc_emisor: editDoc.suppliernumber,
+        serie: editDoc.documentserial,
+        numero: editDoc.documentnumber,
+      }),
+    });
 
-      const data = await res.json();
+    const sunatData = await sunatRes.json();
 
-      if (data.success && data.data?.nombre_o_razon_social) {
-        setEditDoc((prev) =>
-          prev
-            ? { ...prev, suppliername: data.data.nombre_o_razon_social }
-            : prev
-        );
-        addNotification("success", "RUC encontrado correctamente");
-      } else {
-        addNotification(
-          "danger",
-          data.message || "No se encontró información del RUC"
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      addNotification("danger", "Error al consultar RUC");
-    } finally {
-      setLoadingRuc(false);
+    if (!sunatData.success) {
+      addNotification("danger", "Error al obtener comprobante de SUNAT");
+      return;
     }
-  };
+
+    const { detalle, totales } = sunatData.payload;
+
+    // 🔹 Extraer valores y formatear correctamente
+    const moneda = detalle.codigo_moneda || "PEN";
+    const subTotal = parseFloat(totales.total_grav_oner || 0).toFixed(2);
+    const igv = parseFloat(totales.total_igv || 0).toFixed(2);
+    const total = parseFloat(totales.monto_total_general || 0).toFixed(2);
+    const fechaEmision = detalle.fecha_emision || editDoc.documentdate;
+
+    // 🔹 Actualizar los campos del formulario
+    setEditDoc((prev) =>
+      prev
+        ? {
+            ...prev,
+            currency: moneda,
+            amount: subTotal,
+            taxamount: igv,
+            totalamount: total,
+            documentdate: fechaEmision,
+          }
+        : prev
+    );
+
+    addNotification("info", "Valores de SUNAT cargados correctamente");
+  } catch (error) {
+    console.error(error);
+    addNotification("danger", "Error al consultar RUC o SUNAT");
+  } finally {
+    setLoadingRuc(false);
+  }
+};
+
 
   const fetchDetails = async (doc: Document) => {
     setLoadingDetails(true);
@@ -1260,9 +1316,27 @@ const DocumentList: React.FC = () => {
                         <Spinner color="primary" />
                       </div>
                     ) : (
-                      <div className="table-responsive">
-                        <Table className="table table-sm table-bordered">
-                          <thead className="table-light">
+                      <div
+                        style={{
+                          maxHeight: "350px", // ajusta según tu diseño
+                          overflowY: "auto",
+                          border: "1px solid #dee2e6",
+                          borderRadius: "0.375rem",
+                        }}
+                      >
+                        <Table
+                          className="table table-sm table-bordered mb-0"
+                          style={{ borderCollapse: "collapse" }}
+                        >
+                          <thead
+                            className="table-light"
+                            style={{
+                              position: "sticky",
+                              top: 0,
+                              zIndex: 1,
+                              backgroundColor: "#f8f9fa", // color de fondo para que no sea transparente
+                            }}
+                          >
                             <tr>
                               <th className="text-center">Unidad</th>
                               <th className="text-center">Descripción</th>
@@ -1283,38 +1357,25 @@ const DocumentList: React.FC = () => {
                               <>
                                 {docDetails.map((d) => (
                                   <tr key={d.detailid}>
-                                    <td className="text-center">
-                                      {d.unit_measure_description}
-                                    </td>
-                                    <td className="text-center">
-                                      {d.description}
-                                    </td>
-                                    <td className="text-center">
-                                      {d.vehicle_no}
-                                    </td>
-                                    <td className="text-center">
-                                      {d.quantity}
+                                    <td className="text-center">{d.unit_measure_description}</td>
+                                    <td className="text-center">{d.description}</td>
+                                    <td className="text-center">{d.vehicle_no}</td>
+                                    <td className="text-center">{d.quantity}</td>
+                                    <td className="text-end">
+                                      {Number(d.unit_value).toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
                                     </td>
                                     <td className="text-end">
-                                      {Number(d.unit_value).toLocaleString(
-                                        "es-PE",
-                                        {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        }
-                                      )}
-                                    </td>
-                                    <td className="text-end">
-                                      {Number(d.total_value).toLocaleString(
-                                        "es-PE",
-                                        {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        }
-                                      )}
+                                      {Number(d.total_value).toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
                                     </td>
                                   </tr>
                                 ))}
+
                                 <tr>
                                   <td colSpan={5} className="text-end fw-bold">
                                     SubTotal:
@@ -1322,8 +1383,8 @@ const DocumentList: React.FC = () => {
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
-                                        (sum, d) =>
-                                          sum + parseFloat(d.unit_value || "0"),0
+                                        (sum, d) => sum + parseFloat(d.unit_value || "0"),
+                                        0
                                       )
                                       .toLocaleString("es-PE", {
                                         minimumFractionDigits: 2,
@@ -1338,8 +1399,8 @@ const DocumentList: React.FC = () => {
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
-                                        (sum, d) =>
-                                          sum + parseFloat(d.tax_value || "0"),0
+                                        (sum, d) => sum + parseFloat(d.tax_value || "0"),
+                                        0
                                       )
                                       .toLocaleString("es-PE", {
                                         minimumFractionDigits: 2,
