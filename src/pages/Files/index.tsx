@@ -16,8 +16,8 @@ const DashboardFiles = () => {
         <React.Fragment>
             <div className="page-content">
                 <Container fluid>
-                    <BreadCrumb title="Files" pageTitle="Dashboards" />                    
-                    {/* <AllTasks /> */}
+                    <BreadCrumb title="Document Details" pageTitle="Dashboards" />                    
+                    <AllTasks />
                 </Container>
             </div>
         </React.Fragment>
