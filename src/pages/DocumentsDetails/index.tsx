@@ -10,8 +10,8 @@ import "simplebar-react/dist/simplebar.min.css";
 import "flatpickr/dist/themes/material_blue.css";
 
 
-const DashboardFiles = () => {
-    document.title="Files | Docuware";
+const DashboardDocumentDetails = () => {
+    document.title="Document Details | Docuware";
     return (
         <React.Fragment>
             <div className="page-content">
@@ -24,4 +24,4 @@ const DashboardFiles = () => {
     );
 };
 
-export default DashboardFiles;
+export default DashboardDocumentDetails;

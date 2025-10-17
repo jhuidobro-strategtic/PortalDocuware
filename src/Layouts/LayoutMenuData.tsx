@@ -161,9 +161,9 @@ const Navdata = () => {
                     parentId: "dashboard",
                 },
                 {
-                    id: "files",
-                    label: "Files",
-                    link: "/files",
+                    id: "documentdetails",
+                    label: "Document Details",
+                    link: "/document-details",
                     parentId: "dashboard",
                 },
                 // {

@@ -6,7 +6,7 @@ import DashboardAnalytics from "../pages/DashboardAnalytics";
 import DashboardCrm from "../pages/DashboardCrm";
 import DashboardEcommerce from "../pages/DashboardEcommerce";
 import DashboardDocuments from "../pages/Documents";
-import DashboardFiles from "../pages/Files";
+import DashboardDocumentDetails from "../pages/DocumentsDetails";
 
 import DashboardCrypto from "../pages/DashboardCrypto";
 import DashboardProject from "../pages/DashboardProject";
@@ -260,7 +260,7 @@ const authProtectedRoutes = [
   { path: "/dashboard-job", component: <DashboardJob /> },
   { path: "/dashboard-blog", component: <DashboardBlog /> },
   { path: "/documents", component: <DashboardDocuments /> },
-  { path: "/files", component: <DashboardFiles /> },
+  { path: "/document-details", component: <DashboardDocumentDetails /> },
 
   // apps
   { path: "/apps-calendar", component: <Calendar /> },
