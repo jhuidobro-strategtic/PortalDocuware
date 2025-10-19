@@ -94,9 +94,12 @@ const DocumentDetails: React.FC = () => {
       doc.unit_measure_description.toLowerCase().includes(term) ||
       doc.description.toLowerCase().includes(term);
 
+    // Usamos moment para comparar correctamente las fechas
+    const docDate = moment(doc.documentdate, ["YYYY/MM/DD", "DD/MM/YYYY"]);
+
     const matchesDate =
-      (!startDate || new Date(doc.documentdate) >= startDate) &&
-      (!endDate || new Date(doc.documentdate) <= endDate);
+      (!startDate || docDate.isSameOrAfter(moment(startDate), "day")) &&
+      (!endDate || docDate.isSameOrBefore(moment(endDate), "day"));
 
     return matchesSearch && matchesDate;
   });
@@ -285,7 +288,10 @@ const DocumentDetails: React.FC = () => {
                     </InputGroupText>
                     <Flatpickr
                       className="form-control"
-                      options={{ mode: "range", dateFormat: "Y-m-d" }}
+                      options={{
+                        mode: "range",
+                        dateFormat: "d/m/Y", // <-- cambia aquí el formato mostrado
+                      }}
                       value={dateRange}
                       onChange={(selectedDates: Date[]) => {
                         setDateRange(selectedDates);

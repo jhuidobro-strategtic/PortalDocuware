@@ -204,9 +204,17 @@ const DocumentList: React.FC = () => {
       (statusFilter === "active" && doc.status) ||
       (statusFilter === "pending" && !doc.status);
 
-    const matchesDate =
-      (!startDate || new Date(doc.documentdate) >= startDate) &&
-      (!endDate || new Date(doc.documentdate) <= endDate);
+    // ✅ Corrección del filtro de fechas
+    let matchesDate = true;
+    if (startDate || endDate) {
+      const docDate = moment(doc.documentdate, ["YYYY/MM/DD", "YYYY-MM-DD"]); // formato real del API
+      const start = startDate ? moment(startDate).startOf("day") : null;
+      const end = endDate ? moment(endDate).endOf("day") : null;
+
+      matchesDate =
+        (!start || docDate.isSameOrAfter(start)) &&
+        (!end || docDate.isSameOrBefore(end));
+    }
 
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -746,7 +754,10 @@ const DocumentList: React.FC = () => {
                     </InputGroupText>
                     <Flatpickr
                       className="form-control"
-                      options={{ mode: "range", dateFormat: "Y-m-d" }}
+                      options={{
+                        mode: "range",
+                        dateFormat: "d/m/Y", // <-- cambia aquí el formato mostrado
+                      }}
                       value={dateRange}
                       onChange={(selectedDates: Date[]) => {
                         setDateRange(selectedDates);
