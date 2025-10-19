@@ -112,6 +112,9 @@ const DocumentList: React.FC = () => {
   // 📌 Estado para spinner RUC
   const [loadingRuc, setLoadingRuc] = useState(false);
 
+  // 📌 Estado para spinner Document
+  const [loadingDocument, setLoadingDocument] = useState(false);
+
   // 📌 Estado adicional para IGV %
   const [editIgvPercent, setEditIgvPercent] = useState<number>(18);
 
@@ -353,7 +356,7 @@ const DocumentList: React.FC = () => {
       return;
     }
 
-    setLoadingRuc(true);
+    setLoadingDocument(true);
     try {
       // 🔹 Primero verificar si ya existen detalles registrados en el backend
       const query = new URLSearchParams({
@@ -370,7 +373,7 @@ const DocumentList: React.FC = () => {
       if (Array.isArray(dataExist) && dataExist.length > 0) {
         setDocDetails(dataExist);
         addNotification("info", "Ya existen detalles registrados. No se consultó SUNAT.");
-        setLoadingRuc(false);
+        setLoadingDocument(false);
         return; // 🚫 Detiene aquí, no consulta ni inserta nada
       }
 
@@ -501,7 +504,7 @@ const DocumentList: React.FC = () => {
       console.error(error);
       addNotification("danger", "Error al consultar datos de SUNAT");
     } finally {
-      setLoadingRuc(false);
+      setLoadingDocument(false);
     }
   };
 
@@ -1180,9 +1183,9 @@ const DocumentList: React.FC = () => {
                             <Button
                               color="secondary"
                               onClick={handleSearchDocument}
-                              disabled={loadingRuc}
+                              disabled={loadingDocument}
                             >
-                              {loadingRuc ? (
+                              {loadingDocument ? (
                                 <Spinner size="sm" color="light" />
                               ) : (
                                 <i className="ri-search-line" />
