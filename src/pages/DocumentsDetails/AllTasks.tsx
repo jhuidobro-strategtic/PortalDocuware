@@ -110,12 +110,12 @@ const DocumentDetails: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  // exportar a excel
+  // exportar a excel Detalles
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Documentos");
+    const worksheet = workbook.addWorksheet("Detalles de Documentos");
 
-    // logo
+    // 🔹 Insertar logo
     try {
       const response = await fetch(LogoDocuware);
       const imageBuffer = await response.arrayBuffer();
@@ -125,17 +125,30 @@ const DocumentDetails: React.FC = () => {
       });
       worksheet.addImage(imageId, "B1:D2");
     } catch {
-      // si falla el logo, seguimos sin bloquear
+      console.warn("⚠️ No se pudo cargar el logo, se continúa sin bloquear.");
     }
 
-    // título
-    worksheet.mergeCells("E1:K2");
+    // 🔹 Título
+    worksheet.mergeCells("E1:P2");
     const titleCell = worksheet.getCell("E1");
-    titleCell.value = "REPORTE DE DOCUMENTOS";
+    titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
     titleCell.font = { size: 14, bold: true };
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "D9E1F2" },
+    };
 
-    // encabezados (ahora con los campos adicionales)
+    ["A1", "A2", "B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
+      worksheet.getCell(cell).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "D9E1F2" },
+      };
+    });
+
+    // 🔹 Encabezados
     const headers = [
       "Tipo Documento",
       "Serie",
@@ -155,11 +168,11 @@ const DocumentDetails: React.FC = () => {
       "Total",
     ];
 
-    worksheet.addRow(headers);
-    const headerRow = worksheet.getRow(3);
-    headerRow.eachCell((cell) => {
+    headers.forEach((header, i) => {
+      const cell = worksheet.getCell(3, i + 1);
+      cell.value = header;
       cell.font = { bold: true };
-      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
       cell.fill = {
         type: "pattern",
         pattern: "solid",
@@ -173,26 +186,34 @@ const DocumentDetails: React.FC = () => {
       };
     });
 
-    // datos (desde fila 4)
+    // 🔹 Datos (empiezan en fila 4)
     filteredDocuments.forEach((doc) => {
-      const row = worksheet.addRow([
-        doc.documenttype,
-        doc.documentserial,
-        doc.documentnumber,
+      // asegurar que todos los valores sean strings o números válidos
+      const tipoDocumento =
+        typeof doc.documenttype === "object" && doc.documenttype !== null
+          ? (doc.documenttype as any).tipo ?? "N/A"
+          : (doc.documenttype ?? "N/A").toString();
+
+      const rowData = [
+        tipoDocumento,
+        doc.documentserial ?? "",
+        doc.documentnumber ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
-        doc.suppliernumber,
-        doc.suppliername,
-        doc.description,
-        doc.vehicle_nro || "—",
-        doc.unit_measure_description || "—",
-        doc.quantity ?? 0,
-        doc.unit_value ?? 0,
-        doc.total_value ?? 0,
-        doc.currency,
-        doc.amount ?? 0,
-        doc.taxamount ?? 0,
-        doc.totalamount ?? 0,
-      ]);
+        doc.suppliernumber ?? "",
+        doc.suppliername ?? "",
+        (doc as any).description ?? "—",
+        (doc as any).vehicle_nro ?? "—",
+        (doc as any).unit_measure_description ?? "—",
+        Number((doc as any).quantity ?? 0),
+        Number((doc as any).unit_value ?? 0),
+        Number((doc as any).total_value ?? 0),
+        doc.currency ?? "PEN",
+        Number((doc as any).amount ?? 0),
+        Number((doc as any).taxamount ?? 0),
+        Number((doc as any).totalamount ?? 0),
+      ];
+
+      const row = worksheet.addRow(rowData);
 
       row.eachCell((cell, colNumber) => {
         cell.border = {
@@ -202,50 +223,49 @@ const DocumentDetails: React.FC = () => {
           right: { style: "thin" },
         };
 
-        // formato numérico para columnas de importe
         if ([10, 11, 12, 14, 15, 16].includes(colNumber)) {
-          // columns: cantidad(10), unit_value(11), total_value(12), amount(14), taxamount(15), totalamount(16)
           if (colNumber === 10) {
-            cell.numFmt = "#,##0"; // cantidad sin decimales
-            cell.alignment = { horizontal: "right" };
+            cell.numFmt = "#,##0";
           } else {
             cell.numFmt = "#,##0.00";
-            cell.alignment = { horizontal: "right" };
           }
+          cell.alignment = { horizontal: "right" };
         } else {
           cell.alignment = { horizontal: "left" };
         }
       });
     });
 
-    // ajustar anchos
+    // 🔹 Ajustar anchos
     worksheet.columns = [
       { width: 18 }, // Tipo Documento
-      { width: 8 }, // Serie
-      { width: 10 }, // Número
-      { width: 12 }, // Fecha
+      { width: 10 }, // Serie
+      { width: 12 }, // Número
+      { width: 15 }, // Fecha
       { width: 15 }, // RUC
-      { width: 30 }, // Nombre proveedor
+      { width: 35 }, // Razón Social
       { width: 40 }, // Descripción
       { width: 14 }, // Vehículo
       { width: 18 }, // Unidad medida
-      { width: 8 }, // Cantidad
+      { width: 10 }, // Cantidad
       { width: 12 }, // Valor unitario
       { width: 14 }, // Valor total línea
-      { width: 8 }, // Moneda
+      { width: 8 },  // Moneda
       { width: 12 }, // Sub Total
       { width: 12 }, // IGV
       { width: 12 }, // Total
     ];
 
+    // 🔹 Descargar Excel
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(
       new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       }),
-      `Documentos_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
+      `Documentos_Detalle_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
     );
   };
+
 
   if (loading)
     return (
