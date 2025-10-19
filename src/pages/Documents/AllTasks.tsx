@@ -221,7 +221,6 @@ const DocumentList: React.FC = () => {
   const handleUpdate = async () => {
     if (!editDoc) return;
 
-    // 🔹 Validación básica
     const isValid =
       editDoc.documentserial.trim() !== "" &&
       editDoc.documentnumber.trim() !== "" &&
@@ -238,137 +237,15 @@ const DocumentList: React.FC = () => {
       return;
     }
 
-    // 🔹 Función para redondear a 2 decimales
-    const round2 = (num: any) => Number(parseFloat(num).toFixed(2));
-
     try {
       setLoadingDetails(true);
 
-      // 🔹 1️⃣ Verificar si existen detalles en documents-detail
-      const query = new URLSearchParams({
-        suppliernumber: editDoc.suppliernumber,
-        documentserial: editDoc.documentserial,
-        documentnumber: editDoc.documentnumber,
-      });
-
-      const resGet = await fetch(
-        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
-      );
-      const dataGet = await resGet.json();
-      const hasDetails = dataGet && dataGet.length > 0;
-
-      // 🔹 Normalizar documenttype
       const docTypeValue =
-        typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
+        typeof editDoc.documenttype === "object" &&
+        editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype;
 
-      const tipoComprobante = docTypeValue
-        ? String(docTypeValue).padStart(2, "0")
-        : null;
-
-      let sunatPayload: any = null;
-
-      // 🔹 2️⃣ Si no existen detalles, llamar a SUNAT
-      if (!hasDetails) {
-        const sunatRes = await fetch(
-          "https://dev.apisunat.pe/api/v1/sunat/comprobante",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization:
-                "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
-            },
-            body: JSON.stringify({
-              tipo_comprobante: tipoComprobante,
-              ruc_emisor: editDoc.suppliernumber,
-              serie: editDoc.documentserial,
-              numero: editDoc.documentnumber,
-            }),
-          }
-        );
-
-        const sunatData = await sunatRes.json();
-
-        if (!sunatData.success) {
-          addNotification("danger", "Error al consultar SUNAT");
-          return;
-        }
-
-        sunatPayload = sunatData.payload;
-
-        // 🔹 Registrar items en backend (Heroku)
-        const itemsToRegister = sunatPayload.items || [];
-        for (const item of itemsToRegister) {
-
-        // 📍 Buscar placa dentro de la descripción
-        let texto = item.descripcion || "";
-        // 1. Limpieza del texto: eliminar etiquetas HTML y normalizar espacios/saltos
-        let textoLimpio = texto
-          .replace(/<[^>]*>/g, " ")   // elimina etiquetas HTML
-          .replace(/\s+/g, " ")       // reemplaza múltiples espacios/saltos por uno
-          .trim();
-
-        // 2. Buscar directamente tras la palabra "PLACA"
-        let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
-
-        if (!match) {
-          // 3. Si no hay "PLACA", buscar un patrón de posible placa (5-7 caracteres, alfanuméricos)
-          // pero con al menos una letra y un número
-          const posibles = textoLimpio.match(/\b[A-Z0-9-]{5,8}\b/g);
-          if (posibles) {
-            match = posibles.find((c: string) =>
-              /[A-Z]/i.test(c) && /\d/.test(c) // debe tener letra y número
-            );
-          }
-        }
-
-        let placa = null;
-        if (match) {
-          const candidata = (typeof match === "string" ? match : match[1])
-            .toUpperCase()
-            .replace(/-/g, ""); // eliminar guiones
-
-          if (
-            candidata.length >= 5 &&
-            candidata.length <= 7 &&
-            /[A-Z]/.test(candidata) &&
-            /\d/.test(candidata)
-          ) {
-            placa = candidata;
-          }
-        }
-          await fetch(
-            "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                documentserial: sunatPayload.detalle.serie,
-                documentnumber: sunatPayload.detalle.numero,
-                suppliernumber: sunatPayload.emisor.ruc,
-                unit_measure_description: item.unidad_medida_descripcion,
-                description: item.descripcion,
-                vehicle_no: placa,
-                quantity: round2(item.cantidad),
-                unit_value: round2(item.valor_unitario),
-                tax_value: round2(item.impuesto_valor),
-                total_value: round2(item.precio_unitario),
-                status: false,
-                created_by: 1,
-                created_at: new Date().toISOString(),
-                updated_by: null,
-                updated_at: null,
-              }),
-            }
-          );
-        }
-
-        addNotification("success", "Items registrados desde SUNAT");
-      }
-
-      // 🔹 3️⃣ Actualizar documento con PATCH
       const updatedDoc = {
         ...editDoc,
         status: isValid,
@@ -383,31 +260,9 @@ const DocumentList: React.FC = () => {
           body: JSON.stringify(updatedDoc),
         }
       );
+
       const dataPatch = await resPatch.json();
 
-      // 🔹 4️⃣ Actualizar las placas detectadas (vehicle_no) en backend
-      try {
-        if (docDetails.length > 0) {
-          for (const detail of docDetails) {
-            if (detail.vehicle_no && detail.detailid) {
-              await fetch(
-                `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/${detail.detailid}/`,
-                {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ vehicle_no: detail.vehicle_no }),
-                }
-              );
-            }
-          }
-          addNotification("info", "Placas actualizadas correctamente");
-        }
-      } catch (placaError) {
-        console.error("Error actualizando placas:", placaError);
-        addNotification("warning", "Algunas placas no pudieron actualizarse");
-      }
-
-      // 🔹 5️⃣ Continuar flujo normal
       if (dataPatch.success) {
         setDocuments((prev) =>
           prev.map((doc) =>
@@ -442,102 +297,205 @@ const DocumentList: React.FC = () => {
     return "Desconocido";
   };
 
-  // 📌 Consultar RUC en Factiliza + obtener datos desde SUNAT
-const handleSearchRuc = async () => {
-  if (!editDoc?.suppliernumber) {
-    addNotification("danger", "Ingrese un RUC válido");
-    return;
-  }
+  // 📌 Consultar RUC en Factiliza
+  const handleSearchRuc = async () => {
+    if (!editDoc?.suppliernumber) {
+      addNotification("danger", "Ingrese un RUC válido");
+      return;
+    }
 
-  setLoadingRuc(true);
-  try {
-    // 🔹 1️⃣ Consultar RUC en Factiliza
-    const factilizaRes = await fetch(
-      `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
-      {
-        headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
-        },
+    setLoadingRuc(true);
+    try {
+      // 🔹 1️⃣ Consultar RUC en Factiliza
+      const factilizaRes = await fetch(
+        `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
+        {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
+          },
+        }
+      );
+      const factilizaData = await factilizaRes.json();
+
+      if (factilizaData.success && factilizaData.data?.nombre_o_razon_social) {
+        setEditDoc((prev) =>
+          prev
+            ? {
+                ...prev,
+                suppliername: factilizaData.data.nombre_o_razon_social,
+              }
+            : prev
+        );
+        addNotification("success", "RUC encontrado correctamente");
+      } else {
+        addNotification("warning", "RUC no encontrado");
       }
-    );
-    const factilizaData = await factilizaRes.json();
+    } catch (error) {
+      console.error(error);
+      addNotification("danger", "Error al consultar RUC o SUNAT");
+    } finally {
+      setLoadingRuc(false);
+    }
+  };
 
-    if (factilizaData.success && factilizaData.data?.nombre_o_razon_social) {
+  // 📌 Consultar y registrar datos desde SUNAT (solo si no existen registros)
+  const handleSearchDocument = async () => {
+    if (!editDoc?.suppliernumber) {
+      addNotification("danger", "Ingrese un RUC válido");
+      return;
+    }
+
+    setLoadingRuc(true);
+    try {
+      // 🔹 Primero verificar si ya existen detalles registrados en el backend
+      const query = new URLSearchParams({
+        suppliernumber: editDoc.suppliernumber,
+        documentserial: editDoc.documentserial,
+        documentnumber: editDoc.documentnumber,
+      });
+
+      const resExist = await fetch(
+        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
+      );
+      const dataExist = await resExist.json();
+
+      if (Array.isArray(dataExist) && dataExist.length > 0) {
+        setDocDetails(dataExist);
+        addNotification("info", "Ya existen detalles registrados. No se consultó SUNAT.");
+        setLoadingRuc(false);
+        return; // 🚫 Detiene aquí, no consulta ni inserta nada
+      }
+
+      // 🔹 Determinar tipo de comprobante
+      const tipoComprobante =
+        typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
+          ? String(editDoc.documenttype.tipoid).padStart(2, "0")
+          : String(editDoc.documenttype).padStart(2, "0");
+
+      if (!tipoComprobante || !editDoc.documentserial || !editDoc.documentnumber) {
+        addNotification("warning", "Complete Tipo, Serie y Número antes de consultar SUNAT");
+        return;
+      }
+
+      // 🔹 1️⃣ Consultar comprobante en SUNAT
+      const sunatRes = await fetch("https://dev.apisunat.pe/api/v1/sunat/comprobante", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
+        },
+        body: JSON.stringify({
+          tipo_comprobante: tipoComprobante,
+          ruc_emisor: editDoc.suppliernumber,
+          serie: editDoc.documentserial,
+          numero: editDoc.documentnumber,
+        }),
+      });
+
+      const sunatData = await sunatRes.json();
+
+      if (!sunatData.success) {
+        addNotification("danger", "Error al obtener comprobante de SUNAT");
+        return;
+      }
+
+      const sunatPayload = sunatData.payload;
+      const { detalle, totales, items } = sunatPayload;
+
+      // 🔹 Actualizar totales en el documento
+      const moneda = detalle.codigo_moneda || "PEN";
+      const subTotal = parseFloat(totales.total_grav_oner || 0).toFixed(2);
+      const igv = parseFloat(totales.total_igv || 0).toFixed(2);
+      const total = parseFloat(totales.monto_total_general || 0).toFixed(2);
+      const fechaEmision = detalle.fecha_emision || editDoc.documentdate;
+
       setEditDoc((prev) =>
         prev
-          ? { ...prev, suppliername: factilizaData.data.nombre_o_razon_social }
+          ? {
+              ...prev,
+              currency: moneda,
+              amount: subTotal,
+              taxamount: igv,
+              totalamount: total,
+              documentdate: fechaEmision,
+            }
           : prev
       );
-      addNotification("success", "RUC encontrado correctamente");
-    }
 
-    // 🔹 2️⃣ Consultar comprobante en SUNAT
-    const tipoComprobante =
-      typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
-        ? String(editDoc.documenttype.tipoid).padStart(2, "0")
-        : String(editDoc.documenttype).padStart(2, "0");
+      // 🔹 2️⃣ Registrar detalles del comprobante
+      const round2 = (num: any) => Number(parseFloat(num).toFixed(2));
+      const itemsToRegister = items || [];
 
-    if (!tipoComprobante || !editDoc.documentserial || !editDoc.documentnumber) {
-      addNotification(
-        "warning",
-        "Complete Tipo, Serie y Número antes de consultar SUNAT"
-      );
-      return;
-    }
+      for (const item of itemsToRegister) {
+        // 📍 Buscar placa en la descripción
+        let texto = item.descripcion || "";
+        let textoLimpio = texto.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
-    const sunatRes = await fetch("https://dev.apisunat.pe/api/v1/sunat/comprobante", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:
-          "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
-      },
-      body: JSON.stringify({
-        tipo_comprobante: tipoComprobante,
-        ruc_emisor: editDoc.suppliernumber,
-        serie: editDoc.documentserial,
-        numero: editDoc.documentnumber,
-      }),
-    });
-
-    const sunatData = await sunatRes.json();
-
-    if (!sunatData.success) {
-      addNotification("danger", "Error al obtener comprobante de SUNAT");
-      return;
-    }
-
-    const { detalle, totales } = sunatData.payload;
-
-    // 🔹 Extraer valores y formatear correctamente
-    const moneda = detalle.codigo_moneda || "PEN";
-    const subTotal = parseFloat(totales.total_grav_oner || 0).toFixed(2);
-    const igv = parseFloat(totales.total_igv || 0).toFixed(2);
-    const total = parseFloat(totales.monto_total_general || 0).toFixed(2);
-    const fechaEmision = detalle.fecha_emision || editDoc.documentdate;
-
-    // 🔹 Actualizar los campos del formulario
-    setEditDoc((prev) =>
-      prev
-        ? {
-            ...prev,
-            currency: moneda,
-            amount: subTotal,
-            taxamount: igv,
-            totalamount: total,
-            documentdate: fechaEmision,
+        let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
+        if (!match) {
+          const posibles = textoLimpio.match(/\b[A-Z0-9-]{5,8}\b/g);
+          if (posibles) {
+            match = posibles.find((c: string) => /[A-Z]/i.test(c) && /\d/.test(c));
           }
-        : prev
-    );
+        }
 
-    addNotification("info", "Valores de SUNAT cargados correctamente");
-  } catch (error) {
-    console.error(error);
-    addNotification("danger", "Error al consultar RUC o SUNAT");
-  } finally {
-    setLoadingRuc(false);
-  }
-};
+        let placa = null;
+        if (match) {
+          const candidata = (typeof match === "string" ? match : match[1])
+            .toUpperCase()
+            .replace(/-/g, "");
+          if (
+            candidata.length >= 5 &&
+            candidata.length <= 7 &&
+            /[A-Z]/.test(candidata) &&
+            /\d/.test(candidata)
+          ) {
+            placa = candidata;
+          }
+        }
+
+        // 🔹 Enviar detalle a backend
+        await fetch("https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            documentserial: detalle.serie,
+            documentnumber: detalle.numero,
+            suppliernumber: sunatPayload.emisor.ruc,
+            unit_measure_description: item.unidad_medida_descripcion,
+            description: item.descripcion,
+            vehicle_no: placa,
+            quantity: round2(item.cantidad),
+            unit_value: round2(item.valor_unitario),
+            tax_value: round2(item.impuesto_valor),
+            total_value: round2(item.precio_unitario),
+            status: false,
+            created_by: 1,
+            created_at: new Date().toISOString(),
+          }),
+        });
+      }
+
+      // 🔹 3️⃣ Obtener los detalles recién registrados
+      const resGet = await fetch(
+        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
+      );
+      const dataGet = await resGet.json();
+
+      if (dataGet && dataGet.length > 0) {
+        setDocDetails(dataGet);
+        addNotification("success", "Detalles cargados correctamente desde SUNAT");
+      } else {
+        addNotification("warning", "No se encontraron detalles en SUNAT");
+      }
+    } catch (error) {
+      console.error(error);
+      addNotification("danger", "Error al consultar datos de SUNAT");
+    } finally {
+      setLoadingRuc(false);
+    }
+  };
 
 
   const fetchDetails = async (doc: Document) => {
@@ -1178,7 +1136,7 @@ const handleSearchRuc = async () => {
                       </Col>
 
                       {/* Nro Documento */}
-                      <Col md="4">
+                      {/* <Col md="4">
                         <FormGroup>
                           <Label className="form-label">Nro Documento</Label>
                           <Input
@@ -1191,6 +1149,35 @@ const handleSearchRuc = async () => {
                             }
                             placeholder="Ej: 000123"
                           />
+                        </FormGroup>
+                      </Col> */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label className="form-label">Nro Documento</Label>
+                          <InputGroup>
+                            <Input
+                              value={editDoc.documentnumber}
+                              onChange={(e) =>
+                                setEditDoc({
+                                  ...editDoc,
+                                  documentnumber: e.target.value,
+                                })
+                              }
+                              placeholder="Ej: 000123"
+                            />
+
+                            <Button
+                              color="secondary"
+                              onClick={handleSearchDocument}
+                              disabled={loadingRuc}
+                            >
+                              {loadingRuc ? (
+                                <Spinner size="sm" color="light" />
+                              ) : (
+                                <i className="ri-search-line" />
+                              )}
+                            </Button>
+                          </InputGroup>
                         </FormGroup>
                       </Col>
                     </Row>
@@ -1378,21 +1365,35 @@ const handleSearchRuc = async () => {
                               <>
                                 {docDetails.map((d) => (
                                   <tr key={d.detailid}>
-                                    <td className="text-center">{d.unit_measure_description}</td>
-                                    <td className="text-center">{d.description}</td>
-                                    <td className="text-center">{d.vehicle_no}</td>
-                                    <td className="text-center">{d.quantity}</td>
-                                    <td className="text-end">
-                                      {Number(d.unit_value).toLocaleString("es-PE", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}
+                                    <td className="text-center">
+                                      {d.unit_measure_description}
+                                    </td>
+                                    <td className="text-center">
+                                      {d.description}
+                                    </td>
+                                    <td className="text-center">
+                                      {d.vehicle_no}
+                                    </td>
+                                    <td className="text-center">
+                                      {d.quantity}
                                     </td>
                                     <td className="text-end">
-                                      {Number(d.total_value).toLocaleString("es-PE", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}
+                                      {Number(d.unit_value).toLocaleString(
+                                        "es-PE",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </td>
+                                    <td className="text-end">
+                                      {Number(d.total_value).toLocaleString(
+                                        "es-PE",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
                                     </td>
                                   </tr>
                                 ))}
@@ -1404,7 +1405,8 @@ const handleSearchRuc = async () => {
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
-                                        (sum, d) => sum + parseFloat(d.unit_value || "0"),
+                                        (sum, d) =>
+                                          sum + parseFloat(d.unit_value || "0"),
                                         0
                                       )
                                       .toLocaleString("es-PE", {
@@ -1420,7 +1422,8 @@ const handleSearchRuc = async () => {
                                   <td className="text-end fw-bold">
                                     {docDetails
                                       .reduce(
-                                        (sum, d) => sum + parseFloat(d.tax_value || "0"),
+                                        (sum, d) =>
+                                          sum + parseFloat(d.tax_value || "0"),
                                         0
                                       )
                                       .toLocaleString("es-PE", {
