@@ -115,7 +115,7 @@ const DocumentDetails: React.FC = () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Detalles de Documentos");
 
-    // 🔹 Insertar logo
+    // 🔹 Insertar logo temporal
     try {
       const response = await fetch(LogoDocuware);
       const imageBuffer = await response.arrayBuffer();
