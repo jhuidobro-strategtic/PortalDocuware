@@ -53,6 +53,8 @@ interface Document {
   updated_by?: number | null;
   updated_at?: string | null;
   currency: string;
+  driver: string;
+  centercost: string;
 }
 
 interface TipoDocumento {
@@ -139,6 +141,7 @@ const DocumentList: React.FC = () => {
     ruc: 130,
     razon: 200,
     tipo: 150,
+    driver: 120,
     fecha: 130,
     moneda: 100,
     subtotal: 110,
@@ -845,6 +848,9 @@ const DocumentList: React.FC = () => {
                       <ResizableHeader width={columnWidths.tipo} onResize={(w) => handleResize("tipo", w)}>
                         Tipo Documento
                       </ResizableHeader>
+                      <ResizableHeader width={columnWidths.driver} onResize={(w) => handleResize("driver", w)}>
+                        Conductor
+                      </ResizableHeader>
                       <ResizableHeader width={columnWidths.fecha} onResize={(w) => handleResize("fecha", w)}>
                         Fecha Emisión
                       </ResizableHeader>
@@ -880,28 +886,31 @@ const DocumentList: React.FC = () => {
 
                     {paginatedDocuments.map((doc) => (
                       <tr key={doc.documentid}>
-                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           <b>#{doc.documentid}</b>
                         </td>
-                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {doc.documentserial}
                         </td>
-                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {doc.documentnumber}
                         </td>
-                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {doc.suppliernumber}
                         </td>
                         <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {doc.suppliername}
                         </td>
-                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {doc.documenttype ? getTipoDocumentoNombre(doc.documenttype) : "N/A"}
                         </td>
-                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.driver, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.driver}
+                        </td>
+                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {moment(doc.documentdate).format("DD/MM/YYYY")}
                         </td>
-                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                           {doc.currency === "PEN" && (
                             <img
                               src="https://flagcdn.com/w40/pe.png"
@@ -921,7 +930,7 @@ const DocumentList: React.FC = () => {
                             />
                           )}
                           {doc.currency}
-                        </td>
+                        </td>                        
                         <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
                           {Number(doc.amount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
