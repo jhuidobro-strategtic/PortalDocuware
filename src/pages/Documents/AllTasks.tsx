@@ -262,6 +262,7 @@ const DocumentList: React.FC = () => {
       editDoc.suppliername.trim() !== "" &&
       editDoc.documenttype !== null &&
       editDoc.documentdate.trim() !== "" &&
+      editDoc.driver.trim() !== "" &&
       parseFloat(editDoc.amount) > 0 &&
       parseFloat(editDoc.taxamount) > 0 &&
       parseFloat(editDoc.totalamount) > 0;
@@ -1373,6 +1374,56 @@ const DocumentList: React.FC = () => {
                             disabled
                             readOnly
                           />
+                        </FormGroup>
+                      </Col>
+                    </Row>
+
+                    <Row>                              
+                      {/* Conductor */}
+                      <Col md="6">
+                        <FormGroup>
+                          <Label className="form-label">Conductor</Label>
+                          <Input
+                            value={editDoc.driver}
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                driver: e.target.value,
+                              })
+                            }
+                            placeholder="Ej: Jeferson Huidobro"
+                          />
+                        </FormGroup>
+                      </Col>
+
+                      {/* Centro de Costo */}
+                      <Col md="6">
+                        <FormGroup>
+                          <Label className="form-label">Centro de Costo</Label>
+                          <Input
+                            type="select"
+                            value={
+                              editDoc.documenttype &&
+                              typeof editDoc.documenttype === "object"
+                                ? editDoc.documenttype.tipoid
+                                : editDoc.documenttype ?? ""
+                            }
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                documenttype: e.target.value
+                                  ? Number(e.target.value)
+                                  : null,
+                              })
+                            }
+                          >
+                            <option value="">Seleccione...</option>
+                            {tiposDocumento.map((tipo) => (
+                              <option key={tipo.tipoid} value={tipo.tipoid}>
+                                {tipo.tipo}
+                              </option>
+                            ))}
+                          </Input>
                         </FormGroup>
                       </Col>
                     </Row>
