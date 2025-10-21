@@ -604,8 +604,8 @@ const DocumentList: React.FC = () => {
 
     worksheet.addImage(imageId, "B1:D2");
 
-    // 🔹 Estilo del título (E1:K2)
-    worksheet.mergeCells("E1:K2");
+    // 🔹 Estilo del título (E1:L2)
+    worksheet.mergeCells("E1:L2");
     const titleCell = worksheet.getCell("E1");
     titleCell.value = "REPORTE DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -633,6 +633,7 @@ const DocumentList: React.FC = () => {
       "RUC",
       "Razón Social",
       "Tipo Documento",
+      "Conductor",
       "Fecha Emisión",
       "Sub Total",
       "IGV",
@@ -667,6 +668,7 @@ const DocumentList: React.FC = () => {
         doc.suppliernumber,
         doc.suppliername,
         getTipoDocumentoNombre(doc.documenttype || { tipoid: 0, tipo: "" }),
+        doc.driver ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
         parseFloat(doc.amount),
         parseFloat(doc.taxamount),
@@ -702,6 +704,7 @@ const DocumentList: React.FC = () => {
       { width: 15 }, // RUC
       { width: 35 }, // Razón Social
       { width: 20 }, // Tipo Documento
+      { width: 15 }, // Conductor
       { width: 15 }, // Fecha
       { width: 12 }, // Sub Total
       { width: 12 }, // IGV
