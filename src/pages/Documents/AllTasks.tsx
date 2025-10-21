@@ -127,7 +127,6 @@ const DocumentList: React.FC = () => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
 
-    // 🔥 Se elimina automáticamente después de 5s
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 5000);
@@ -827,83 +826,44 @@ const DocumentList: React.FC = () => {
                   style={{ tableLayout: "fixed", width: "100%", minWidth: "1500px" }}
                 >
                   <thead className="table-light">
-                    <tr>
-                      <ResizableHeader
-                        width={columnWidths.id}
-                        onResize={(w) => handleResize("id", w)}
-                      >
+                    <tr style={{ textAlign: "center" }}>
+                      <ResizableHeader width={columnWidths.id} onResize={(w) => handleResize("id", w)}>
                         ID
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.serie}
-                        onResize={(w) => handleResize("serie", w)}
-                      >
+                      <ResizableHeader width={columnWidths.serie} onResize={(w) => handleResize("serie", w)}>
                         Serie
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.numero}
-                        onResize={(w) => handleResize("numero", w)}
-                      >
+                      <ResizableHeader width={columnWidths.numero} onResize={(w) => handleResize("numero", w)}>
                         Número
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.ruc}
-                        onResize={(w) => handleResize("ruc", w)}
-                      >
+                      <ResizableHeader width={columnWidths.ruc} onResize={(w) => handleResize("ruc", w)}>
                         RUC
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.razon}
-                        onResize={(w) => handleResize("razon", w)}
-                      >
+                      <ResizableHeader width={columnWidths.razon} onResize={(w) => handleResize("razon", w)}>
                         Razón Social
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.tipo}
-                        onResize={(w) => handleResize("tipo", w)}
-                      >
+                      <ResizableHeader width={columnWidths.tipo} onResize={(w) => handleResize("tipo", w)}>
                         Tipo Documento
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.fecha}
-                        onResize={(w) => handleResize("fecha", w)}
-                      >
+                      <ResizableHeader width={columnWidths.fecha} onResize={(w) => handleResize("fecha", w)}>
                         Fecha Emisión
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.moneda}
-                        onResize={(w) => handleResize("moneda", w)}
-                      >
+                      <ResizableHeader width={columnWidths.moneda} onResize={(w) => handleResize("moneda", w)}>
                         Moneda
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.subtotal}
-                        onResize={(w) => handleResize("subtotal", w)}
-                      >
+                      <ResizableHeader width={columnWidths.subtotal} onResize={(w) => handleResize("subtotal", w)}>
                         Sub Total
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.igv}
-                        onResize={(w) => handleResize("igv", w)}
-                      >
+                      <ResizableHeader width={columnWidths.igv} onResize={(w) => handleResize("igv", w)}>
                         IGV
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.total}
-                        onResize={(w) => handleResize("total", w)}
-                      >
+                      <ResizableHeader width={columnWidths.total} onResize={(w) => handleResize("total", w)}>
                         Total
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.estado}
-                        onResize={(w) => handleResize("estado", w)}
-                      >
+                      <ResizableHeader width={columnWidths.estado} onResize={(w) => handleResize("estado", w)}>
                         Estado
                       </ResizableHeader>
-                      <ResizableHeader
-                        width={columnWidths.acciones}
-                        onResize={(w) => handleResize("acciones", w)}
-                      >
+                      <ResizableHeader width={columnWidths.acciones} onResize={(w) => handleResize("acciones", w)}>
                         Acciones
                       </ResizableHeader>
                     </tr>
@@ -920,20 +880,28 @@ const DocumentList: React.FC = () => {
 
                     {paginatedDocuments.map((doc) => (
                       <tr key={doc.documentid}>
-                        <td>
+                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           <b>#{doc.documentid}</b>
                         </td>
-                        <td>{doc.documentserial}</td>
-                        <td>{doc.documentnumber}</td>
-                        <td>{doc.suppliernumber}</td>
-                        <td>{doc.suppliername}</td>
-                        <td>
-                          {doc.documenttype
-                            ? getTipoDocumentoNombre(doc.documenttype)
-                            : "N/A"}
+                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.documentserial}
                         </td>
-                        <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
-                        <td>
+                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.documentnumber}
+                        </td>
+                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.suppliernumber}
+                        </td>
+                        <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.suppliername}
+                        </td>
+                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {doc.documenttype ? getTipoDocumentoNombre(doc.documenttype) : "N/A"}
+                        </td>
+                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {moment(doc.documentdate).format("DD/MM/YYYY")}
+                        </td>
+                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {doc.currency === "PEN" && (
                             <img
                               src="https://flagcdn.com/w40/pe.png"
@@ -954,24 +922,24 @@ const DocumentList: React.FC = () => {
                           )}
                           {doc.currency}
                         </td>
-                        <td className="text-end">
+                        <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
                           {Number(doc.amount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="text-end">
+                        <td style={{ width: columnWidths.igv, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
                           {Number(doc.taxamount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="text-end">
+                        <td style={{ width: columnWidths.total, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
                           <b>
                             {Number(doc.totalamount).toLocaleString("es-PE", {
                               minimumFractionDigits: 2,
                             })}
                           </b>
                         </td>
-                        <td className="text-center">
+                        <td style={{ width: columnWidths.estado, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-center">
                           <span
                             className={`badge ${
                               doc.status ? "bg-success" : "bg-warning"
@@ -980,9 +948,8 @@ const DocumentList: React.FC = () => {
                             {doc.status ? "Activo" : "Pendiente"}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ width: columnWidths.acciones, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           <div className="hstack gap-2">
-                            {/* Ver */}
                             <Button
                               size="sm"
                               color="info"
@@ -991,28 +958,22 @@ const DocumentList: React.FC = () => {
                             >
                               <i className="ri-eye-line align-bottom" /> Ver
                             </Button>
-                            {/* Editar */}
                             <Button
                               size="sm"
                               color="warning"
                               outline
                               onClick={() => {
                                 setEditDoc(doc);
-                                // calcular IGV %
                                 const amt = parseFloat(doc.amount || "0");
                                 const tax = parseFloat(doc.taxamount || "0");
                                 setEditIgvPercent(
-                                  amt > 0 && tax > 0
-                                    ? Math.round((tax / amt) * 100)
-                                    : 0
+                                  amt > 0 && tax > 0 ? Math.round((tax / amt) * 100) : 0
                                 );
-                                // traer detalles
                                 fetchDetails(doc);
                                 setEditModal(true);
                               }}
                             >
-                              <i className="ri-edit-box-line align-bottom" />{" "}
-                              Editar
+                              <i className="ri-edit-box-line align-bottom" /> Editar
                             </Button>
                           </div>
                         </td>
