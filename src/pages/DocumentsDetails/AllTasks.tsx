@@ -40,6 +40,7 @@ interface Document {
   amount: number;
   taxamount: number;
   totalamount: number;
+  driver: string;
 }
 
 const DocumentDetails: React.FC = () => {
@@ -92,7 +93,8 @@ const DocumentDetails: React.FC = () => {
       doc.documenttype.toLowerCase().includes(term) ||
       doc.vehicle_nro.toLowerCase().includes(term) ||
       doc.unit_measure_description.toLowerCase().includes(term) ||
-      doc.description.toLowerCase().includes(term);
+      doc.description.toLowerCase().includes(term) ||
+      doc.driver.toLowerCase().includes(term);
 
     // Usamos moment para comparar correctamente las fechas
     const docDate = moment(doc.documentdate, ["YYYY/MM/DD", "DD/MM/YYYY"]);
@@ -129,7 +131,7 @@ const DocumentDetails: React.FC = () => {
     }
 
     // 🔹 Título
-    worksheet.mergeCells("E1:P2");
+    worksheet.mergeCells("E1:Q2");
     const titleCell = worksheet.getCell("E1");
     titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -151,6 +153,7 @@ const DocumentDetails: React.FC = () => {
     // 🔹 Encabezados
     const headers = [
       "Tipo Documento",
+      "Conductor",
       "Serie",
       "Número",
       "Fecha",
@@ -196,6 +199,7 @@ const DocumentDetails: React.FC = () => {
 
       const rowData = [
         tipoDocumento,
+        doc.driver ?? "",
         doc.documentserial ?? "",
         doc.documentnumber ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
@@ -239,6 +243,7 @@ const DocumentDetails: React.FC = () => {
     // 🔹 Ajustar anchos
     worksheet.columns = [
       { width: 18 }, // Tipo Documento
+      { width: 15 }, // Conductor
       { width: 10 }, // Serie
       { width: 12 }, // Número
       { width: 15 }, // Fecha
@@ -332,6 +337,7 @@ const DocumentDetails: React.FC = () => {
                   <thead className="table-light">
                     <tr>
                       <th>Tipo</th>
+                      <th>Conductor</th>
                       <th>Serie</th>
                       <th>Núm</th>
                       <th>Fecha</th>
@@ -362,6 +368,7 @@ const DocumentDetails: React.FC = () => {
                           key={`${doc.documentserial}-${doc.documentnumber}-${index}`}
                         >
                           <td>{doc.documenttype}</td>
+                          <td>{doc.driver}</td>
                           <td>{doc.documentserial}</td>
                           <td>{doc.documentnumber}</td>
                           <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
