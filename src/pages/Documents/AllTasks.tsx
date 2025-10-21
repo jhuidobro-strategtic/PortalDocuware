@@ -32,6 +32,7 @@ import Draggable from "react-draggable";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
+import ResizableHeader from "./ResizableHeader";
 
 interface Document {
   documentid: number;
@@ -130,6 +131,26 @@ const DocumentList: React.FC = () => {
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 5000);
+  };
+
+  const [columnWidths, setColumnWidths] = useState({
+    id: 80,
+    serie: 100,
+    numero: 100,
+    ruc: 130,
+    razon: 200,
+    tipo: 150,
+    fecha: 130,
+    moneda: 100,
+    subtotal: 110,
+    igv: 100,
+    total: 120,
+    estado: 120,
+    acciones: 160,
+  });
+
+  const handleResize = (column: keyof typeof columnWidths, newWidth: number) => {
+    setColumnWidths((prev) => ({ ...prev, [column]: newWidth }));
   };
 
   useEffect(() => {
@@ -372,37 +393,51 @@ const DocumentList: React.FC = () => {
 
       if (Array.isArray(dataExist) && dataExist.length > 0) {
         setDocDetails(dataExist);
-        addNotification("info", "Ya existen detalles registrados. No se consultó SUNAT.");
+        addNotification(
+          "info",
+          "Ya existen detalles registrados. No se consultó SUNAT."
+        );
         setLoadingDocument(false);
         return; // 🚫 Detiene aquí, no consulta ni inserta nada
       }
 
       // 🔹 Determinar tipo de comprobante
       const tipoComprobante =
-        typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
+        typeof editDoc.documenttype === "object" &&
+        editDoc.documenttype !== null
           ? String(editDoc.documenttype.tipoid).padStart(2, "0")
           : String(editDoc.documenttype).padStart(2, "0");
 
-      if (!tipoComprobante || !editDoc.documentserial || !editDoc.documentnumber) {
-        addNotification("warning", "Complete Tipo, Serie y Número antes de consultar SUNAT");
+      if (
+        !tipoComprobante ||
+        !editDoc.documentserial ||
+        !editDoc.documentnumber
+      ) {
+        addNotification(
+          "warning",
+          "Complete Tipo, Serie y Número antes de consultar SUNAT"
+        );
         return;
       }
 
       // 🔹 1️⃣ Consultar comprobante en SUNAT
-      const sunatRes = await fetch("https://dev.apisunat.pe/api/v1/sunat/comprobante", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:
-            "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
-        },
-        body: JSON.stringify({
-          tipo_comprobante: tipoComprobante,
-          ruc_emisor: editDoc.suppliernumber,
-          serie: editDoc.documentserial,
-          numero: editDoc.documentnumber,
-        }),
-      });
+      const sunatRes = await fetch(
+        "https://dev.apisunat.pe/api/v1/sunat/comprobante",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
+          },
+          body: JSON.stringify({
+            tipo_comprobante: tipoComprobante,
+            ruc_emisor: editDoc.suppliernumber,
+            serie: editDoc.documentserial,
+            numero: editDoc.documentnumber,
+          }),
+        }
+      );
 
       const sunatData = await sunatRes.json();
 
@@ -441,13 +476,18 @@ const DocumentList: React.FC = () => {
       for (const item of itemsToRegister) {
         // 📍 Buscar placa en la descripción
         let texto = item.descripcion || "";
-        let textoLimpio = texto.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        let textoLimpio = texto
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
 
         let match = textoLimpio.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
         if (!match) {
           const posibles = textoLimpio.match(/\b[A-Z0-9-]{5,8}\b/g);
           if (posibles) {
-            match = posibles.find((c: string) => /[A-Z]/i.test(c) && /\d/.test(c));
+            match = posibles.find(
+              (c: string) => /[A-Z]/i.test(c) && /\d/.test(c)
+            );
           }
         }
 
@@ -467,25 +507,28 @@ const DocumentList: React.FC = () => {
         }
 
         // 🔹 Enviar detalle a backend
-        await fetch("https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            documentserial: detalle.serie,
-            documentnumber: detalle.numero,
-            suppliernumber: sunatPayload.emisor.ruc,
-            unit_measure_description: item.unidad_medida_descripcion,
-            description: item.descripcion,
-            vehicle_no: placa,
-            quantity: round2(item.cantidad),
-            unit_value: round2(item.valor_unitario),
-            tax_value: round2(item.impuesto_valor),
-            total_value: round2(item.precio_unitario),
-            status: false,
-            created_by: 1,
-            created_at: new Date().toISOString(),
-          }),
-        });
+        await fetch(
+          "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              documentserial: detalle.serie,
+              documentnumber: detalle.numero,
+              suppliernumber: sunatPayload.emisor.ruc,
+              unit_measure_description: item.unidad_medida_descripcion,
+              description: item.descripcion,
+              vehicle_no: placa,
+              quantity: round2(item.cantidad),
+              unit_value: round2(item.valor_unitario),
+              tax_value: round2(item.impuesto_valor),
+              total_value: round2(item.precio_unitario),
+              status: false,
+              created_by: 1,
+              created_at: new Date().toISOString(),
+            }),
+          }
+        );
       }
 
       // 🔹 3️⃣ Obtener los detalles recién registrados
@@ -496,7 +539,10 @@ const DocumentList: React.FC = () => {
 
       if (dataGet && dataGet.length > 0) {
         setDocDetails(dataGet);
-        addNotification("success", "Detalles cargados correctamente desde SUNAT");
+        addNotification(
+          "success",
+          "Detalles cargados correctamente desde SUNAT"
+        );
       } else {
         addNotification("warning", "No se encontraron detalles en SUNAT");
       }
@@ -507,7 +553,6 @@ const DocumentList: React.FC = () => {
       setLoadingDocument(false);
     }
   };
-
 
   const fetchDetails = async (doc: Document) => {
     setLoadingDetails(true);
@@ -776,33 +821,103 @@ const DocumentList: React.FC = () => {
               </div>
 
               {/* 📌 Tabla */}
-              <div className="table-responsive">
-                <Table className="table align-middle table-nowrap mb-0">
+              <div className="table-responsive"  style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+                <Table
+                  className="table align-middle table-nowrap mb-0"
+                  style={{ tableLayout: "fixed", width: "100%", minWidth: "1500px" }}
+                >
                   <thead className="table-light">
                     <tr>
-                      <th>ID</th>
-                      <th>Serie</th>
-                      <th>Número</th>
-                      <th>RUC</th>
-                      <th>Razón Social</th>
-                      <th>Tipo Documento</th>
-                      <th>Fecha Emisión</th>
-                      <th>Moneda</th>
-                      <th>Sub Total</th>
-                      <th>IGV</th>
-                      <th>Total</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
+                      <ResizableHeader
+                        width={columnWidths.id}
+                        onResize={(w) => handleResize("id", w)}
+                      >
+                        ID
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.serie}
+                        onResize={(w) => handleResize("serie", w)}
+                      >
+                        Serie
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.numero}
+                        onResize={(w) => handleResize("numero", w)}
+                      >
+                        Número
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.ruc}
+                        onResize={(w) => handleResize("ruc", w)}
+                      >
+                        RUC
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.razon}
+                        onResize={(w) => handleResize("razon", w)}
+                      >
+                        Razón Social
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.tipo}
+                        onResize={(w) => handleResize("tipo", w)}
+                      >
+                        Tipo Documento
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.fecha}
+                        onResize={(w) => handleResize("fecha", w)}
+                      >
+                        Fecha Emisión
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.moneda}
+                        onResize={(w) => handleResize("moneda", w)}
+                      >
+                        Moneda
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.subtotal}
+                        onResize={(w) => handleResize("subtotal", w)}
+                      >
+                        Sub Total
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.igv}
+                        onResize={(w) => handleResize("igv", w)}
+                      >
+                        IGV
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.total}
+                        onResize={(w) => handleResize("total", w)}
+                      >
+                        Total
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.estado}
+                        onResize={(w) => handleResize("estado", w)}
+                      >
+                        Estado
+                      </ResizableHeader>
+                      <ResizableHeader
+                        width={columnWidths.acciones}
+                        onResize={(w) => handleResize("acciones", w)}
+                      >
+                        Acciones
+                      </ResizableHeader>
                     </tr>
                   </thead>
+
                   <tbody>
                     {paginatedDocuments.length === 0 && (
                       <tr>
-                        <td colSpan={10} className="text-center">
+                        <td colSpan={13} className="text-center">
                           No se encontraron registros
                         </td>
                       </tr>
                     )}
+
                     {paginatedDocuments.map((doc) => (
                       <tr key={doc.documentid}>
                         <td>
@@ -842,20 +957,17 @@ const DocumentList: React.FC = () => {
                         <td className="text-end">
                           {Number(doc.amount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
                           })}
                         </td>
                         <td className="text-end">
                           {Number(doc.taxamount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
                           })}
                         </td>
                         <td className="text-end">
                           <b>
                             {Number(doc.totalamount).toLocaleString("es-PE", {
                               minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
                             })}
                           </b>
                         </td>
@@ -877,8 +989,7 @@ const DocumentList: React.FC = () => {
                               outline
                               onClick={() => setSelectedDoc(doc)}
                             >
-                              <i className="ri-eye-line align-bottom" />
-                              <span> Ver</span>
+                              <i className="ri-eye-line align-bottom" /> Ver
                             </Button>
                             {/* Editar */}
                             <Button
@@ -887,7 +998,6 @@ const DocumentList: React.FC = () => {
                               outline
                               onClick={() => {
                                 setEditDoc(doc);
-
                                 // calcular IGV %
                                 const amt = parseFloat(doc.amount || "0");
                                 const tax = parseFloat(doc.taxamount || "0");
@@ -896,15 +1006,13 @@ const DocumentList: React.FC = () => {
                                     ? Math.round((tax / amt) * 100)
                                     : 0
                                 );
-
                                 // traer detalles
                                 fetchDetails(doc);
-
                                 setEditModal(true);
                               }}
                             >
-                              <i className="ri-edit-box-line align-bottom" />
-                              <span> Editar</span>
+                              <i className="ri-edit-box-line align-bottom" />{" "}
+                              Editar
                             </Button>
                           </div>
                         </td>
@@ -1149,22 +1257,6 @@ const DocumentList: React.FC = () => {
                         </FormGroup>
                       </Col>
 
-                      {/* Nro Documento */}
-                      {/* <Col md="4">
-                        <FormGroup>
-                          <Label className="form-label">Nro Documento</Label>
-                          <Input
-                            value={editDoc.documentnumber}
-                            onChange={(e) =>
-                              setEditDoc({
-                                ...editDoc,
-                                documentnumber: e.target.value,
-                              })
-                            }
-                            placeholder="Ej: 000123"
-                          />
-                        </FormGroup>
-                      </Col> */}
                       <Col md="4">
                         <FormGroup>
                           <Label className="form-label">Nro Documento</Label>
