@@ -1431,7 +1431,7 @@ const DocumentList: React.FC = () => {
                                 driver: e.target.value,
                               })
                             }
-                            placeholder="Ej: Jeferson Huidobro"
+                            placeholder="Ingrese nombre conductor"
                           />
                         </FormGroup>
                       </Col>
@@ -1484,59 +1484,59 @@ const DocumentList: React.FC = () => {
                         </FormGroup>
                       </Col> */}
                       <Col md="6">
-  <FormGroup>
-    <Label className="form-label">Centro de Costo</Label>
-    <Select
-      value={
-        (() => {
-          // Determinar el valor actual
-          const currentValue = 
-            editDoc.centercost && typeof editDoc.centercost === "object"
-              ? String(editDoc.centercost.centroid)
-              : editDoc.centercost
-              ? String(editDoc.centercost)
-              : null;
-          // Encontrar la opción correspondiente
-          return centrosCostos
-            .map((centro) => ({
-              value: String(centro.centroid),
-              label: `${centro.centrocodigo} - ${centro.descripcion}`,
-            }))
-            .find((opt) => opt.value === currentValue) || null;
-        })()
-      }
-      options={centrosCostos.map((centro) => ({
-        value: String(centro.centroid),
-        label: `${centro.centrocodigo} - ${centro.descripcion}`,
-      }))}
-      onChange={(selected: { value: string; label: string } | null) =>
-        setEditDoc({
-          ...editDoc,
-          centercost: selected ? Number(selected.value) : null,
-        })
-      }
-      placeholder="Buscar centro de costo..."
-      isClearable
-      isSearchable
-      noOptionsMessage={() => "No hay resultados"}
-      styles={{
-        control: (base: any) => ({
-          ...base,
-          minHeight: "38px",
-        }),
-        menu: (base: any) => ({
-          ...base,
-          zIndex: 9999,
-        }),
-        menuPortal: (base: any) => ({
-          ...base,
-          zIndex: 9999,
-        }),
-      }}
-      menuPortalTarget={document.body}
-    />
-  </FormGroup>
-</Col>
+                          <FormGroup>
+                            <Label className="form-label">Centro de Costo</Label>
+                            <Select
+                              value={
+                                (() => {
+                                  // Determinar el valor actual
+                                  const currentValue = 
+                                    editDoc.centercost && typeof editDoc.centercost === "object"
+                                      ? String(editDoc.centercost.centroid)
+                                      : editDoc.centercost
+                                      ? String(editDoc.centercost)
+                                      : null;
+                                  // Encontrar la opción correspondiente
+                                  return centrosCostos
+                                    .map((centro) => ({
+                                      value: String(centro.centroid),
+                                      label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                                    }))
+                                    .find((opt) => opt.value === currentValue) || null;
+                                })()
+                              }
+                              options={centrosCostos.map((centro) => ({
+                                value: String(centro.centroid),
+                                label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                              }))}
+                              onChange={(selected: { value: string; label: string } | null) =>
+                                setEditDoc({
+                                  ...editDoc,
+                                  centercost: selected ? Number(selected.value) : null,
+                                })
+                              }
+                              placeholder="Seleccione centro de costo"
+                              isClearable
+                              isSearchable
+                              noOptionsMessage={() => "No hay resultados"}
+                              styles={{
+                                control: (base: any) => ({
+                                  ...base,
+                                  minHeight: "38px",
+                                }),
+                                menu: (base: any) => ({
+                                  ...base,
+                                  zIndex: 9999,
+                                }),
+                                menuPortal: (base: any) => ({
+                                  ...base,
+                                  zIndex: 9999,
+                                }),
+                              }}
+                              menuPortalTarget={document.body}
+                            />
+                          </FormGroup>
+                        </Col>
 
                     </Row>
 
