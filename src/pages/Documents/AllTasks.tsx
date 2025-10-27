@@ -54,12 +54,18 @@ interface Document {
   updated_at?: string | null;
   currency: string;
   driver: string;
-  centercost: string;
+  centercost: number;
 }
 
 interface TipoDocumento {
   tipoid: number;
   tipo: string;
+}
+
+interface CentroCosto {
+  centroid: number;
+  centrocodigo: string;
+  descripcion: string;
 }
 
 interface DocumentDetail {
@@ -100,6 +106,9 @@ const DocumentList: React.FC = () => {
 
   // 📌 Tipos de documento
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
+
+    // 📌 Centros de Costos
+  const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
 
   // 📌 Filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -188,8 +197,27 @@ const DocumentList: React.FC = () => {
       }
     };
 
+    const fetchCentrosCostos = async () => {
+      try {
+        const res = await fetch(
+          "https://docuware-api-a09ab977636d.herokuapp.com/api/centro-costo"
+        );
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          setCentrosCostos(data);
+        } else {
+          console.error("La respuesta no es un array válido:", data);
+        }
+      } catch (error) {
+        console.error("Error al cargar los centros de costos:", error);
+      }
+    };
+
+
     fetchDocuments();
     fetchTiposDocumento();
+    fetchCentrosCostos();
   }, []);
 
   // 📌 Google Drive helpers
@@ -261,6 +289,7 @@ const DocumentList: React.FC = () => {
       editDoc.suppliernumber.trim() !== "" &&
       editDoc.suppliername.trim() !== "" &&
       editDoc.documenttype !== null &&
+      // editDoc.documenttype !== null &&
       editDoc.documentdate.trim() !== "" &&
       editDoc.driver.trim() !== "" &&
       parseFloat(editDoc.amount) > 0 &&
@@ -285,6 +314,7 @@ const DocumentList: React.FC = () => {
         ...editDoc,
         status: isValid,
         documenttype_id: docTypeValue,
+        centercost_id: editDoc.centercost,
       };
 
       const resPatch = await fetch(
@@ -1403,32 +1433,27 @@ const DocumentList: React.FC = () => {
                       <Col md="6">
                         <FormGroup>
                           <Label className="form-label">Centro de Costo</Label>
+
                           <Input
                             type="select"
-                            value={
-                              editDoc.documenttype &&
-                              typeof editDoc.documenttype === "object"
-                                ? editDoc.documenttype.tipoid
-                                : editDoc.documenttype ?? ""
-                            }
+                            value={editDoc.centercost || ""}
                             onChange={(e) =>
                               setEditDoc({
                                 ...editDoc,
-                                documenttype: e.target.value
-                                  ? Number(e.target.value)
-                                  : null,
+                                centercost: e.target.value ? Number(e.target.value) : 0,
                               })
                             }
                           >
-                            <option value="">Seleccione...</option>
-                            {tiposDocumento.map((tipo) => (
-                              <option key={tipo.tipoid} value={tipo.tipoid}>
-                                {tipo.tipo}
+                            <option value="">Seleccione un centro de costo...</option>
+                            {centrosCostos.map((centro) => (
+                              <option key={centro.centroid} value={centro.centroid}>
+                                {centro.centrocodigo} - {centro.descripcion}
                               </option>
                             ))}
                           </Input>
                         </FormGroup>
                       </Col>
+
                     </Row>
 
                     <Row>
