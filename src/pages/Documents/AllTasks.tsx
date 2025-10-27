@@ -54,7 +54,7 @@ interface Document {
   updated_at?: string | null;
   currency: string;
   driver: string;
-  centercost: number;
+  centercost: number | { centroid: number; centrocodigo: string; descripcion:string } | null;
 }
 
 interface TipoDocumento {
@@ -289,7 +289,7 @@ const DocumentList: React.FC = () => {
       editDoc.suppliernumber.trim() !== "" &&
       editDoc.suppliername.trim() !== "" &&
       editDoc.documenttype !== null &&
-      // editDoc.documenttype !== null &&
+      editDoc.centercost !== null &&
       editDoc.documentdate.trim() !== "" &&
       editDoc.driver.trim() !== "" &&
       parseFloat(editDoc.amount) > 0 &&
@@ -1431,28 +1431,34 @@ const DocumentList: React.FC = () => {
 
                       {/* Centro de Costo */}
                       <Col md="6">
-                        <FormGroup>
-                          <Label className="form-label">Centro de Costo</Label>
-
-                          <Input
-                            type="select"
-                            value={editDoc.centercost || ""}
-                            onChange={(e) =>
-                              setEditDoc({
-                                ...editDoc,
-                                centercost: e.target.value ? Number(e.target.value) : 0,
-                              })
-                            }
-                          >
-                            <option value="">Seleccione un centro de costo...</option>
-                            {centrosCostos.map((centro) => (
-                              <option key={centro.centroid} value={centro.centroid}>
-                                {centro.centrocodigo} - {centro.descripcion}
-                              </option>
-                            ))}
-                          </Input>
-                        </FormGroup>
-                      </Col>
+                          <FormGroup>
+                            <Label className="form-label">Centro de Costo</Label>
+                            <Input
+                              type="select"
+                              value={
+                                editDoc.centercost &&
+                                typeof editDoc.centercost === "object"
+                                  ? editDoc.centercost.centroid
+                                  : editDoc.centercost ?? ""
+                              }
+                              onChange={(e) =>
+                                setEditDoc({
+                                  ...editDoc,
+                                  centercost: e.target.value
+                                    ? Number(e.target.value)
+                                    : null,
+                                })
+                              }
+                            >
+                              <option value="">Seleccione...</option>
+                              {centrosCostos.map((centro) => (
+                                <option key={centro.centroid} value={centro.centroid}>
+                                  {centro.centrocodigo} - {centro.descripcion}
+                                </option>
+                              ))}
+                            </Input>
+                          </FormGroup>
+                        </Col>
 
                     </Row>
 
