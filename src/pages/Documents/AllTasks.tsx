@@ -33,6 +33,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
 import ResizableHeader from "./ResizableHeader";
+import Select from 'react-select';
 
 interface Document {
   documentid: number;
@@ -311,10 +312,10 @@ const DocumentList: React.FC = () => {
           : editDoc.documenttype;
       
       const centerCostValue =
-      typeof editDoc.centercost === "object" &&
-      editDoc.centercost !== null
-        ? editDoc.centercost.centroid
-        : editDoc.centercost;
+        typeof editDoc.centercost === "object" &&
+        editDoc.centercost !== null
+          ? editDoc.centercost.centroid
+          : editDoc.centercost;
 
       const updatedDoc = {
         ...editDoc,
@@ -1436,40 +1437,106 @@ const DocumentList: React.FC = () => {
                       </Col>
 
                       {/* Centro de Costo */}
-                      <Col md="6">
+                      {/* <Col md="6">
                         <FormGroup>
                           <Label className="form-label">Centro de Costo</Label>
-                          <Input
-                            type="select"
+                          <Select
                             value={
-                              editDoc.centercost &&
-                              typeof editDoc.centercost === "object"
-                                ? String(editDoc.centercost.centroid)
-                                : editDoc.centercost 
-                                  ? String(editDoc.centercost)
-                                  : ""
+                              (() => {
+                                // Determinar el valor actual
+                                const currentValue = 
+                                  editDoc.centercost && typeof editDoc.centercost === "object"
+                                    ? String(editDoc.centercost.centroid)
+                                    : editDoc.centercost
+                                    ? String(editDoc.centercost)
+                                    : null;
+
+                                // Encontrar la opción correspondiente
+                                return centrosCostos
+                                  .map((centro) => ({
+                                    value: String(centro.centroid),
+                                    label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                                  }))
+                                  .find((opt) => opt.value === currentValue) || null;
+                              })()
                             }
-                            onChange={(e) =>
+                            options={centrosCostos.map((centro) => ({
+                              value: String(centro.centroid),
+                              label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                            }))}
+                            onChange={(selected: { value: string; label: string } | null) =>
                               setEditDoc({
                                 ...editDoc,
-                                centercost: e.target.value
-                                  ? Number(e.target.value)
-                                  : null,
+                                centercost: selected ? Number(selected.value) : null,
                               })
                             }
-                          >
-                            <option value="">Seleccione...</option>
-                            {centrosCostos.map((centro) => (
-                              <option 
-                                key={centro.centroid} 
-                                value={String(centro.centroid)}
-                              >
-                                {centro.centrocodigo} - {centro.descripcion}
-                              </option>
-                            ))}
-                          </Input>
+                            placeholder="Buscar centro de costo..."
+                            isClearable
+                            isSearchable
+                            noOptionsMessage={() => "No hay resultados"}
+                            styles={{
+                              control: (base: any) => ({
+                                ...base,
+                                minHeight: "38px",
+                              }),
+                            }}
+                          />
                         </FormGroup>
-                      </Col>
+                      </Col> */}
+                      <Col md="6">
+  <FormGroup>
+    <Label className="form-label">Centro de Costo</Label>
+    <Select
+      value={
+        (() => {
+          // Determinar el valor actual
+          const currentValue = 
+            editDoc.centercost && typeof editDoc.centercost === "object"
+              ? String(editDoc.centercost.centroid)
+              : editDoc.centercost
+              ? String(editDoc.centercost)
+              : null;
+          // Encontrar la opción correspondiente
+          return centrosCostos
+            .map((centro) => ({
+              value: String(centro.centroid),
+              label: `${centro.centrocodigo} - ${centro.descripcion}`,
+            }))
+            .find((opt) => opt.value === currentValue) || null;
+        })()
+      }
+      options={centrosCostos.map((centro) => ({
+        value: String(centro.centroid),
+        label: `${centro.centrocodigo} - ${centro.descripcion}`,
+      }))}
+      onChange={(selected: { value: string; label: string } | null) =>
+        setEditDoc({
+          ...editDoc,
+          centercost: selected ? Number(selected.value) : null,
+        })
+      }
+      placeholder="Buscar centro de costo..."
+      isClearable
+      isSearchable
+      noOptionsMessage={() => "No hay resultados"}
+      styles={{
+        control: (base: any) => ({
+          ...base,
+          minHeight: "38px",
+        }),
+        menu: (base: any) => ({
+          ...base,
+          zIndex: 9999,
+        }),
+        menuPortal: (base: any) => ({
+          ...base,
+          zIndex: 9999,
+        }),
+      }}
+      menuPortalTarget={document.body}
+    />
+  </FormGroup>
+</Col>
 
                     </Row>
 
