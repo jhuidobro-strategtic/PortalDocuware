@@ -309,12 +309,18 @@ const DocumentList: React.FC = () => {
         editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype;
+      
+      const centerCostValue =
+      typeof editDoc.centercost === "object" &&
+      editDoc.centercost !== null
+        ? editDoc.centercost.centroid
+        : editDoc.centercost;
 
       const updatedDoc = {
         ...editDoc,
         status: isValid,
         documenttype_id: docTypeValue,
-        centercost_id: editDoc.centercost,
+        centercost_id: centerCostValue,
       };
 
       const resPatch = await fetch(
@@ -1431,34 +1437,39 @@ const DocumentList: React.FC = () => {
 
                       {/* Centro de Costo */}
                       <Col md="6">
-                          <FormGroup>
-                            <Label className="form-label">Centro de Costo</Label>
-                            <Input
-                              type="select"
-                              value={
-                                editDoc.centercost &&
-                                typeof editDoc.centercost === "object"
-                                  ? editDoc.centercost.centroid
-                                  : editDoc.centercost ?? ""
-                              }
-                              onChange={(e) =>
-                                setEditDoc({
-                                  ...editDoc,
-                                  centercost: e.target.value
-                                    ? Number(e.target.value)
-                                    : null,
-                                })
-                              }
-                            >
-                              <option value="">Seleccione...</option>
-                              {centrosCostos.map((centro) => (
-                                <option key={centro.centroid} value={centro.centroid}>
-                                  {centro.centrocodigo} - {centro.descripcion}
-                                </option>
-                              ))}
-                            </Input>
-                          </FormGroup>
-                        </Col>
+                        <FormGroup>
+                          <Label className="form-label">Centro de Costo</Label>
+                          <Input
+                            type="select"
+                            value={
+                              editDoc.centercost &&
+                              typeof editDoc.centercost === "object"
+                                ? String(editDoc.centercost.centroid)
+                                : editDoc.centercost 
+                                  ? String(editDoc.centercost)
+                                  : ""
+                            }
+                            onChange={(e) =>
+                              setEditDoc({
+                                ...editDoc,
+                                centercost: e.target.value
+                                  ? Number(e.target.value)
+                                  : null,
+                              })
+                            }
+                          >
+                            <option value="">Seleccione...</option>
+                            {centrosCostos.map((centro) => (
+                              <option 
+                                key={centro.centroid} 
+                                value={String(centro.centroid)}
+                              >
+                                {centro.centrocodigo} - {centro.descripcion}
+                              </option>
+                            ))}
+                          </Input>
+                        </FormGroup>
+                      </Col>
 
                     </Row>
 
