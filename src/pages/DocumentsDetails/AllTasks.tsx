@@ -41,6 +41,7 @@ interface Document {
   taxamount: number;
   totalamount: number;
   driver: string;
+  centercost:string;
 }
 
 const DocumentDetails: React.FC = () => {
@@ -131,7 +132,7 @@ const DocumentDetails: React.FC = () => {
     }
 
     // 🔹 Título
-    worksheet.mergeCells("E1:Q2");
+    worksheet.mergeCells("E1:R2");
     const titleCell = worksheet.getCell("E1");
     titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -159,6 +160,7 @@ const DocumentDetails: React.FC = () => {
       "Fecha",
       "Proveedor (RUC)",
       "Nombre Proveedor",
+      "Centro de Costos",
       "Descripción",
       "Vehículo",
       "Unidad Medida",
@@ -205,6 +207,7 @@ const DocumentDetails: React.FC = () => {
         moment(doc.documentdate).format("DD/MM/YYYY"),
         doc.suppliernumber ?? "",
         doc.suppliername ?? "",
+        doc.centercost ?? "",
         (doc as any).description ?? "—",
         (doc as any).vehicle_nro ?? "—",
         (doc as any).unit_measure_description ?? "—",
@@ -249,6 +252,7 @@ const DocumentDetails: React.FC = () => {
       { width: 15 }, // Fecha
       { width: 15 }, // RUC
       { width: 35 }, // Razón Social
+      { width: 40 }, // Descripción
       { width: 40 }, // Descripción
       { width: 14 }, // Vehículo
       { width: 18 }, // Unidad medida
@@ -343,6 +347,7 @@ const DocumentDetails: React.FC = () => {
                       <th>Fecha</th>
                       <th>RUC</th>
                       <th>Proveedor</th>
+                      <th>Centro de Costo</th>
                       <th>Descripción</th>
                       <th>Vehículo</th>
                       <th>Unidad</th>
@@ -374,6 +379,7 @@ const DocumentDetails: React.FC = () => {
                           <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
                           <td>{doc.suppliernumber}</td>
                           <td>{doc.suppliername}</td>
+                          <td>{doc.centercost}</td>
                           <td style={{ maxWidth: 300, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {doc.description.replace(/<[^>]*>/g, '')}
                           </td>                          
