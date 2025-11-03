@@ -39,6 +39,7 @@ interface Document {
   documentid: number;
   documentserial: string;
   documentnumber: string;
+  customer: string;
   suppliernumber: string;
   suppliername: string;
   documenttype: number | { tipoid: number; tipo: string } | null;
@@ -924,34 +925,36 @@ const DocumentList: React.FC = () => {
                         </td>
                       </tr>
                     )}
-
-                    {paginatedDocuments.map((doc) => (
-                      <tr key={doc.documentid}>
-                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                    {/* amarillo de respaldo #ffeb3b */}
+                    {paginatedDocuments.map((doc) => {
+                      const highlightStyle = doc.customer !== '20129605490' ? { backgroundColor: '#ffe5009c' } : {};
+                      return (
+                      <tr key={doc.documentid} style={{ backgroundColor: doc.customer !== '20129605490' ? '#ffe5009c' : 'transparent' }}>
+                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           <b>#{doc.documentid}</b>
                         </td>
-                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {doc.documentserial}
                         </td>
-                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {doc.documentnumber}
                         </td>
-                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {doc.suppliernumber}
                         </td>
-                        <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
                           {doc.suppliername}
                         </td>
-                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {doc.documenttype ? getTipoDocumentoNombre(doc.documenttype) : "N/A"}
                         </td>
-                        <td style={{ width: columnWidths.driver, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.driver, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
                           {doc.driver}
                         </td>
-                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {moment(doc.documentdate).format("DD/MM/YYYY")}
                         </td>
-                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           {doc.currency === "PEN" && (
                             <img
                               src="https://flagcdn.com/w40/pe.png"
@@ -972,24 +975,24 @@ const DocumentList: React.FC = () => {
                           )}
                           {doc.currency}
                         </td>                        
-                        <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
+                        <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
                           {Number(doc.amount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td style={{ width: columnWidths.igv, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
+                        <td style={{ width: columnWidths.igv, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
                           {Number(doc.taxamount).toLocaleString("es-PE", {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td style={{ width: columnWidths.total, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-end">
+                        <td style={{ width: columnWidths.total, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
                           <b>
                             {Number(doc.totalamount).toLocaleString("es-PE", {
                               minimumFractionDigits: 2,
                             })}
                           </b>
                         </td>
-                        <td style={{ width: columnWidths.estado, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-center">
+                        <td style={{ width: columnWidths.estado, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-center">
                           <span
                             className={`badge ${
                               doc.status ? "bg-success" : "bg-warning"
@@ -998,7 +1001,7 @@ const DocumentList: React.FC = () => {
                             {doc.status ? "Activo" : "Pendiente"}
                           </span>
                         </td>
-                        <td style={{ width: columnWidths.acciones, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ width: columnWidths.acciones, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
                           <div className="hstack gap-2">
                             <Button
                               size="sm"
@@ -1028,7 +1031,8 @@ const DocumentList: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </Table>
               </div>
