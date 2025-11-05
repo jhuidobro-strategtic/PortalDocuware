@@ -159,7 +159,7 @@ const DocumentList: React.FC = () => {
     igv: 100,
     total: 120,
     estado: 120,
-    acciones: 160,
+    acciones: 250,
   });
 
   const handleResize = (column: keyof typeof columnWidths, newWidth: number) => {
@@ -1027,6 +1027,23 @@ const DocumentList: React.FC = () => {
                               }}
                             >
                               <i className="ri-edit-box-line align-bottom" /> Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              color="danger"
+                              outline
+                              // onClick={() => {
+                              //   setEditDoc(doc);
+                              //   const amt = parseFloat(doc.amount || "0");
+                              //   const tax = parseFloat(doc.taxamount || "0");
+                              //   setEditIgvPercent(
+                              //     amt > 0 && tax > 0 ? Math.round((tax / amt) * 100) : 0
+                              //   );
+                              //   fetchDetails(doc);
+                              //   setEditModal(true);
+                              // }}
+                            >
+                              <i className=" ri-delete-bin-line align-bottom" /> Eliminar
                             </Button>
                           </div>
                         </td>
