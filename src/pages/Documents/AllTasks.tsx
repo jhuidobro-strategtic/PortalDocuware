@@ -927,9 +927,9 @@ const DocumentList: React.FC = () => {
                     )}
                     {/* amarillo de respaldo #ffeb3b */}
                     {paginatedDocuments.map((doc) => {
-                      const highlightStyle = doc.customer !== '20129605490' ? { backgroundColor: '#ffe5009c' } : {};
+                      const highlightStyle = doc.customer !== '20129605490' ? { backgroundColor: '#fff5a1' } : {};
                       return (
-                      <tr key={doc.documentid} style={{ backgroundColor: doc.customer !== '20129605490' ? '#ffe5009c' : 'transparent' }}>
+                      <tr key={doc.documentid} style={{ backgroundColor: doc.customer !== '20129605490' ? '#fff5a1' : 'transparent' }}>
                         <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
                           <b>#{doc.documentid}</b>
                         </td>
