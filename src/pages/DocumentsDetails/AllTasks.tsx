@@ -154,7 +154,7 @@ const DocumentDetails: React.FC = () => {
     // 🔹 Encabezados
     const headers = [
       "Tipo Documento",
-      "Conductor",
+      "Comprador",
       "Serie",
       "Número",
       "Fecha",
@@ -246,7 +246,7 @@ const DocumentDetails: React.FC = () => {
     // 🔹 Ajustar anchos
     worksheet.columns = [
       { width: 18 }, // Tipo Documento
-      { width: 15 }, // Conductor
+      { width: 15 }, // Comprador
       { width: 10 }, // Serie
       { width: 12 }, // Número
       { width: 15 }, // Fecha
@@ -341,7 +341,7 @@ const DocumentDetails: React.FC = () => {
                   <thead className="table-light">
                     <tr>
                       <th>Tipo</th>
-                      <th>Conductor</th>
+                      <th>Comprador</th>
                       <th>Serie</th>
                       <th>Núm</th>
                       <th>Fecha</th>

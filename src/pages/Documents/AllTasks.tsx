@@ -671,7 +671,7 @@ const DocumentList: React.FC = () => {
       "RUC",
       "Razón Social",
       "Tipo Documento",
-      "Conductor",
+      "Comprador",
       "Fecha Emisión",
       "Sub Total",
       "IGV",
@@ -742,7 +742,7 @@ const DocumentList: React.FC = () => {
       { width: 15 }, // RUC
       { width: 35 }, // Razón Social
       { width: 20 }, // Tipo Documento
-      { width: 15 }, // Conductor
+      { width: 15 }, // Comprador
       { width: 15 }, // Fecha
       { width: 12 }, // Sub Total
       { width: 12 }, // IGV
@@ -891,7 +891,7 @@ const DocumentList: React.FC = () => {
                         Tipo Documento
                       </ResizableHeader>
                       <ResizableHeader width={columnWidths.driver} onResize={(w) => handleResize("driver", w)}>
-                        Conductor
+                        Comprador
                       </ResizableHeader>
                       <ResizableHeader width={columnWidths.fecha} onResize={(w) => handleResize("fecha", w)}>
                         Fecha Emisión
@@ -1423,10 +1423,10 @@ const DocumentList: React.FC = () => {
                     </Row>
 
                     <Row>                              
-                      {/* Conductor */}
+                      {/* Comprador */}
                       <Col md="6">
                         <FormGroup>
-                          <Label className="form-label">Conductor</Label>
+                          <Label className="form-label">Comprador</Label>
                           <Input
                             value={editDoc.driver}
                             onChange={(e) =>
@@ -1435,7 +1435,7 @@ const DocumentList: React.FC = () => {
                                 driver: e.target.value,
                               })
                             }
-                            placeholder="Ingrese nombre conductor"
+                            placeholder="Ingrese nombre comprador"
                           />
                         </FormGroup>
                       </Col>
