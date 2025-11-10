@@ -119,6 +119,10 @@ const DocumentList: React.FC = () => {
   const startDate = dateRange[0];
   const endDate = dateRange[1];
 
+  // 📌 Modal de confirmación de eliminación
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
+
   // 📌 Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -368,6 +372,52 @@ const DocumentList: React.FC = () => {
       return docType.tipo;
     }
     return "Desconocido";
+  };
+
+  function tog_delete() {
+    setDeleteModal(!deleteModal);
+  }
+
+  // 📌 Abrir modal de confirmación de eliminación
+  const handleDelete = (documentid: number) => {
+    setDocumentToDelete(documentid);
+    setDeleteModal(true);
+  };
+
+  // 📌 Confirmar y ejecutar eliminación
+  const confirmDelete = async () => {
+    if (!documentToDelete) return;
+
+    try {
+      const response = await fetch(
+        "https://docuware-api-a09ab977636d.herokuapp.com/api/document-delete/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentid: documentToDelete,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success || response.ok) {
+        setDocuments((prev) =>
+          prev.filter((doc) => doc.documentid !== documentToDelete)
+        );
+        addNotification("success", "Documento eliminado correctamente");
+        setDeleteModal(false);
+        setDocumentToDelete(null);
+      } else {
+        addNotification("danger", data.message || "Error al eliminar el documento");
+      }
+    } catch (error) {
+      console.error("Error al eliminar documento:", error);
+      addNotification("danger", "Error en el proceso de eliminación");
+    }
   };
 
   // 📌 Consultar RUC en Factiliza
@@ -1032,16 +1082,7 @@ const DocumentList: React.FC = () => {
                               size="sm"
                               color="danger"
                               outline
-                              // onClick={() => {
-                              //   setEditDoc(doc);
-                              //   const amt = parseFloat(doc.amount || "0");
-                              //   const tax = parseFloat(doc.taxamount || "0");
-                              //   setEditIgvPercent(
-                              //     amt > 0 && tax > 0 ? Math.round((tax / amt) * 100) : 0
-                              //   );
-                              //   fetchDetails(doc);
-                              //   setEditModal(true);
-                              // }}
+                              onClick={() => handleDelete(doc.documentid)}
                             >
                               <i className=" ri-delete-bin-line align-bottom" /> Eliminar
                             </Button>
@@ -1456,54 +1497,7 @@ const DocumentList: React.FC = () => {
                           />
                         </FormGroup>
                       </Col>
-
-                      {/* Centro de Costo */}
-                      {/* <Col md="6">
-                        <FormGroup>
-                          <Label className="form-label">Centro de Costo</Label>
-                          <Select
-                            value={
-                              (() => {
-                                // Determinar el valor actual
-                                const currentValue = 
-                                  editDoc.centercost && typeof editDoc.centercost === "object"
-                                    ? String(editDoc.centercost.centroid)
-                                    : editDoc.centercost
-                                    ? String(editDoc.centercost)
-                                    : null;
-
-                                // Encontrar la opción correspondiente
-                                return centrosCostos
-                                  .map((centro) => ({
-                                    value: String(centro.centroid),
-                                    label: `${centro.centrocodigo} - ${centro.descripcion}`,
-                                  }))
-                                  .find((opt) => opt.value === currentValue) || null;
-                              })()
-                            }
-                            options={centrosCostos.map((centro) => ({
-                              value: String(centro.centroid),
-                              label: `${centro.centrocodigo} - ${centro.descripcion}`,
-                            }))}
-                            onChange={(selected: { value: string; label: string } | null) =>
-                              setEditDoc({
-                                ...editDoc,
-                                centercost: selected ? Number(selected.value) : null,
-                              })
-                            }
-                            placeholder="Buscar centro de costo..."
-                            isClearable
-                            isSearchable
-                            noOptionsMessage={() => "No hay resultados"}
-                            styles={{
-                              control: (base: any) => ({
-                                ...base,
-                                minHeight: "38px",
-                              }),
-                            }}
-                          />
-                        </FormGroup>
-                      </Col> */}
+                      
                       <Col md="6">
                           <FormGroup>
                             <Label className="form-label">Centro de Costo</Label>
@@ -1731,6 +1725,39 @@ const DocumentList: React.FC = () => {
             </div>
           </div>
         </Draggable>
+      </Modal>
+      <Modal
+        id="deleteModal"
+        isOpen={deleteModal}
+        toggle={() => {
+          tog_delete();
+        }}
+        centered
+      >
+        
+        <ModalBody>
+          <div className="text-center">
+            <i className="ri-error-warning-line" style={{ fontSize: '4rem', color: '#f06548' }}></i>
+            <h4 className="mt-3">¿Está seguro?</h4>
+            <p className="text-muted">
+              ¿Desea eliminar el documento <strong>#{documentToDelete}</strong>?
+            </p>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="light"
+            onClick={() => {
+              setDeleteModal(false);
+              setDocumentToDelete(null);
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button color="danger" onClick={confirmDelete}>
+            Sí, Eliminar
+          </Button>
+        </ModalFooter>
       </Modal>
     </Container>
   );
