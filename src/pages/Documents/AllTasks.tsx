@@ -40,6 +40,7 @@ interface Document {
   documentserial: string;
   documentnumber: string;
   customer: string;
+  isDuplicated: string;
   suppliernumber: string;
   suppliername: string;
   documenttype: number | { tipoid: number; tipo: string } | null;
@@ -56,7 +57,7 @@ interface Document {
   updated_at?: string | null;
   currency: string;
   driver: string;
-  centercost: number | { centroid: number; centrocodigo: string; descripcion:string } | null;
+  centercost: number | { centroid: number; centrocodigo: string; descripcion: string } | null;
 }
 
 interface TipoDocumento {
@@ -109,7 +110,7 @@ const DocumentList: React.FC = () => {
   // 📌 Tipos de documento
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
 
-    // 📌 Centros de Costos
+  // 📌 Centros de Costos
   const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
 
   // 📌 Filtros
@@ -312,13 +313,13 @@ const DocumentList: React.FC = () => {
 
       const docTypeValue =
         typeof editDoc.documenttype === "object" &&
-        editDoc.documenttype !== null
+          editDoc.documenttype !== null
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype;
-      
+
       const centerCostValue =
         typeof editDoc.centercost === "object" &&
-        editDoc.centercost !== null
+          editDoc.centercost !== null
           ? editDoc.centercost.centroid
           : editDoc.centercost;
 
@@ -444,9 +445,9 @@ const DocumentList: React.FC = () => {
         setEditDoc((prev) =>
           prev
             ? {
-                ...prev,
-                suppliername: factilizaData.data.nombre_o_razon_social,
-              }
+              ...prev,
+              suppliername: factilizaData.data.nombre_o_razon_social,
+            }
             : prev
         );
         addNotification("success", "RUC encontrado correctamente");
@@ -495,7 +496,7 @@ const DocumentList: React.FC = () => {
       // 🔹 Determinar tipo de comprobante
       const tipoComprobante =
         typeof editDoc.documenttype === "object" &&
-        editDoc.documenttype !== null
+          editDoc.documenttype !== null
           ? String(editDoc.documenttype.tipoid).padStart(2, "0")
           : String(editDoc.documenttype).padStart(2, "0");
 
@@ -550,13 +551,13 @@ const DocumentList: React.FC = () => {
       setEditDoc((prev) =>
         prev
           ? {
-              ...prev,
-              currency: moneda,
-              amount: subTotal,
-              taxamount: igv,
-              totalamount: total,
-              documentdate: fechaEmision,
-            }
+            ...prev,
+            currency: moneda,
+            amount: subTotal,
+            taxamount: igv,
+            totalamount: total,
+            documentdate: fechaEmision,
+          }
           : prev
       );
 
@@ -915,7 +916,7 @@ const DocumentList: React.FC = () => {
               </div>
 
               {/* 📌 Tabla */}
-              <div className="table-responsive"  style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+              <div className="table-responsive" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
                 <Table
                   className="table align-middle table-nowrap mb-0"
                   style={{ tableLayout: "fixed", width: "100%", minWidth: "1500px" }}
@@ -975,120 +976,123 @@ const DocumentList: React.FC = () => {
                         </td>
                       </tr>
                     )}
-                    {/* amarillo de respaldo #ffeb3b */}
                     {paginatedDocuments.map((doc) => {
-                      const highlightStyle = doc.customer !== '20129605490' ? { backgroundColor: '#fff5a1' } : {};
+                      const highlightStyle = doc.customer !== '20129605490'
+                        ? { backgroundColor: '#fff5a1' }
+                        : doc.isDuplicated === 'X'
+                          ? { backgroundColor: '#fff5a1' }
+                          : {};
+
                       return (
-                      <tr key={doc.documentid} style={{ backgroundColor: doc.customer !== '20129605490' ? '#fff5a1' : 'transparent' }}>
-                        <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          <b>#{doc.documentid}</b>
-                        </td>
-                        <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {doc.documentserial}
-                        </td>
-                        <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {doc.documentnumber}
-                        </td>
-                        <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {doc.suppliernumber}
-                        </td>
-                        <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
-                          {doc.suppliername}
-                        </td>
-                        <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {doc.documenttype ? getTipoDocumentoNombre(doc.documenttype) : "N/A"}
-                        </td>
-                        <td style={{ width: columnWidths.driver, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
-                          {doc.driver}
-                        </td>
-                        <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {moment(doc.documentdate).format("DD/MM/YYYY")}
-                        </td>
-                        <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
-                          {doc.currency === "PEN" && (
-                            <img
-                              src="https://flagcdn.com/w40/pe.png"
-                              alt="Perú"
-                              width={20}
-                              height={15}
-                              className="me-2"
-                            />
-                          )}
-                          {doc.currency === "USD" && (
-                            <img
-                              src="https://flagcdn.com/w40/us.png"
-                              alt="USA"
-                              width={20}
-                              height={15}
-                              className="me-2"
-                            />
-                          )}
-                          {doc.currency}
-                        </td>                        
-                        <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
-                          {Number(doc.amount).toLocaleString("es-PE", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={{ width: columnWidths.igv, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
-                          {Number(doc.taxamount).toLocaleString("es-PE", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={{ width: columnWidths.total, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
-                          <b>
-                            {Number(doc.totalamount).toLocaleString("es-PE", {
+                        <tr key={doc.documentid}>
+                          <td style={{ width: columnWidths.id, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            <b>#{doc.documentid}</b>
+                          </td>
+                          <td style={{ width: columnWidths.serie, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {doc.documentserial}
+                          </td>
+                          <td style={{ width: columnWidths.numero, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {doc.documentnumber}
+                          </td>
+                          <td style={{ width: columnWidths.ruc, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {doc.suppliernumber}
+                          </td>
+                          <td style={{ width: columnWidths.razon, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
+                            {doc.suppliername}
+                          </td>
+                          <td style={{ width: columnWidths.tipo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {doc.documenttype ? getTipoDocumentoNombre(doc.documenttype) : "N/A"}
+                          </td>
+                          <td style={{ width: columnWidths.driver, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
+                            {doc.driver}
+                          </td>
+                          <td style={{ width: columnWidths.fecha, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {moment(doc.documentdate).format("DD/MM/YYYY")}
+                          </td>
+                          <td style={{ width: columnWidths.moneda, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", ...highlightStyle }}>
+                            {doc.currency === "PEN" && (
+                              <img
+                                src="https://flagcdn.com/w40/pe.png"
+                                alt="Perú"
+                                width={20}
+                                height={15}
+                                className="me-2"
+                              />
+                            )}
+                            {doc.currency === "USD" && (
+                              <img
+                                src="https://flagcdn.com/w40/us.png"
+                                alt="USA"
+                                width={20}
+                                height={15}
+                                className="me-2"
+                              />
+                            )}
+                            {doc.currency}
+                          </td>
+                          <td style={{ width: columnWidths.subtotal, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
+                            {Number(doc.amount).toLocaleString("es-PE", {
                               minimumFractionDigits: 2,
                             })}
-                          </b>
-                        </td>
-                        <td style={{ width: columnWidths.estado, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-center">
-                          <span
-                            className={`badge ${
-                              doc.status ? "bg-success" : "bg-warning"
-                            }`}
-                          >
-                            {doc.status ? "Activo" : "Pendiente"}
-                          </span>
-                        </td>
-                        <td style={{ width: columnWidths.acciones, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
-                          <div className="hstack gap-2">
-                            <Button
-                              size="sm"
-                              color="info"
-                              outline
-                              onClick={() => setSelectedDoc(doc)}
+                          </td>
+                          <td style={{ width: columnWidths.igv, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
+                            {Number(doc.taxamount).toLocaleString("es-PE", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td style={{ width: columnWidths.total, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-end">
+                            <b>
+                              {Number(doc.totalamount).toLocaleString("es-PE", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </b>
+                          </td>
+                          <td style={{ width: columnWidths.estado, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }} className="text-center">
+                            <span
+                              className={`badge ${doc.status ? "bg-success" : "bg-warning"
+                                }`}
                             >
-                              <i className="ri-eye-line align-bottom" /> Ver
-                            </Button>
-                            <Button
-                              size="sm"
-                              color="warning"
-                              outline
-                              onClick={() => {
-                                setEditDoc(doc);
-                                const amt = parseFloat(doc.amount || "0");
-                                const tax = parseFloat(doc.taxamount || "0");
-                                setEditIgvPercent(
-                                  amt > 0 && tax > 0 ? Math.round((tax / amt) * 100) : 0
-                                );
-                                fetchDetails(doc);
-                                setEditModal(true);
-                              }}
-                            >
-                              <i className="ri-edit-box-line align-bottom" /> Editar
-                            </Button>
-                            <Button
-                              size="sm"
-                              color="danger"
-                              outline
-                              onClick={() => handleDelete(doc.documentid)}
-                            >
-                              <i className=" ri-delete-bin-line align-bottom" /> Eliminar
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                              {doc.status ? "Activo" : "Pendiente"}
+                            </span>
+                          </td>
+                          <td style={{ width: columnWidths.acciones, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...highlightStyle }}>
+                            <div className="hstack gap-2">
+                              <Button
+                                size="sm"
+                                color="info"
+                                outline
+                                onClick={() => setSelectedDoc(doc)}
+                              >
+                                <i className="ri-eye-line align-bottom" /> Ver
+                              </Button>
+                              <Button
+                                size="sm"
+                                color="warning"
+                                outline
+                                onClick={() => {
+                                  setEditDoc(doc);
+                                  const amt = parseFloat(doc.amount || "0");
+                                  const tax = parseFloat(doc.taxamount || "0");
+                                  setEditIgvPercent(
+                                    amt > 0 && tax > 0 ? Math.round((tax / amt) * 100) : 0
+                                  );
+                                  fetchDetails(doc);
+                                  setEditModal(true);
+                                }}
+                              >
+                                <i className="ri-edit-box-line align-bottom" /> Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                color="danger"
+                                outline
+                                onClick={() => handleDelete(doc.documentid)}
+                              >
+                                <i className=" ri-delete-bin-line align-bottom" /> Eliminar
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -1290,7 +1294,7 @@ const DocumentList: React.FC = () => {
                             type="select"
                             value={
                               editDoc.documenttype &&
-                              typeof editDoc.documenttype === "object"
+                                typeof editDoc.documenttype === "object"
                                 ? editDoc.documenttype.tipoid
                                 : editDoc.documenttype ?? ""
                             }
@@ -1480,7 +1484,7 @@ const DocumentList: React.FC = () => {
                       </Col>
                     </Row>
 
-                    <Row>                              
+                    <Row>
                       {/* Comprador */}
                       <Col md="6">
                         <FormGroup>
@@ -1497,61 +1501,61 @@ const DocumentList: React.FC = () => {
                           />
                         </FormGroup>
                       </Col>
-                      
+
                       <Col md="6">
-                          <FormGroup>
-                            <Label className="form-label">Centro de Costo</Label>
-                            <Select
-                              value={
-                                (() => {
-                                  // Determinar el valor actual
-                                  const currentValue = 
-                                    editDoc.centercost && typeof editDoc.centercost === "object"
-                                      ? String(editDoc.centercost.centroid)
-                                      : editDoc.centercost
+                        <FormGroup>
+                          <Label className="form-label">Centro de Costo</Label>
+                          <Select
+                            value={
+                              (() => {
+                                // Determinar el valor actual
+                                const currentValue =
+                                  editDoc.centercost && typeof editDoc.centercost === "object"
+                                    ? String(editDoc.centercost.centroid)
+                                    : editDoc.centercost
                                       ? String(editDoc.centercost)
                                       : null;
-                                  // Encontrar la opción correspondiente
-                                  return centrosCostos
-                                    .map((centro) => ({
-                                      value: String(centro.centroid),
-                                      label: `${centro.centrocodigo} - ${centro.descripcion}`,
-                                    }))
-                                    .find((opt) => opt.value === currentValue) || null;
-                                })()
-                              }
-                              options={centrosCostos.map((centro) => ({
-                                value: String(centro.centroid),
-                                label: `${centro.centrocodigo} - ${centro.descripcion}`,
-                              }))}
-                              onChange={(selected: { value: string; label: string } | null) =>
-                                setEditDoc({
-                                  ...editDoc,
-                                  centercost: selected ? Number(selected.value) : null,
-                                })
-                              }
-                              placeholder="Seleccione centro de costo"
-                              isClearable
-                              isSearchable
-                              noOptionsMessage={() => "No hay resultados"}
-                              styles={{
-                                control: (base: any) => ({
-                                  ...base,
-                                  minHeight: "38px",
-                                }),
-                                menu: (base: any) => ({
-                                  ...base,
-                                  zIndex: 9999,
-                                }),
-                                menuPortal: (base: any) => ({
-                                  ...base,
-                                  zIndex: 9999,
-                                }),
-                              }}
-                              menuPortalTarget={document.body}
-                            />
-                          </FormGroup>
-                        </Col>
+                                // Encontrar la opción correspondiente
+                                return centrosCostos
+                                  .map((centro) => ({
+                                    value: String(centro.centroid),
+                                    label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                                  }))
+                                  .find((opt) => opt.value === currentValue) || null;
+                              })()
+                            }
+                            options={centrosCostos.map((centro) => ({
+                              value: String(centro.centroid),
+                              label: `${centro.centrocodigo} - ${centro.descripcion}`,
+                            }))}
+                            onChange={(selected: { value: string; label: string } | null) =>
+                              setEditDoc({
+                                ...editDoc,
+                                centercost: selected ? Number(selected.value) : null,
+                              })
+                            }
+                            placeholder="Seleccione centro de costo"
+                            isClearable
+                            isSearchable
+                            noOptionsMessage={() => "No hay resultados"}
+                            styles={{
+                              control: (base: any) => ({
+                                ...base,
+                                minHeight: "38px",
+                              }),
+                              menu: (base: any) => ({
+                                ...base,
+                                zIndex: 9999,
+                              }),
+                              menuPortal: (base: any) => ({
+                                ...base,
+                                zIndex: 9999,
+                              }),
+                            }}
+                            menuPortalTarget={document.body}
+                          />
+                        </FormGroup>
+                      </Col>
 
                     </Row>
 
@@ -1734,7 +1738,7 @@ const DocumentList: React.FC = () => {
         }}
         centered
       >
-        
+
         <ModalBody>
           <div className="text-center">
             <i className="ri-error-warning-line" style={{ fontSize: '4rem', color: '#f06548' }}></i>
