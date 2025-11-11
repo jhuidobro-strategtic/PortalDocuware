@@ -166,6 +166,12 @@ const Navdata = () => {
                     link: "/document-details",
                     parentId: "dashboard",
                 },
+                {
+                    id: "documentprogramacion",
+                    label: "Programming",
+                    link: "/document-programation",
+                    parentId: "dashboard",
+                },
                 // {
                 //     id: "crm",
                 //     label: "CRM",
