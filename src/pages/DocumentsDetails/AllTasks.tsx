@@ -41,7 +41,7 @@ interface Document {
   taxamount: number;
   totalamount: number;
   driver: string;
-  centercost:string;
+  centercost: string;
 }
 
 const DocumentDetails: React.FC = () => {
@@ -126,13 +126,13 @@ const DocumentDetails: React.FC = () => {
         buffer: imageBuffer,
         extension: "png",
       });
-      worksheet.addImage(imageId, "B1:D2");
+      worksheet.addImage(imageId, "B1:B2");
     } catch {
       console.warn("⚠️ No se pudo cargar el logo, se continúa sin bloquear.");
     }
 
     // 🔹 Título
-    worksheet.mergeCells("E1:R2");
+    worksheet.mergeCells("E1:AA2");
     const titleCell = worksheet.getCell("E1");
     titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -153,24 +153,51 @@ const DocumentDetails: React.FC = () => {
 
     // 🔹 Encabezados
     const headers = [
-      "Tipo Documento",
-      "Comprador",
-      "Serie",
+      // "Tipo Documento",
+      // "Comprador",
+      // "Serie",
+      // "Número",
+      // "Fecha",
+      // "Proveedor (RUC)",
+      // "Nombre Proveedor",
+      // "Centro de Costos",
+      // "Descripción",
+      // "Vehículo",
+      // "Unidad Medida",
+      // "Cantidad",
+      // "Valor Unitario",
+      // "Valor Total (línea)",
+      // "Moneda",
+      // "Sub Total",
+      // "IGV",
+      // "Total",
+      "Movimiento Orden Servicio o Orden",
+      "Fecha de Emisión del Comprobante de Pago o Documento",
+      "Fecha de Vencimiento o Fecha de Pago",
+      "Tipo",
+      "Serie/Codigo Aduana",
+      "Año Emisión DUA o DSI",
+      "Nº Comprobante Pago",
+      "Tipo",
       "Número",
-      "Fecha",
-      "Proveedor (RUC)",
-      "Nombre Proveedor",
-      "Centro de Costos",
-      "Descripción",
-      "Vehículo",
-      "Unidad Medida",
-      "Cantidad",
-      "Valor Unitario",
-      "Valor Total (línea)",
-      "Moneda",
-      "Sub Total",
+      "Apellidos y Nombres, Denominación o Razon social",
+      "Producto",
+      "Unidad",
+      "Valor de Compra",
+      "Base Imponible",
       "IGV",
-      "Total",
+      "Importe Total",
+      "Tipo de Cambio",
+      "Fecha",
+      "Tipo",
+      "Serie",
+      "Nº Comprobante Pago o Documento",
+      "Moneda",
+      "Equivalente en Dolares Americanos",
+      "Condición Contado/Credito",
+      "Codigo Centro de Costos",
+      "Codigo Centro de Costos 2",
+      "Porcentaje I.G.V."
     ];
 
     headers.forEach((header, i) => {
@@ -199,25 +226,72 @@ const DocumentDetails: React.FC = () => {
           ? (doc.documenttype as any).tipo ?? "N/A"
           : (doc.documenttype ?? "N/A").toString();
 
+      //temporal
+      const movimientoOrden = "";
+      const fechaVencimiento = "";
+      const añoEmision = "";
+      const dTipo = "";
+      const producto = "";
+      const vCompra = "";
+      const rFecha = "";
+      const rTipo = "";
+      const rSerie = "";
+      const rNroComprobante = "";
+      const tipoCambio = "";
+      const equivalenteDolar = "";
+      const condicionCC = "";
+      const codigoCC = "";
+      const codigoCC2 = "";
+      const amount = Number((doc as any).amount ?? 0);
+      const taxamount = Number((doc as any).taxamount ?? 0);
+      const pIGV = amount > 0 ? ((taxamount / amount) * 100).toFixed(2) : "0.00";
+
       const rowData = [
-        tipoDocumento,
-        doc.driver ?? "",
-        doc.documentserial ?? "",
-        doc.documentnumber ?? "",
+        // tipoDocumento,
+        // doc.driver ?? "",
+        // doc.documentserial ?? "",
+        // doc.documentnumber ?? "",
+        // moment(doc.documentdate).format("DD/MM/YYYY"),
+        // doc.suppliernumber ?? "",
+        // doc.suppliername ?? "",
+        // doc.centercost ?? "",
+        // (doc as any).description ?? "—",
+        // (doc as any).vehicle_nro ?? "—",
+        // (doc as any).unit_measure_description ?? "—",
+        // Number((doc as any).quantity ?? 0),
+        // Number((doc as any).unit_value ?? 0),
+        // Number((doc as any).total_value ?? 0),
+        // doc.currency ?? "PEN",
+        // Number((doc as any).amount ?? 0),
+        // Number((doc as any).taxamount ?? 0),
+        // Number((doc as any).totalamount ?? 0),
+        movimientoOrden ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
+        fechaVencimiento ?? "",
+        tipoDocumento,
+        doc.documentserial ?? "",
+        añoEmision ?? "",
+        doc.documentnumber ?? "",
+        dTipo ?? "",
         doc.suppliernumber ?? "",
         doc.suppliername ?? "",
-        doc.centercost ?? "",
-        (doc as any).description ?? "—",
-        (doc as any).vehicle_nro ?? "—",
-        (doc as any).unit_measure_description ?? "—",
+        producto ?? "",
         Number((doc as any).quantity ?? 0),
-        Number((doc as any).unit_value ?? 0),
-        Number((doc as any).total_value ?? 0),
-        doc.currency ?? "PEN",
+        vCompra ?? "",
         Number((doc as any).amount ?? 0),
         Number((doc as any).taxamount ?? 0),
         Number((doc as any).totalamount ?? 0),
+        tipoCambio,
+        rFecha,
+        rTipo,
+        rSerie,
+        rNroComprobante,
+        doc.currency ?? "PEN",
+        equivalenteDolar,
+        condicionCC,
+        codigoCC,
+        codigoCC2,
+        pIGV
       ];
 
       const row = worksheet.addRow(rowData);
@@ -245,24 +319,33 @@ const DocumentDetails: React.FC = () => {
 
     // 🔹 Ajustar anchos
     worksheet.columns = [
-      { width: 18 }, // Tipo Documento
-      { width: 15 }, // Comprador
-      { width: 10 }, // Serie
-      { width: 12 }, // Número
-      { width: 15 }, // Fecha
-      { width: 15 }, // RUC
-      { width: 35 }, // Razón Social
-      { width: 40 }, // Descripción
-      { width: 40 }, // Descripción
-      { width: 14 }, // Vehículo
-      { width: 18 }, // Unidad medida
-      { width: 10 }, // Cantidad
-      { width: 12 }, // Valor unitario
-      { width: 14 }, // Valor total línea
-      { width: 8 },  // Moneda
-      { width: 12 }, // Sub Total
-      { width: 12 }, // IGV
-      { width: 12 }, // Total
+      { width: 35 },
+      { width: 55 },
+      { width: 40 },
+      { width: 20 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 50 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 20 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 20 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 35 },
+      { width: 20 },
     ];
 
     // 🔹 Descargar Excel
@@ -382,7 +465,7 @@ const DocumentDetails: React.FC = () => {
                           <td>{doc.centercost}</td>
                           <td style={{ maxWidth: 300, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {doc.description.replace(/<[^>]*>/g, '')}
-                          </td>                          
+                          </td>
                           <td>{doc.vehicle_nro || "—"}</td>
                           <td>{doc.unit_measure_description || "—"}</td>
                           <td className="text-end">
