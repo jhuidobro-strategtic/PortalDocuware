@@ -300,7 +300,7 @@ const DocumentList: React.FC = () => {
       editDoc.documentdate.trim() !== "" &&
       editDoc.driver.trim() !== "" &&
       parseFloat(editDoc.amount) > 0 &&
-      parseFloat(editDoc.taxamount) > 0 &&
+      parseFloat(editDoc.taxamount) >= 0 &&
       parseFloat(editDoc.totalamount) > 0;
 
     if (!isValid) {
