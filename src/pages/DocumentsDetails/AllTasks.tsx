@@ -1,51 +1,16 @@
 import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  CardBody,
-  Table,
-  Spinner,
-  Alert,
-  Button,
-  Input,
-  InputGroup,
-  InputGroupText,
-  Pagination,
-  PaginationItem,
-  PaginationLink,
-} from "reactstrap";
+import { Container, Row, Col, Card, CardBody, Spinner, Alert, Pagination,
+  PaginationItem, PaginationLink } from "reactstrap";
 import moment from "moment";
-import Flatpickr from "react-flatpickr";
-import "flatpickr/dist/themes/material_blue.css";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
-
-interface Document {
-  documenttype: string;
-  suppliernumber: string;
-  documentserial: string;
-  documentnumber: string;
-  documentdate: string;
-  suppliername: string;
-  description: string;
-  vehicle_nro: string;
-  unit_measure_description: string;
-  quantity: number;
-  currency: string;
-  unit_value: number;
-  total_value: number;
-  amount: number;
-  taxamount: number;
-  totalamount: number;
-  driver: string;
-  centercost: string;
-}
+import DocumentFilters from "./components/DocumentFilters";
+import DocumentTable from "./components/DocumentTable";
+import { DocumentDetailsRow } from "./types";
 
 const DocumentDetails: React.FC = () => {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentDetailsRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +71,16 @@ const DocumentDetails: React.FC = () => {
 
     return matchesSearch && matchesDate;
   });
+
+  const handleSearchTermChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleDateRangeChange = (dates: Date[]) => {
+    setDateRange(dates);
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
   const paginatedDocuments = filteredDocuments.slice(
@@ -374,167 +349,16 @@ const DocumentDetails: React.FC = () => {
         <Col lg={12}>
           <Card>
             <CardBody>
-              {/* filtros */}
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>
-                  Lista Detallada de Documentos
-                </h4>
-                <div className="d-flex align-items-center gap-2">
-                  <InputGroup style={{ maxWidth: "250px" }}>
-                    <InputGroupText>
-                      <i className="ri-search-line" />
-                    </InputGroupText>
-                    <Input
-                      placeholder="Buscar..."
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  </InputGroup>
+              <DocumentFilters
+                searchTerm={searchTerm}
+                dateRange={dateRange}
+                onSearchTermChange={handleSearchTermChange}
+                onDateRangeChange={handleDateRangeChange}
+                onExport={exportToExcel}
+              />
 
-                  <InputGroup style={{ maxWidth: "280px" }}>
-                    <InputGroupText>
-                      <i className="ri-calendar-line" />
-                    </InputGroupText>
-                    <Flatpickr
-                      className="form-control"
-                      options={{
-                        mode: "range",
-                        dateFormat: "d/m/Y", // <-- cambia aquí el formato mostrado
-                      }}
-                      value={dateRange}
-                      onChange={(selectedDates: Date[]) => {
-                        setDateRange(selectedDates);
-                        setCurrentPage(1);
-                      }}
-                      placeholder="Filtrar por fecha"
-                    />
-                  </InputGroup>
-                  <Button color="success" onClick={exportToExcel}>
-                    <i className="ri-file-excel-2-line"></i>
-                  </Button>
-                </div>
-              </div>
+              <DocumentTable documents={paginatedDocuments} />
 
-              {/* tabla */}
-              <div className="table-responsive">
-                <Table className="table align-middle table-nowrap mb-0">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Comprador</th>
-                      <th>Serie</th>
-                      <th>Núm</th>
-                      <th>Fecha</th>
-                      <th>RUC</th>
-                      <th>Proveedor</th>
-                      <th>Centro de Costo</th>
-                      <th>Descripción</th>
-                      <th>Vehículo</th>
-                      <th>Unidad</th>
-                      <th className="text-end">Cant.</th>
-                      <th className="text-end">V. Unit.</th>
-                      <th className="text-end">V. Línea</th>
-                      <th>Moneda</th>
-                      <th className="text-end">Sub Total</th>
-                      <th className="text-end">IGV</th>
-                      <th className="text-end">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedDocuments.length === 0 ? (
-                      <tr>
-                        <td colSpan={16} className="text-center">
-                          No se encontraron registros
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedDocuments.map((doc, index) => (
-                        <tr
-                          key={`${doc.documentserial}-${doc.documentnumber}-${index}`}
-                        >
-                          <td>{doc.documenttype}</td>
-                          <td>{doc.driver}</td>
-                          <td>{doc.documentserial}</td>
-                          <td>{doc.documentnumber}</td>
-                          <td>{moment(doc.documentdate).format("DD/MM/YYYY")}</td>
-                          <td>{doc.suppliernumber}</td>
-                          <td>{doc.suppliername}</td>
-                          <td>{doc.centercost}</td>
-                          <td style={{ maxWidth: 300, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {doc.description.replace(/<[^>]*>/g, '')}
-                          </td>
-                          <td>{doc.vehicle_nro || "—"}</td>
-                          <td>{doc.unit_measure_description || "—"}</td>
-                          <td className="text-end">
-                            {(doc.quantity ?? 0).toLocaleString("es-PE", {
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 0,
-                            })}
-                          </td>
-                          <td className="text-end">
-                            {(doc.unit_value ?? 0).toLocaleString("es-PE", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td className="text-end">
-                            {(doc.total_value ?? 0).toLocaleString("es-PE", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td>
-                            {doc.currency === "PEN" && (
-                              <img
-                                src="https://flagcdn.com/w40/pe.png"
-                                alt="Perú"
-                                width={20}
-                                height={15}
-                                className="me-2"
-                              />
-                            )}
-                            {doc.currency === "USD" && (
-                              <img
-                                src="https://flagcdn.com/w40/us.png"
-                                alt="USA"
-                                width={20}
-                                height={15}
-                                className="me-2"
-                              />
-                            )}
-                            {doc.currency}
-                          </td>
-                          <td className="text-end">
-                            {(doc.amount ?? 0).toLocaleString("es-PE", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td className="text-end">
-                            {(doc.taxamount ?? 0).toLocaleString("es-PE", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td className="text-end">
-                            <b>
-                              {(doc.totalamount ?? 0).toLocaleString("es-PE", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </b>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </div>
-
-              {/* paginación */}
               {totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-3">
                   <Pagination>
