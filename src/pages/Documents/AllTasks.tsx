@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
 import moment from "moment";
 import "./Documents.css";
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
 import Notifications from "./components/Notifications";
 import DocumentFilters from "./components/DocumentFilters";
@@ -637,6 +635,10 @@ const DocumentList: React.FC = () => {
 
   // 📌 Generar Excel
   const exportToExcel = async () => {
+    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+      import("exceljs"),
+      import("file-saver"),
+    ]);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Documentos");
 

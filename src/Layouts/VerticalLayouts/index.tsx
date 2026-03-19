@@ -3,13 +3,14 @@ import { Link, useLocation } from "react-router-dom";
 import { Collapse } from 'reactstrap';
 import navdata from "../LayoutMenuData";
 
+const navItems = navdata();
+
 const VerticalLayout = () => {
     const location = useLocation();
-    const navData = navdata();
     const [openSection, setOpenSection] = useState<string>("document-management");
 
     useEffect(() => {
-        const activeSection = navData.find(
+        const activeSection = navItems.find(
             (item: any) => item.subItems?.some((subItem: any) => subItem.link === location.pathname)
         );
 
@@ -18,11 +19,11 @@ const VerticalLayout = () => {
         }
 
         window.scrollTo({ top: 0, behavior: "smooth" });
-    }, [location.pathname, navData]);
+    }, [location.pathname]);
 
     return (
         <React.Fragment>
-            {navData.map((item: any, key: number) => (
+            {navItems.map((item: any, key: number) => (
                 <React.Fragment key={key}>
                     {item.isHeader ? (
                         <li className="menu-title">

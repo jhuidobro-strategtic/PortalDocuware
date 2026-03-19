@@ -1,0 +1,18 @@
+=none : El t‚rmino '=none' no se reconoce como nombre de un cmdlet, funci¢n, archivo de script o programa ejecutable. 
+Compruebe si escribi¢ correctamente el nombre o, si incluy¢ una ruta de acceso, compruebe que dicha ruta es correcta e 
+int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 1
++ ='none'; ='3012'; npm.cmd run dev
++ ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=none:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+=3012 : El t‚rmino '=3012' no se reconoce como nombre de un cmdlet, funci¢n, archivo de script o programa ejecutable. 
+Compruebe si escribi¢ correctamente el nombre o, si incluy¢ una ruta de acceso, compruebe que dicha ruta es correcta e 
+int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 10
++ ='none'; ='3012'; npm.cmd run dev
++          ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=3012:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 

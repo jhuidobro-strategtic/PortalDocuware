@@ -4,17 +4,16 @@ import { Input } from 'reactstrap';
 
 import Navdata from '../../Layouts/LayoutMenuData';
 
-const SearchOption = () => {
-    const navData = Navdata();
-    const [searchTerm, setSearchTerm] = useState('');
+const searchableItems = Navdata().flatMap((menuItem: any) => (
+    menuItem.subItems?.map((subItem: any) => ({
+        label: subItem.label,
+        link: subItem.link,
+        icon: menuItem.icon,
+    })) || []
+));
 
-    const searchableItems = navData.flatMap((menuItem: any) => (
-        menuItem.subItems?.map((subItem: any) => ({
-            label: subItem.label,
-            link: subItem.link,
-            icon: menuItem.icon,
-        })) || []
-    ));
+const SearchOption = () => {
+    const [searchTerm, setSearchTerm] = useState('');
 
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const filteredItems = normalizedSearch

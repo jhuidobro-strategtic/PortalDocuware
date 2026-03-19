@@ -6,49 +6,15 @@ import withRouter from '../Components/Common/withRouter';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-import {
-    changeLayout,
-    changeSidebarTheme,
-    changeLayoutMode,
-    changeLayoutThemeColor,
-    changeLayoutTheme,
-    changeLayoutWidth,
-    changeLayoutPosition,
-    changeTopbarTheme,
-    changeLeftsidebarSizeType,
-    changeLeftsidebarViewType,
-    changeSidebarImageType,
-    changeSidebarVisibility
-} from "../slices/layouts/thunk";
+import { changeLayoutMode } from "../slices/layouts/thunk";
+import { changeHTMLAttribute } from "../slices/layouts/utils";
 
 //redux
 import { useSelector, useDispatch } from "react-redux";
-import { createSelector } from 'reselect';
 
 const Layout = (props : any) => {
     const [headerClass, setHeaderClass] = useState("");
     const dispatch : any = useDispatch();
-
-    const selectLayoutState = (state : any) => state.Layout;
-    const selectLayoutProperties = createSelector(
-        selectLayoutState,
-        (layout) => ({
-            layoutType: layout.layoutType,
-            leftSidebarType: layout.leftSidebarType,
-            layoutModeType: layout.layoutModeType,
-            layoutThemeColorType: layout.layoutThemeColorType,
-            layoutThemeType : layout.layoutThemeType,
-            layoutWidthType: layout.layoutWidthType,
-            layoutPositionType: layout.layoutPositionType,
-            topbarThemeType: layout.topbarThemeType,
-            leftsidbarSizeType: layout.leftsidbarSizeType,
-            leftSidebarViewType: layout.leftSidebarViewType,
-            leftSidebarImageType: layout.leftSidebarImageType,
-            preloader: layout.preloader,
-            sidebarVisibilitytype: layout.sidebarVisibilitytype,
-        })
-    );
-    // Inside your component
     const {
         layoutType,
         leftSidebarType,
@@ -62,7 +28,7 @@ const Layout = (props : any) => {
         leftSidebarViewType,
         leftSidebarImageType,
         sidebarVisibilitytype
-    } = useSelector(selectLayoutProperties);
+    } = useSelector((state: any) => state.Layout);
 
     /*
     layout settings
@@ -83,18 +49,21 @@ const Layout = (props : any) => {
             sidebarVisibilitytype
         ) {
             window.dispatchEvent(new Event('resize'));
-            dispatch(changeLeftsidebarViewType(leftSidebarViewType));
-            dispatch(changeLeftsidebarSizeType(leftsidbarSizeType));
-            dispatch(changeSidebarTheme(leftSidebarType));
-            dispatch(changeLayoutThemeColor(layoutThemeColorType));
-            dispatch(changeLayoutTheme(layoutThemeType));
-            dispatch(changeLayoutMode(layoutModeType));
-            dispatch(changeLayoutWidth(layoutWidthType));
-            dispatch(changeLayoutPosition(layoutPositionType));
-            dispatch(changeTopbarTheme(topbarThemeType));
-            dispatch(changeLayout(layoutType));
-            dispatch(changeSidebarImageType(leftSidebarImageType));
-            dispatch(changeSidebarVisibility(sidebarVisibilitytype));
+            changeHTMLAttribute("data-layout", layoutType);
+            changeHTMLAttribute("data-sidebar", leftSidebarType);
+            changeHTMLAttribute("data-bs-theme", layoutModeType);
+            changeHTMLAttribute("data-theme-colors", layoutThemeColorType);
+            changeHTMLAttribute("data-theme", layoutThemeType);
+            changeHTMLAttribute(
+                "data-layout-width",
+                layoutWidthType === "lg" ? "fluid" : "boxed"
+            );
+            changeHTMLAttribute("data-layout-position", layoutPositionType);
+            changeHTMLAttribute("data-topbar", topbarThemeType);
+            changeHTMLAttribute("data-sidebar-size", leftsidbarSizeType);
+            changeHTMLAttribute("data-layout-style", leftSidebarViewType);
+            changeHTMLAttribute("data-sidebar-image", leftSidebarImageType);
+            changeHTMLAttribute("data-sidebar-visibility", sidebarVisibilitytype);
         }
     }, [layoutType,
         leftSidebarType,
@@ -120,24 +89,27 @@ const Layout = (props : any) => {
 
     // class add remove in header 
     useEffect(() => {
-        window.addEventListener("scroll", scrollNavigation, true);
-    });
+        const scrollNavigation = () => {
+            const scrollup = document.documentElement.scrollTop;
+            setHeaderClass(scrollup > 50 ? "topbar-shadow" : "");
+        };
 
-    function scrollNavigation() {
-        var scrollup = document.documentElement.scrollTop;
-        if (scrollup > 50) {
-            setHeaderClass("topbar-shadow");
-        } else {
-            setHeaderClass("");
-        }
-    }
+        window.addEventListener("scroll", scrollNavigation, true);
+        return () => {
+            window.removeEventListener("scroll", scrollNavigation, true);
+        };
+    }, []);
 
     useEffect(() => {
-        const humberIcon = document.querySelector(".hamburger-icon") as HTMLElement;
+        const humberIcon = document.querySelector(".hamburger-icon") as HTMLElement | null;
+        if (!humberIcon) {
+            return;
+        }
+
         if (sidebarVisibilitytype === 'show' || layoutType === "vertical" || layoutType === "twocolumn") {
             humberIcon.classList.remove('open');
         } else {
-            humberIcon && humberIcon.classList.add('open');
+            humberIcon.classList.add('open');
         }
     }, [sidebarVisibilitytype, layoutType]);
 

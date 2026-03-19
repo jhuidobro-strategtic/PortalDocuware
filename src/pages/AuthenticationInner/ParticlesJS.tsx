@@ -93,6 +93,11 @@ const ParticlesAuth: React.FC = () => {
       }
     }
 
+    let animationFrameId = 0;
+    const particleCount = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? 0
+      : 24;
+
     function animate() {
       if (!ctx || !canvas) return; // Additional check here for ctx and canvas
 
@@ -106,14 +111,17 @@ const ParticlesAuth: React.FC = () => {
         particlesRef.current[i].draw(ctx);
       }
 
-      requestAnimationFrame(animate);
+      animationFrameId = window.requestAnimationFrame(animate);
     }
 
-    initParticles(60);
-    animate();
+    if (particleCount > 0) {
+      initParticles(particleCount);
+      animate();
+    }
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
+      window.cancelAnimationFrame(animationFrameId);
     };
   }, []); // Empty dependency array ensures this effect runs once
 

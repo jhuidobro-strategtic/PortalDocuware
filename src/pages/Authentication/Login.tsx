@@ -17,8 +17,6 @@ import { useSelector, useDispatch } from "react-redux";
 import withRouter from "../../Components/Common/withRouter";
 import * as Yup from "yup";
 import { useFormik } from "formik";
-import { createSelector } from "reselect";
-import { motion } from "framer-motion";
 
 import ParticlesJS from "../AuthenticationInner/ParticlesJS";
 import { loginUser, resetLoginFlag } from "../../slices/auth/login/thunk";
@@ -27,11 +25,7 @@ import fondoCayala from "../../assets/images/cayala.jpg";
 
 const Login = (props: any) => {
   const dispatch: any = useDispatch();
-  const loginpageData = createSelector((state: any) => state.Login, (state) => ({
-    error: state.error,
-    errorMsg: state.errorMsg,
-  }));
-  const { error, errorMsg } = useSelector(loginpageData);
+  const { error, errorMsg } = useSelector((state: any) => state.Login);
 
   const [passwordShow, setPasswordShow] = useState<boolean>(false);
   const [loader, setLoader] = useState<boolean>(false);
@@ -100,37 +94,17 @@ const Login = (props: any) => {
                   className="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white text-center"
                   style={{ zIndex: 3 }}
                 >
-                  <motion.div
-                    className="w-50 border-top border-white mb-4"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                  />
+                  <div className="w-50 border-top border-white mb-4" />
 
-                  <motion.h3
-                    className="montserrat fs-3.5 fs-lg-1 mb-2 text-white"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4 }}
-                  >
+                  <h3 className="montserrat fs-3.5 fs-lg-1 mb-2 text-white">
                     BIENVENIDO A
-                  </motion.h3>
+                  </h3>
 
-                  <motion.h1
-                    className="montserrat-bold display-4 fw-bold text-white"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6 }}
-                  >
+                  <h1 className="montserrat-bold display-4 fw-bold text-white">
                     DOCUWARE
-                  </motion.h1>
+                  </h1>
 
-                  <motion.div
-                    className="w-50 border-top border-white mt-4"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, delay: 0.8 }}
-                  />
+                  <div className="w-50 border-top border-white mt-4" />
                 </div>
 
                 <div

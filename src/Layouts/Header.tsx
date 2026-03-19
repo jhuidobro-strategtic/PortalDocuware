@@ -16,18 +16,12 @@ import LightDark from '../Components/Common/LightDark';
 
 import { changeSidebarVisibility } from '../slices/layouts/thunk';
 import { useSelector, useDispatch } from "react-redux";
-import { createSelector } from 'reselect';
 
 const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
     const dispatch : any = useDispatch();
-
-
-    const selectDashboardData = createSelector(
-        (state) => state.Layout,
-        (sidebarVisibilitytype) => sidebarVisibilitytype.sidebarVisibilitytype
-      );
-    // Inside your component
-    const sidebarVisibilitytype = useSelector(selectDashboardData);
+    const sidebarVisibilitytype = useSelector(
+        (state: any) => state.Layout.sidebarVisibilitytype
+    );
     
 
     const [search, setSearch] = useState<boolean>(false);
@@ -37,10 +31,10 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
 
     const toogleMenuBtn = () => {
         var windowSize = document.documentElement.clientWidth;
-        const humberIcon = document.querySelector(".hamburger-icon") as HTMLElement;
+        const humberIcon = document.querySelector(".hamburger-icon") as HTMLElement | null;
         dispatch(changeSidebarVisibility("show"));
 
-        if (windowSize > 767)
+        if (windowSize > 767 && humberIcon)
             humberIcon.classList.toggle('open');
 
         //For collapse horizontal menu

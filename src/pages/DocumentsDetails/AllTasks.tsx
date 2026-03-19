@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert, Pagination,
   PaginationItem, PaginationLink } from "reactstrap";
 import moment from "moment";
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
@@ -90,6 +88,10 @@ const DocumentDetails: React.FC = () => {
 
   // exportar a excel Detalles
   const exportToExcel = async () => {
+    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+      import("exceljs"),
+      import("file-saver"),
+    ]);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Detalles de Documentos");
 
