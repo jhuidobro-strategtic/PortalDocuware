@@ -13,72 +13,37 @@ import {
   Alert,
   Spinner,
 } from "reactstrap";
-// import ParticlesAuth from "../AuthenticationInner/ParticlesAuth";
-import ParticlesJS from "../AuthenticationInner/ParticlesJS";
-
-//redux
 import { useSelector, useDispatch } from "react-redux";
-
-import { Link } from "react-router-dom";
 import withRouter from "../../Components/Common/withRouter";
-// Formik validation
 import * as Yup from "yup";
 import { useFormik } from "formik";
-
-// actions
-import { loginUser, socialLogin, resetLoginFlag } from "../../slices/thunks";
-
-// import logoLight from "../../assets/images/logo-light.png";
 import { createSelector } from "reselect";
-//import images
+import { motion } from "framer-motion";
+
+import ParticlesJS from "../AuthenticationInner/ParticlesJS";
+import { loginUser, resetLoginFlag } from "../../slices/auth/login/thunk";
 import logologin from "../../assets/images/Grupo_Cayala_Color.png";
 import fondoCayala from "../../assets/images/cayala.jpg";
-import { motion } from "framer-motion";
+
 const Login = (props: any) => {
   const dispatch: any = useDispatch();
-
-  const selectLayoutState = (state: any) => state;
-  const loginpageData = createSelector(selectLayoutState, (state) => ({
-    user: state.Account.user,
-    error: state.Login.error,
-    errorMsg: state.Login.errorMsg,
+  const loginpageData = createSelector((state: any) => state.Login, (state) => ({
+    error: state.error,
+    errorMsg: state.errorMsg,
   }));
-  // Inside your component
-  const { user, error, errorMsg } = useSelector(loginpageData);
+  const { error, errorMsg } = useSelector(loginpageData);
 
-  const [userLogin, setUserLogin] = useState<any>([]);
   const [passwordShow, setPasswordShow] = useState<boolean>(false);
-
   const [loader, setLoader] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (user && user) {
-      const updatedUserData =
-        process.env.REACT_APP_DEFAULTAUTH === "firebase"
-          ? user.multiFactor.user.username
-          : user.username;
-      const updatedUserPassword =
-        process.env.REACT_APP_DEFAULTAUTH === "firebase"
-          ? ""
-          : user.confirm_password;
-      setUserLogin({
-        username: updatedUserData,
-        password: updatedUserPassword,
-      });
-    }
-  }, [user]);
-
   const validation: any = useFormik({
-    // enableReinitialize : use this flag when initial values needs to be changed
-    enableReinitialize: true,
-
     initialValues: {
-      username: userLogin.username || "" || "",
-      password: userLogin.password || "" || "",
+      username: "",
+      password: "",
     },
     validationSchema: Yup.object({
       username: Yup.string().required("Por favor ingrese su username"),
-      password: Yup.string().required("Por favor ingrese su contraseña"),
+      password: Yup.string().required("Por favor ingrese su contrasena"),
     }),
     onSubmit: (values) => {
       dispatch(loginUser(values, props.router.navigate));
@@ -86,31 +51,26 @@ const Login = (props: any) => {
     },
   });
 
-  const signIn = (type: any) => {
-    dispatch(socialLogin(type, props.router.navigate));
-  };
-
-  //for facebook and google authentication
-  const socialResponse = (type: any) => {
-    signIn(type);
-  };
-
   useEffect(() => {
-    if (errorMsg) {
-      setTimeout(() => {
-        dispatch(resetLoginFlag());
-        setLoader(false);
-      }, 3000);
+    if (!errorMsg) {
+      return;
     }
+
+    const timer = window.setTimeout(() => {
+      dispatch(resetLoginFlag());
+      setLoader(false);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
   }, [dispatch, errorMsg]);
 
   document.title = "Login - DOCUWARE";
+
   return (
     <React.Fragment>
       <div className="auth-page-content">
         <Container fluid className="px-0">
           <Row className="min-vh-100 g-0">
-            {/* Imagen a la derecha */}
             <Col md={6} className="d-none d-md-block position-relative">
               <div className="auth-image-container h-100 w-100 position-relative">
                 <div
@@ -182,7 +142,6 @@ const Login = (props: any) => {
               </div>
             </Col>
 
-            {/* Login a la izquierda */}
             <Col
               md={6}
               className="d-flex align-items-center justify-content-center"
@@ -191,14 +150,21 @@ const Login = (props: any) => {
                 <Card className="shadow-sm border-0 cardDatosIniciales">
                   <CardBody className="p-4">
                     <div className="text-center mt-2">
-                      <img src={logologin} alt="Cayalá Logo" height="135" />
+                      <img src={logologin} alt="Docuware Logo" height="135" />
                     </div>
-                    {error && <Alert color="danger">{typeof error === 'string' ? error : "Error de autenticación. Verifique sus credenciales."}</Alert>}
+
+                    {error && (
+                      <Alert color="danger">
+                        {typeof error === "string"
+                          ? error
+                          : "Error de autenticacion. Verifique sus credenciales."}
+                      </Alert>
+                    )}
 
                     <Form
                       className="mt-4"
-                      onSubmit={(e) => {
-                        e.preventDefault();
+                      onSubmit={(event) => {
+                        event.preventDefault();
                         validation.handleSubmit();
                         return false;
                       }}
@@ -231,14 +197,14 @@ const Login = (props: any) => {
 
                       <div className="mb-3">
                         <Label htmlFor="password" className="form-label">
-                          Contraseña
+                          Contrasena
                         </Label>
                         <div className="position-relative auth-pass-inputgroup mb-3">
                           <Input
                             name="password"
                             value={validation.values.password || ""}
                             type={passwordShow ? "text" : "password"}
-                            placeholder="Ingrese su contraseña"
+                            placeholder="Ingrese su contrasena"
                             onChange={validation.handleChange}
                             onBlur={validation.handleBlur}
                             invalid={
@@ -271,24 +237,12 @@ const Login = (props: any) => {
                           disabled={loader}
                         >
                           {loader && <Spinner size="sm" className="me-2" />}{" "}
-                          Iniciar Sesión
+                          Iniciar Sesion
                         </Button>
                       </div>
                     </Form>
                   </CardBody>
                 </Card>
-
-                <div className="mt-4 text-center">
-                  <p className="mb-0">
-                    ¿No tienes una cuenta?{" "}
-                    <Link
-                      to="/register"
-                      className="fw-semibold text-primary text-decoration-underline"
-                    >
-                      Regístrate
-                    </Link>
-                  </p>
-                </div>
               </div>
             </Col>
           </Row>

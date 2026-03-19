@@ -6,9 +6,6 @@ import withRouter from '../Components/Common/withRouter';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-// import RightSidebar from '../Components/Common/RightSidebar';
-
-//import actions
 import {
     changeLayout,
     changeSidebarTheme,
@@ -22,7 +19,7 @@ import {
     changeLeftsidebarViewType,
     changeSidebarImageType,
     changeSidebarVisibility
-} from "../slices/thunks";
+} from "../slices/layouts/thunk";
 
 //redux
 import { useSelector, useDispatch } from "react-redux";
@@ -151,9 +148,7 @@ const Layout = (props : any) => {
                     headerClass={headerClass}
                     layoutModeType={layoutModeType}
                     onChangeLayoutMode={onChangeLayoutMode} />
-                <Sidebar
-                    layoutType={layoutType}
-                />
+                <Sidebar />
                 <div className="main-content">
                     {props.children}
                     <Footer />

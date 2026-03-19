@@ -10,14 +10,11 @@ import logoLight from "../assets/images/logo-light.png";
 //import Components
 import SearchOption from '../Components/Common/SearchOption';
 import LanguageDropdown from '../Components/Common/LanguageDropdown';
-import WebAppsDropdown from '../Components/Common/WebAppsDropdown';
-import MyCartDropdown from '../Components/Common/MyCartDropdown';
 import FullScreenDropdown from '../Components/Common/FullScreenDropdown';
-import NotificationDropdown from '../Components/Common/NotificationDropdown';
 import ProfileDropdown from '../Components/Common/ProfileDropdown';
 import LightDark from '../Components/Common/LightDark';
 
-import { changeSidebarVisibility } from '../slices/thunks';
+import { changeSidebarVisibility } from '../slices/layouts/thunk';
 import { useSelector, useDispatch } from "react-redux";
 import { createSelector } from 'reselect';
 
@@ -80,7 +77,7 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                         <div className="d-flex">
 
                             <div className="navbar-brand-box horizontal-logo">
-                                <Link to="/" className="logo logo-dark">
+                                <Link to="/documents" className="logo logo-dark">
                                     <span className="logo-sm">
                                         <img src={logoSm} alt="" height="22" />
                                     </span>
@@ -89,7 +86,7 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                                     </span>
                                 </Link>
 
-                                <Link to="/" className="logo logo-light">
+                                <Link to="/documents" className="logo logo-light">
                                     <span className="logo-sm">
                                         <img src={logoSm} alt="" height="22" />
                                     </span>
@@ -135,28 +132,12 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                                 </DropdownMenu>
                             </Dropdown>
 
-                            {/* LanguageDropdown */}
                             <LanguageDropdown />
-
-                            {/* WebAppsDropdown */}
-                            {/* <WebAppsDropdown /> */}
-
-                            {/* MyCartDropdwon */}
-                            {/* <MyCartDropdown /> */}
-
-                            {/* FullScreenDropdown */}
                             <FullScreenDropdown />
-
-                            {/* Dark/Light Mode set */}
                             <LightDark
                                 layoutMode={layoutModeType}
                                 onChangeLayoutMode={onChangeLayoutMode}
                             />
-
-                            {/* NotificationDropdown */}
-                            {/* <NotificationDropdown /> */}
-
-                            {/* ProfileDropdown */}
                             <ProfileDropdown />
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route } from "react-router-dom";
 
 //Layouts
@@ -10,6 +10,8 @@ import { authProtectedRoutes, publicRoutes } from "./allRoutes";
 import AuthProtected  from './AuthProtected';
 
 const Index = () => {
+    const fallback = <div className="page-content p-4">Cargando...</div>;
+
     return (
         <React.Fragment>
             <Routes>
@@ -19,7 +21,9 @@ const Index = () => {
                             path={route.path}
                             element={
                                 <NonAuthLayout>
-                                    {route.component}
+                                    <Suspense fallback={fallback}>
+                                        {route.component}
+                                    </Suspense>
                                 </NonAuthLayout>
                             }
                             key={idx}
@@ -33,7 +37,11 @@ const Index = () => {
                             path={route.path}
                             element={
                                 <AuthProtected>
-                                    <VerticalLayout>{route.component}</VerticalLayout>
+                                    <VerticalLayout>
+                                        <Suspense fallback={fallback}>
+                                            {route.component}
+                                        </Suspense>
+                                    </VerticalLayout>
                                 </AuthProtected>}
                             key={idx}
                         />

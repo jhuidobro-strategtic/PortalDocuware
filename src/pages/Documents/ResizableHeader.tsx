@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 interface ResizableHeaderProps {
   children: React.ReactNode;
@@ -17,38 +17,47 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(width);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleMouseDown = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     setIsResizing(true);
-    setStartX(e.clientX);
+    setStartX(event.clientX);
     setStartWidth(width);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isResizing) return;
-    const newWidth = startWidth + (e.clientX - startX);
-    if (newWidth > 20) onResize(newWidth);
-  };
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    if (!isResizing) {
+      return;
+    }
 
-  const handleMouseUp = () => setIsResizing(false);
+    const newWidth = startWidth + (event.clientX - startX);
+
+    if (newWidth > 20) {
+      onResize(newWidth);
+    }
+  }, [isResizing, onResize, startWidth, startX]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
 
   useEffect(() => {
     if (isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize"; // 👈 cambia el cursor global
+      document.body.style.cursor = "col-resize";
     } else {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "default";
     }
+
     return () => {
       document.body.style.cursor = "default";
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing]);
+  }, [handleMouseMove, handleMouseUp, isResizing]);
 
   return (
     <th
@@ -56,8 +65,8 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({
       style={{
         width: `${width}px`,
         position: "relative",
-        backgroundColor: "white", // 👈 evita transparencia
-        zIndex: isResizing ? 50 : "auto", // 👈 se eleva al frente
+        backgroundColor: "white",
+        zIndex: isResizing ? 50 : "auto",
         userSelect: "none",
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -82,7 +91,6 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({
           {children}
         </span>
 
-        {/* 🔹 Barra de redimensionamiento funcional */}
         <div
           onMouseDown={handleMouseDown}
           style={{
@@ -93,7 +101,7 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({
             height: "100%",
             cursor: "col-resize",
             background: "rgba(0, 0, 0, 0.1)",
-            zIndex: 100, // 👈 asegura que quede encima
+            zIndex: 100,
           }}
         />
       </div>

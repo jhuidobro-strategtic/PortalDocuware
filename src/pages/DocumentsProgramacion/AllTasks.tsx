@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
 import moment from "moment";
 import DocumentFilters from "./components/ProgramacionFilters";
@@ -51,13 +51,7 @@ const ProgramacionDiaria: React.FC = () => {
   const removeNotification = (id: number) =>
     setNotifications((prev) => prev.filter((notif) => notif.id !== id));
 
-  useEffect(() => {
-    fetchProgramaciones();
-    fetchVehiculos();
-    fetchConductores();
-  }, []);
-
-  const fetchProgramaciones = async () => {
+  const fetchProgramaciones = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(
@@ -76,7 +70,7 @@ const ProgramacionDiaria: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchVehiculos = async () => {
     try {
@@ -107,6 +101,12 @@ const ProgramacionDiaria: React.FC = () => {
       console.error("Error loading conductores:", error);
     }
   };
+
+  useEffect(() => {
+    fetchProgramaciones();
+    fetchVehiculos();
+    fetchConductores();
+  }, [fetchProgramaciones]);
 
   const handleRegistrar = async () => {
     if (
