@@ -44,4 +44,22 @@ Asegúrate de tener **Node.js** instalado.
 
 Para iniciar el servidor de desarrollo y ver el proyecto en tu navegador:
 ```bash
+npm run dev
+```
+
+Para servir la version compilada del frontend:
+```bash
+npm run build
 npm start
+```
+
+## Heroku
+
+Este proyecto queda listo para Heroku con este flujo:
+
+```bash
+heroku create
+git push heroku main
+```
+
+Durante el deploy Heroku ejecuta el build del frontend y luego levanta la app con el `Procfile`, sirviendo la carpeta `build` en el puerto asignado por Heroku.
