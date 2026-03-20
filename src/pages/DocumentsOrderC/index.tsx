@@ -15,6 +15,7 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
+import { buildApiUrl } from "../../helpers/api-url";
 import { Document } from "../Documents/types";
 
 interface OrderCFormValues {
@@ -129,9 +130,7 @@ const DocumentOrderC = () => {
     const fetchDocument = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/documents"
-        );
+        const response = await fetch(buildApiUrl("documents"));
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.data)) {

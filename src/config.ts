@@ -18,6 +18,10 @@ interface Config {
   api: ApiConfig;
 }
 
+const apiUrl =
+  process.env.REACT_APP_API_URL ||
+  "https://docuware-api-a09ab977636d.herokuapp.com/api/";
+
 const config: Config = {
   google: {
     API_KEY: "",
@@ -28,7 +32,7 @@ const config: Config = {
     APP_ID: "",
   },
   api: {
-    API_URL: "https://apivet.strategtic.com/api/v1",
+    API_URL: apiUrl,
   },
 };
 

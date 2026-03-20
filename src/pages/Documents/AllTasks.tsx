@@ -10,6 +10,7 @@ import DocumentTable from "./components/DocumentTable";
 import DocumentPreview from "./components/DocumentPreview";
 import EditDocumentModal from "./components/EditDocumentModal";
 import DeleteDocumentModal from "./components/DeleteDocumentModal";
+import { buildApiUrl } from "../../helpers/api-url";
 import {
   ColumnWidths,
   Document,
@@ -102,9 +103,7 @@ const DocumentList: React.FC = () => {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const res = await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/documents"
-        );
+        const res = await fetch(buildApiUrl("documents"));
         const data = await res.json();
         if (data.success) {
           setDocuments(data.data);
@@ -120,9 +119,7 @@ const DocumentList: React.FC = () => {
 
     const fetchTiposDocumento = async () => {
       try {
-        const res = await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/tipo-documento"
-        );
+        const res = await fetch(buildApiUrl("tipo-documento"));
         const data = await res.json();
         if (data.success) {
           setTiposDocumento(data.data);
@@ -134,9 +131,7 @@ const DocumentList: React.FC = () => {
 
     const fetchCentrosCostos = async () => {
       try {
-        const res = await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/centro-costo"
-        );
+        const res = await fetch(buildApiUrl("centro-costo"));
         const data = await res.json();
 
         if (Array.isArray(data)) {
@@ -278,7 +273,7 @@ const DocumentList: React.FC = () => {
       };
 
       const resPatch = await fetch(
-        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents/${editDoc.documentid}/`,
+        buildApiUrl(`documents/${editDoc.documentid}/`),
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -334,7 +329,7 @@ const DocumentList: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/document-delete/",
+        buildApiUrl("document-delete/"),
         {
           method: "POST",
           headers: {
@@ -431,7 +426,7 @@ const DocumentList: React.FC = () => {
       });
 
       const resExist = await fetch(
-        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
+        buildApiUrl(`documents-detail/?${query.toString()}`)
       );
       const dataExist = await resExist.json();
 
@@ -552,7 +547,7 @@ const DocumentList: React.FC = () => {
 
         // 🔹 Enviar detalle a backend
         await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/",
+          buildApiUrl("documents-detail/"),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -577,7 +572,7 @@ const DocumentList: React.FC = () => {
 
       // 🔹 3️⃣ Obtener los detalles recién registrados
       const resGet = await fetch(
-        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`
+        buildApiUrl(`documents-detail/?${query.toString()}`)
       );
       const dataGet = await resGet.json();
 
@@ -608,7 +603,7 @@ const DocumentList: React.FC = () => {
       });
 
       const res = await fetch(
-        `https://docuware-api-a09ab977636d.herokuapp.com/api/documents-detail/?${query.toString()}`,
+        buildApiUrl(`documents-detail/?${query.toString()}`),
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

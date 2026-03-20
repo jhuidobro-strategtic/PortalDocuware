@@ -5,6 +5,7 @@ import DocumentFilters from "./components/ProgramacionFilters";
 import DocumentTable from "./components/ProgramacionTable";
 import ProgramacionFormModal from "./components/ProgramacionFormModal";
 import Notifications from "./components/Notifications";
+import { buildApiUrl } from "../../helpers/api-url";
 import {
   Vehiculo,
   Conductor,
@@ -54,9 +55,7 @@ const ProgramacionDiaria: React.FC = () => {
   const fetchProgramaciones = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/programacion-diaria"
-      );
+      const res = await fetch(buildApiUrl("programacion-diaria"));
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -74,9 +73,7 @@ const ProgramacionDiaria: React.FC = () => {
 
   const fetchVehiculos = async () => {
     try {
-      const res = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/vehiculos"
-      );
+      const res = await fetch(buildApiUrl("vehiculos"));
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -89,9 +86,7 @@ const ProgramacionDiaria: React.FC = () => {
 
   const fetchConductores = async () => {
     try {
-      const res = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/conductores"
-      );
+      const res = await fetch(buildApiUrl("conductores"));
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -120,7 +115,7 @@ const ProgramacionDiaria: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/programacion-diaria/",
+        buildApiUrl("programacion-diaria/"),
         {
           method: "POST",
           headers: {
@@ -163,7 +158,7 @@ const ProgramacionDiaria: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://docuware-api-a09ab977636d.herokuapp.com/api/programacion-diaria/",
+        buildApiUrl("programacion-diaria/"),
         {
           method: "PATCH",
           headers: {

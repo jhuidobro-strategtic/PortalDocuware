@@ -16,8 +16,18 @@ export const loginUser = (user: any, history: any) => async (dispatch: any) => {
     });
 
     if (response?.success === true) {
-      sessionStorage.setItem("authUser", JSON.stringify(response));
-      dispatch(loginSuccess(response.data));
+      const authSession = {
+        ...response,
+        token: response?.token ?? null,
+        data: {
+          ...response?.data,
+          username: user.username,
+          email: user.username,
+        },
+      };
+
+      sessionStorage.setItem("authUser", JSON.stringify(authSession));
+      dispatch(loginSuccess(authSession.data));
       history("/documents");
       return;
     }

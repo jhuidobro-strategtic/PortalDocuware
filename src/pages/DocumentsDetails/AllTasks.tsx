@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, CardBody, Spinner, Alert, Pagination,
   PaginationItem, PaginationLink } from "reactstrap";
 import moment from "moment";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
+import { buildApiUrl } from "../../helpers/api-url";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
 import { DocumentDetailsRow } from "./types";
@@ -25,9 +26,7 @@ const DocumentDetails: React.FC = () => {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const res = await fetch(
-          "https://docuware-api-a09ab977636d.herokuapp.com/api/documents-all"
-        );
+        const res = await fetch(buildApiUrl("documents-all"));
         const data = await res.json();
 
         if (!Array.isArray(data)) {

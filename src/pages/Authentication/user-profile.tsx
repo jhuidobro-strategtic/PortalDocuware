@@ -30,11 +30,10 @@ import { createSelector } from "reselect";
 const UserProfile = () => {
   const dispatch: any = useDispatch();
 
-  const [email, setemail] = useState("admin@gmail.com");
+  const [email, setemail] = useState("Sin correo");
   const [idx, setidx] = useState("1");
-
   const [userName, setUserName] = useState("Admin");
-
+  const [profileName, setProfileName] = useState("Sin perfil");
 
 
   const selectLayoutState = (state: any) => state.Profile;
@@ -68,14 +67,17 @@ const UserProfile = () => {
           process.env.REACT_APP_DEFAULTAUTH === "jwt"
         ) {
           if (!isEmpty(user)) {
-            obj.data.first_name = user.first_name;
+            obj.data.fullname = user.first_name;
             sessionStorage.removeItem("authUser");
             sessionStorage.setItem("authUser", JSON.stringify(obj));
           }
 
-          setUserName(obj.data.first_name || "Admin");
-          setemail(obj.data.email || "admin@gmail.com");
-          setidx(obj.data._id || "1");
+          setUserName(
+            obj.data.fullname || obj.data.first_name || obj.data.username || "Admin"
+          );
+          setemail(obj.data.email || obj.data.username || "Sin correo");
+          setidx(String(obj.data.profileID || obj.data._id || "1"));
+          setProfileName(obj.data.profileName || "Sin perfil");
 
         }
         setTimeout(() => {
@@ -127,6 +129,7 @@ const UserProfile = () => {
                       <div className="text-muted">
                         <h5>{userName || "Admin"}</h5>
                         <p className="mb-1">Email Id : {email}</p>
+                        <p className="mb-1">Perfil : {profileName}</p>
                         <p className="mb-0">Id No : #{idx}</p>
                       </div>
                     </div>
