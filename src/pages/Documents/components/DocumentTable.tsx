@@ -9,6 +9,10 @@ import {
 import moment from "moment";
 import ResizableHeader from "../ResizableHeader";
 import { ColumnWidths, Document } from "../types";
+import {
+  CurrencyBadge,
+  DocumentStatusBadge,
+} from "../../../Components/Common/RecordBadges";
 
 interface DocumentTableProps {
   columnWidths: ColumnWidths;
@@ -71,7 +75,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               width={columnWidths.numero}
               onResize={(w) => onResizeColumn("numero", w)}
             >
-              Número
+              Numero
             </ResizableHeader>
             <ResizableHeader
               width={columnWidths.ruc}
@@ -83,7 +87,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               width={columnWidths.razon}
               onResize={(w) => onResizeColumn("razon", w)}
             >
-              Razón Social
+              Razon Social
             </ResizableHeader>
             <ResizableHeader
               width={columnWidths.tipo}
@@ -101,7 +105,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               width={columnWidths.fecha}
               onResize={(w) => onResizeColumn("fecha", w)}
             >
-              Fecha Emisión
+              Fecha Emision
             </ResizableHeader>
             <ResizableHeader
               width={columnWidths.moneda}
@@ -230,25 +234,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     textAlign: "center",
                   }}
                 >
-                  {doc.currency === "PEN" && (
-                    <img
-                      src="https://flagcdn.com/w40/pe.png"
-                      alt="Perú"
-                      width={20}
-                      height={15}
-                      className="me-2"
-                    />
-                  )}
-                  {doc.currency === "USD" && (
-                    <img
-                      src="https://flagcdn.com/w40/us.png"
-                      alt="USA"
-                      width={20}
-                      height={15}
-                      className="me-2"
-                    />
-                  )}
-                  {doc.currency}
+                  <CurrencyBadge currency={doc.currency} />
                 </td>
                 <td
                   style={{
@@ -292,11 +278,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     textAlign: "center",
                   }}
                 >
-                  <span
-                    className={`badge ${doc.status ? "bg-success" : "bg-warning"}`}
-                  >
-                    {doc.status ? "Activo" : "Pendiente"}
-                  </span>
+                  <DocumentStatusBadge status={doc.status} />
                 </td>
                 <td style={{ ...style, width: columnWidths.acciones }}>
                   <div className="d-flex flex-wrap gap-2">
@@ -314,7 +296,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       outline
                       onClick={() => onOrderC(doc)}
                     >
-                      <i className="ri-file-list-3-line align-bottom" /> Orden C.
+                      <i className="ri-file-list-3-line align-bottom" /> Orden
+                      C.
                     </Button>
                     <Button
                       size="sm"

@@ -2,6 +2,7 @@ import React from "react";
 import { Table } from "reactstrap";
 import moment from "moment";
 import { DocumentDetailsRow } from "../types";
+import { CurrencyBadge } from "../../../Components/Common/RecordBadges";
 
 interface DocumentTableProps {
   documents: DocumentDetailsRow[];
@@ -15,17 +16,17 @@ const DocumentTable: React.FC<DocumentTableProps> = ({ documents }) => (
           <th>Tipo</th>
           <th>Comprador</th>
           <th>Serie</th>
-          <th>Nº</th>
+          <th>N</th>
           <th>Fecha</th>
           <th>RUC</th>
           <th>Proveedor</th>
           <th>Centro de Costo</th>
-          <th>Descripción</th>
-          <th>Vehículo</th>
+          <th>Descripcion</th>
+          <th>Vehiculo</th>
           <th>Unidad</th>
           <th className="text-end">Cant.</th>
           <th className="text-end">V. Unit.</th>
-          <th className="text-end">V. Línea</th>
+          <th className="text-end">V. Linea</th>
           <th>Moneda</th>
           <th className="text-end">Sub Total</th>
           <th className="text-end">IGV</th>
@@ -41,9 +42,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({ documents }) => (
           </tr>
         ) : (
           documents.map((doc, index) => (
-            <tr
-              key={`${doc.documentserial}-${doc.documentnumber}-${index}`}
-            >
+            <tr key={`${doc.documentserial}-${doc.documentnumber}-${index}`}>
               <td>{doc.documenttype}</td>
               <td>{doc.driver}</td>
               <td>{doc.documentserial}</td>
@@ -83,25 +82,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({ documents }) => (
                 })}
               </td>
               <td>
-                {doc.currency === "PEN" && (
-                  <img
-                    src="https://flagcdn.com/w40/pe.png"
-                    alt="Perú"
-                    width={20}
-                    height={15}
-                    className="me-2"
-                  />
-                )}
-                {doc.currency === "USD" && (
-                  <img
-                    src="https://flagcdn.com/w40/us.png"
-                    alt="USA"
-                    width={20}
-                    height={15}
-                    className="me-2"
-                  />
-                )}
-                {doc.currency}
+                <CurrencyBadge currency={doc.currency} />
               </td>
               <td className="text-end">
                 {(doc.amount ?? 0).toLocaleString("es-PE", {
