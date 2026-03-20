@@ -12,6 +12,12 @@ import EditDocumentModal from "./components/EditDocumentModal";
 import DeleteDocumentModal from "./components/DeleteDocumentModal";
 import { buildApiUrl } from "../../helpers/api-url";
 import {
+  buildFactilizaUrl,
+  buildSunatUrl,
+  getFactilizaToken,
+  getSunatToken,
+} from "../../helpers/external-api";
+import {
   ColumnWidths,
   Document,
   DocumentDetail,
@@ -375,14 +381,20 @@ const DocumentList: React.FC = () => {
       return;
     }
 
+    const factilizaToken = getFactilizaToken();
+    if (!factilizaToken) {
+      addNotification("danger", "Token de Factiliza no configurado en entorno");
+      return;
+    }
+
     setLoadingRuc(true);
     try {
       // 🔹 1️⃣ Consultar RUC en Factiliza
       const factilizaRes = await fetch(
-        `https://api.factiliza.com/v1/ruc/info/${editDoc.suppliernumber}`,
+        buildFactilizaUrl(`ruc/info/${editDoc.suppliernumber}`),
         {
           headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ODEiLCJuYW1lIjoiQ29ycG9yYWNpb24gQUNNRSIsImVtYWlsIjoicmZsb3JlekBhY21ldGljLmNvbS5wZSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNvbnN1bHRvciJ9.06GySJlpTrqWUQA5EI3tDHvLn8LNzZ2m5VBSIy_SbF4`,
+            Authorization: `Bearer ${factilizaToken}`,
           },
         }
       );
@@ -413,6 +425,12 @@ const DocumentList: React.FC = () => {
   const handleSearchDocument = async () => {
     if (!editDoc?.suppliernumber) {
       addNotification("danger", "Ingrese un RUC válido");
+      return;
+    }
+
+    const sunatToken = getSunatToken();
+    if (!sunatToken) {
+      addNotification("danger", "Token de SUNAT no configurado en entorno");
       return;
     }
 
@@ -461,13 +479,12 @@ const DocumentList: React.FC = () => {
 
       // 🔹 1️⃣ Consultar comprobante en SUNAT
       const sunatRes = await fetch(
-        "https://dev.apisunat.pe/api/v1/sunat/comprobante",
+        buildSunatUrl("sunat/comprobante"),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization:
-              "Bearer 327.0b9xy0B3FvkF4dtgymPuAMKfDIktTLvnvuJTIWHiO50NUd1Z4L62IzFhGXmlEOt5wiz3sWtg8IQOas0OgoEXGyjUKNbiJjXrPmMRxTlpU4l9J2PdZkCLwbKJ",
+            Authorization: `Bearer ${sunatToken}`,
           },
           body: JSON.stringify({
             tipo_comprobante: tipoComprobante,
