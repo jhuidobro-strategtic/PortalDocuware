@@ -8,6 +8,7 @@ const Documents = lazy(() => import("../pages/Documents"));
 const DocumentOrderC = lazy(() => import("../pages/DocumentsOrderC"));
 const DocumentDetails = lazy(() => import("../pages/DocumentsDetails"));
 const DocumentProgramacion = lazy(() => import("../pages/DocumentsProgramacion"));
+const PurchaseOrderDetails = lazy(() => import("../pages/PurchaseOrderDetails"));
 
 const authProtectedRoutes = [
   { path: "/", component: <Navigate to="/documents" replace /> },
@@ -17,6 +18,7 @@ const authProtectedRoutes = [
   { path: "/documents/order-c/:documentId", component: <DocumentOrderC /> },
   { path: "/document-details", component: <DocumentDetails /> },
   { path: "/document-programation", component: <DocumentProgramacion /> },
+  { path: "/purchase-order-details", component: <PurchaseOrderDetails /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Navigate to="/documents" replace /> },
 ];

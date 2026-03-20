@@ -25,6 +25,18 @@ const Navdata = () => [
             },
         ],
     },
+    {
+        id: "purchase-orders",
+        label: "Ordenes de Compra",
+        icon: "ri-shopping-bag-3-line",
+        subItems: [
+            {
+                id: "purchase-order-details",
+                label: "Detalle de Orden de Compra",
+                link: "/purchase-order-details",
+            },
+        ],
+    },
 ];
 
 export default Navdata;
