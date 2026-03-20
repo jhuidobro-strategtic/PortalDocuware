@@ -83,20 +83,17 @@ const ORDER_C_FIELDS: OrderCFieldConfig[] = [
     label: "Supplier ID",
     placeholder: "Ingrese el identificador del proveedor",
     type: "number",
-    helperText: "Corresponde al ID interno del proveedor en tu API.",
   },
   {
     name: "documentAssociatedType",
     label: "Tipo Documento Asociado",
     placeholder: "Ej. 2",
     type: "number",
-    helperText: "Se precarga con el tipo del documento cuando existe.",
   },
   {
     name: "documentAssociatedNo",
     label: "Numero Documento Asociado",
     placeholder: "Ej. FAC-1001",
-    helperText: "Puedes usar la serie y numero del documento asociado.",
   },
   {
     name: "paymentCondition",
