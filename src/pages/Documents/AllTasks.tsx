@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
 import moment from "moment";
 import "./Documents.css";
@@ -19,6 +20,7 @@ import {
 } from "./types";
 
 const DocumentList: React.FC = () => {
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ const DocumentList: React.FC = () => {
     igv: 100,
     total: 120,
     estado: 120,
-    acciones: 250,
+    acciones: 360,
   });
 
   const handleResize = (column: keyof typeof columnWidths, newWidth: number) => {
@@ -364,6 +366,11 @@ const DocumentList: React.FC = () => {
 
   const handleViewDocument = (doc: Document) => {
     setSelectedDoc(doc);
+  };
+  const handleOpenOrderC = (doc: Document) => {
+    navigate(`/documents/order-c/${doc.documentid}`, {
+      state: { document: doc },
+    });
   };
 
   // 📌 Consultar RUC en Factiliza
@@ -808,6 +815,7 @@ const DocumentList: React.FC = () => {
                 documents={paginatedDocuments}
                 getTipoDocumentoNombre={getTipoDocumentoNombre}
                 onView={handleViewDocument}
+                onOrderC={handleOpenOrderC}
                 onEdit={handleEditClick}
                 onDelete={(doc) => handleDelete(doc.documentid)}
                 currentPage={currentPage}

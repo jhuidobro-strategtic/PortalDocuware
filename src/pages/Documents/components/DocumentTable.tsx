@@ -16,6 +16,7 @@ interface DocumentTableProps {
   documents: Document[];
   getTipoDocumentoNombre: (docType: Document["documenttype"]) => string;
   onView: (doc: Document) => void;
+  onOrderC: (doc: Document) => void;
   onEdit: (doc: Document) => void;
   onDelete: (doc: Document) => void;
   currentPage: number;
@@ -36,6 +37,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   documents,
   getTipoDocumentoNombre,
   onView,
+  onOrderC,
   onEdit,
   onDelete,
   currentPage,
@@ -49,7 +51,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
     >
       <Table
         className="table align-middle table-nowrap mb-0"
-        style={{ tableLayout: "fixed", width: "100%", minWidth: "1500px" }}
+        style={{ tableLayout: "fixed", width: "100%", minWidth: "1620px" }}
       >
         <thead className="table-light">
           <tr style={{ textAlign: "center" }}>
@@ -143,7 +145,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
         <tbody>
           {documents.length === 0 && (
             <tr>
-              <td colSpan={13} className="text-center">
+              <td colSpan={14} className="text-center">
                 No se encontraron registros
               </td>
             </tr>
@@ -297,7 +299,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                   </span>
                 </td>
                 <td style={{ ...style, width: columnWidths.acciones }}>
-                  <div className="hstack gap-2">
+                  <div className="d-flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       color="info"
@@ -305,6 +307,14 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       onClick={() => onView(doc)}
                     >
                       <i className="ri-eye-line align-bottom" /> Ver
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="primary"
+                      outline
+                      onClick={() => onOrderC(doc)}
+                    >
+                      <i className="ri-file-list-3-line align-bottom" /> Orden C.
                     </Button>
                     <Button
                       size="sm"
