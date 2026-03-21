@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Input, InputGroup, InputGroupText } from "reactstrap";
 import Flatpickr from "react-flatpickr";
+import { useTranslation } from "react-i18next";
 import "flatpickr/dist/themes/material_blue.css";
 
 interface DocumentFiltersProps {
@@ -21,54 +22,58 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
   onStatusChange,
   onDateRangeChange,
   onExport,
-}) => (
-  <div className="d-flex justify-content-between align-items-center mb-4">
-    <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>
-      Lista de Documentos
-    </h4>
-    <div className="d-flex align-items-center gap-2 flex">
-      <InputGroup style={{ maxWidth: "250px" }}>
-        <InputGroupText>
-          <i className="ri-search-line" />
-        </InputGroupText>
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="d-flex justify-content-between align-items-center mb-4">
+      <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>
+        {t("Document List")}
+      </h4>
+      <div className="d-flex align-items-center gap-2 flex">
+        <InputGroup style={{ maxWidth: "250px" }}>
+          <InputGroupText>
+            <i className="ri-search-line" />
+          </InputGroupText>
+          <Input
+            placeholder={t("Search...")}
+            value={searchTerm}
+            onChange={(e) => onSearchTermChange(e.target.value)}
+          />
+        </InputGroup>
+
         <Input
-          placeholder="Buscar..."
-          value={searchTerm}
-          onChange={(e) => onSearchTermChange(e.target.value)}
-        />
-      </InputGroup>
+          type="select"
+          value={statusFilter}
+          onChange={(e) => onStatusChange(e.target.value)}
+          style={{ maxWidth: "180px" }}
+        >
+          <option value="all">{t("All")}</option>
+          <option value="active">{t("Active")}</option>
+          <option value="pending">{t("Pending")}</option>
+        </Input>
 
-      <Input
-        type="select"
-        value={statusFilter}
-        onChange={(e) => onStatusChange(e.target.value)}
-        style={{ maxWidth: "180px" }}
-      >
-        <option value="all">Todos</option>
-        <option value="active">Activos</option>
-        <option value="pending">Pendientes</option>
-      </Input>
-
-      <InputGroup style={{ maxWidth: "280px" }}>
-        <InputGroupText>
-          <i className="ri-calendar-line" />
-        </InputGroupText>
-        <Flatpickr
-          className="form-control"
-          options={{
-            mode: "range",
-            dateFormat: "d/m/Y",
-          }}
-          value={dateRange}
-          onChange={onDateRangeChange}
-          placeholder="Filtrar por fecha"
-        />
-      </InputGroup>
-      <Button color="success" onClick={onExport}>
-        <i className="ri-file-excel-2-line"></i>
-      </Button>
+        <InputGroup style={{ maxWidth: "280px" }}>
+          <InputGroupText>
+            <i className="ri-calendar-line" />
+          </InputGroupText>
+          <Flatpickr
+            className="form-control"
+            options={{
+              mode: "range",
+              dateFormat: "d/m/Y",
+            }}
+            value={dateRange}
+            onChange={onDateRangeChange}
+            placeholder={t("Filter by date")}
+          />
+        </InputGroup>
+        <Button color="success" onClick={onExport} title={t("Download")}>
+          <i className="ri-file-excel-2-line"></i>
+        </Button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default DocumentFilters;

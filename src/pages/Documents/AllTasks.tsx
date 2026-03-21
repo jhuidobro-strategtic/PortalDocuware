@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
 import moment from "moment";
+import { useTranslation } from "react-i18next";
 import "./Documents.css";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
 import Notifications from "./components/Notifications";
@@ -27,6 +28,7 @@ import {
 } from "./types";
 
 const DocumentList: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,7 @@ const DocumentList: React.FC = () => {
         if (data.success) {
           setDocuments(data.data);
         } else {
-          throw new Error(data.message || "Error al obtener documentos");
+          throw new Error(data.message || t("Error getting documents"));
         }
       } catch (err: any) {
         setError(err.message);
@@ -154,7 +156,7 @@ const DocumentList: React.FC = () => {
     fetchDocuments();
     fetchTiposDocumento();
     fetchCentrosCostos();
-  }, []);
+  }, [t]);
 
   // 📌 Google Drive helpers
   const extractDriveId = (url: string) => {
@@ -252,7 +254,7 @@ const DocumentList: React.FC = () => {
       parseFloat(editDoc.totalamount) > 0;
 
     if (!isValid) {
-      addNotification("danger", "Complete todos los campos correctamente");
+      addNotification("danger", t("Complete all fields correctly"));
       return;
     }
 
@@ -298,13 +300,13 @@ const DocumentList: React.FC = () => {
           )
         );
         setEditModal(false);
-        addNotification("success", "Documento actualizado correctamente");
+        addNotification("success", t("Document updated successfully"));
       } else {
-        addNotification("danger", dataPatch.message || "Error al actualizar");
+        addNotification("danger", dataPatch.message || t("Error updating"));
       }
     } catch (error) {
       console.error(error);
-      addNotification("danger", "Error en el proceso de actualización");
+      addNotification("danger", t("Error during the update process"));
     } finally {
       setLoadingDetails(false);
     }
@@ -320,7 +322,7 @@ const DocumentList: React.FC = () => {
     if (typeof docType === "object" && docType !== null) {
       return docType.tipo;
     }
-    return "Desconocido";
+    return t("Unknown");
   };
 
   // 📌 Abrir modal de confirmación de eliminación
@@ -353,15 +355,15 @@ const DocumentList: React.FC = () => {
         setDocuments((prev) =>
           prev.filter((doc) => doc.documentid !== documentToDelete)
         );
-        addNotification("success", "Documento eliminado correctamente");
+        addNotification("success", t("Document deleted successfully"));
         setDeleteModal(false);
         setDocumentToDelete(null);
       } else {
-        addNotification("danger", data.message || "Error al eliminar el documento");
+        addNotification("danger", data.message || t("Error deleting the document"));
       }
     } catch (error) {
       console.error("Error al eliminar documento:", error);
-      addNotification("danger", "Error en el proceso de eliminación");
+      addNotification("danger", t("Error during the deletion process"));
     }
   };
 
@@ -377,13 +379,13 @@ const DocumentList: React.FC = () => {
   // 📌 Consultar RUC en Factiliza
   const handleSearchRuc = async () => {
     if (!editDoc?.suppliernumber) {
-      addNotification("danger", "Ingrese un RUC válido");
+      addNotification("danger", t("Enter a valid RUC"));
       return;
     }
 
     const factilizaToken = getFactilizaToken();
     if (!factilizaToken) {
-      addNotification("danger", "Token de Factiliza no configurado en entorno");
+      addNotification("danger", t("Factiliza token is not configured in the environment"));
       return;
     }
 
@@ -409,13 +411,13 @@ const DocumentList: React.FC = () => {
             }
             : prev
         );
-        addNotification("success", "RUC encontrado correctamente");
+        addNotification("success", t("RUC found successfully"));
       } else {
-        addNotification("warning", "RUC no encontrado");
+        addNotification("warning", t("RUC not found"));
       }
     } catch (error) {
       console.error(error);
-      addNotification("danger", "Error al consultar RUC o SUNAT");
+      addNotification("danger", t("Error consulting RUC or SUNAT"));
     } finally {
       setLoadingRuc(false);
     }
@@ -424,13 +426,13 @@ const DocumentList: React.FC = () => {
   // 📌 Consultar y registrar datos desde SUNAT (solo si no existen registros)
   const handleSearchDocument = async () => {
     if (!editDoc?.suppliernumber) {
-      addNotification("danger", "Ingrese un RUC válido");
+      addNotification("danger", t("Enter a valid RUC"));
       return;
     }
 
     const sunatToken = getSunatToken();
     if (!sunatToken) {
-      addNotification("danger", "Token de SUNAT no configurado en entorno");
+      addNotification("danger", t("SUNAT token is not configured in the environment"));
       return;
     }
 
@@ -450,10 +452,7 @@ const DocumentList: React.FC = () => {
 
       if (Array.isArray(dataExist) && dataExist.length > 0) {
         setDocDetails(dataExist);
-        addNotification(
-          "info",
-          "Ya existen detalles registrados. No se consultó SUNAT."
-        );
+        addNotification("info", t("Details already exist. SUNAT was not queried."));
         setLoadingDocument(false);
         return; // 🚫 Detiene aquí, no consulta ni inserta nada
       }
@@ -470,10 +469,7 @@ const DocumentList: React.FC = () => {
         !editDoc.documentserial ||
         !editDoc.documentnumber
       ) {
-        addNotification(
-          "warning",
-          "Complete Tipo, Serie y Número antes de consultar SUNAT"
-        );
+        addNotification("warning", t("Complete Type, Series and Number before querying SUNAT"));
         return;
       }
 
@@ -498,7 +494,7 @@ const DocumentList: React.FC = () => {
       const sunatData = await sunatRes.json();
 
       if (!sunatData.success) {
-        addNotification("danger", "Error al obtener comprobante de SUNAT");
+        addNotification("danger", t("Error fetching invoice data from SUNAT"));
         return;
       }
 
@@ -595,16 +591,13 @@ const DocumentList: React.FC = () => {
 
       if (dataGet && dataGet.length > 0) {
         setDocDetails(dataGet);
-        addNotification(
-          "success",
-          "Detalles cargados correctamente desde SUNAT"
-        );
+        addNotification("success", t("Details loaded successfully from SUNAT"));
       } else {
-        addNotification("warning", "No se encontraron detalles en SUNAT");
+        addNotification("warning", t("No details found in SUNAT"));
       }
     } catch (error) {
       console.error(error);
-      addNotification("danger", "Error al consultar datos de SUNAT");
+      addNotification("danger", t("Error querying SUNAT data"));
     } finally {
       setLoadingDocument(false);
     }

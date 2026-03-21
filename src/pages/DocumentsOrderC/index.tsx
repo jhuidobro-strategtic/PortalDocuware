@@ -400,7 +400,7 @@ const DocumentOrderC = () => {
       setSubmitting(true);
 
       const payload = buildPurchaseOrderPayload(normalizedValues, details);
-      const response = await fetch(buildApiUrl("purchase-orders"), {
+      const response = await fetch(buildApiUrl("purchase-orders/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

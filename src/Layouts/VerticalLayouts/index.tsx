@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { Collapse } from 'reactstrap';
+import { useTranslation } from "react-i18next";
 import navdata from "../LayoutMenuData";
 
-const navItems = navdata();
-
 const VerticalLayout = () => {
+    const { t } = useTranslation();
     const location = useLocation();
+    const navItems = useMemo(() => navdata(t), [t]);
     const [openSection, setOpenSection] = useState<string>("document-management");
 
     useEffect(() => {
@@ -19,7 +20,7 @@ const VerticalLayout = () => {
         }
 
         window.scrollTo({ top: 0, behavior: "smooth" });
-    }, [location.pathname]);
+    }, [location.pathname, navItems]);
 
     return (
         <React.Fragment>

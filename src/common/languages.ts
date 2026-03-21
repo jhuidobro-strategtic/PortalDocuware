@@ -7,18 +7,17 @@ import flagchina from "../assets/images/flags/china.svg";
 import flagfrench from "../assets/images/flags/french.svg";
 import flagarabic from "../assets/images/flags/ae.svg";
 
-
 const languages = {
   sp: {
-    label: "Española",
+    label: "Español",
     flag: flagspain,
   },
   gr: {
-    label: "Deutsche",
+    label: "Deutsch",
     flag: flaggermany,
   },
   it: {
-    label: "Italiana",
+    label: "Italiano",
     flag: flagitaly,
   },
   rs: {
@@ -30,7 +29,7 @@ const languages = {
     flag: flagus,
   },
   cn: {
-    label: "中国人",
+    label: "中文",
     flag: flagchina,
   },
   fr: {
@@ -38,9 +37,9 @@ const languages = {
     flag: flagfrench,
   },
   ar: {
-    label: "Arabic",
+    label: "العربية",
     flag: flagarabic,
   },
-}
+};
 
-export default languages
+export default languages;

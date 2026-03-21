@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
+  Button,
   Card,
   CardBody,
   Container,
@@ -17,6 +19,9 @@ import {
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
 import { buildApiUrl } from "../../helpers/api-url";
+import { getNumberLocale } from "../../common/locale";
+import { Document } from "../Documents/types";
+import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
@@ -49,16 +54,10 @@ interface PurchaseOrder {
   details: PurchaseOrderDetail[];
 }
 
-const formatAmount = (value: string | number) =>
-  Number(value || 0).toLocaleString("es-PE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const getDocumentAssociatedNo = (document: Document) =>
+  [document.documentserial, document.documentnumber].filter(Boolean).join("-");
 
-const getOrderTotal = (details: PurchaseOrderDetail[]) =>
-  details.reduce((sum, detail) => sum + Number(detail.total || 0), 0);
-
-const getCurrencyMeta = (currency: number) => {
+const getCurrencyMeta = (currency: number, t: (key: string) => string) => {
   switch (currency) {
     case 1:
       return {
@@ -75,24 +74,27 @@ const getCurrencyMeta = (currency: number) => {
     default:
       return {
         label: String(currency ?? "-"),
-        alt: "Moneda",
+        alt: t("Currency"),
         imageUrl: null,
       };
   }
 };
 
-const getPurchaseStateMeta = (purchaseState: number) => {
+const getPurchaseStateMeta = (
+  purchaseState: number,
+  t: (key: string) => string
+) => {
   switch (purchaseState) {
     case 1:
       return {
-        label: "APROBADO",
+        label: t("Approved"),
         className:
           "badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-checkbox-circle-line",
       };
     case 2:
       return {
-        label: "RECHAZADO",
+        label: t("Rejected"),
         className:
           "badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-close-circle-line",
@@ -100,7 +102,7 @@ const getPurchaseStateMeta = (purchaseState: number) => {
     case 0:
     default:
       return {
-        label: "PENDIENTE",
+        label: t("Pending"),
         className:
           "badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-time-line",
@@ -137,11 +139,29 @@ const matchesSearchValue = (value: unknown, term: string): boolean => {
 };
 
 const PurchaseOrderDetails = () => {
+  const { t, i18n } = useTranslation();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [documentsByAssociatedNo, setDocumentsByAssociatedNo] = useState<
+    Record<string, Document>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(
+    null
+  );
+
+  const numberLocale = getNumberLocale(i18n.language);
+  const formatAmount = (value: string | number) =>
+    Number(value || 0).toLocaleString(numberLocale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const getOrderTotal = (details: PurchaseOrderDetail[]) =>
+    details.reduce((sum, detail) => sum + Number(detail.total || 0), 0);
 
   const itemsPerPage = 10;
   const filteredPurchaseOrders = purchaseOrders.filter((purchaseOrder) => {
@@ -153,8 +173,8 @@ const PurchaseOrderDetails = () => {
 
     return (
       matchesSearchValue(purchaseOrder, term) ||
-      getCurrencyMeta(purchaseOrder.currency).label.toLowerCase().includes(term) ||
-      getPurchaseStateMeta(purchaseOrder.purchaseState).label
+      getCurrencyMeta(purchaseOrder.currency, t).label.toLowerCase().includes(term) ||
+      getPurchaseStateMeta(purchaseOrder.purchaseState, t).label
         .toLowerCase()
         .includes(term)
     );
@@ -166,26 +186,83 @@ const PurchaseOrderDetails = () => {
     currentPage * itemsPerPage
   );
 
+  const handleGeneratePdf = async (purchaseOrder: PurchaseOrder) => {
+    try {
+      setActionError(null);
+      setGeneratingOrderId(purchaseOrder.purchaseOrderID);
+
+      await generatePurchaseOrderPdf({
+        purchaseOrder,
+        relatedDocument:
+          documentsByAssociatedNo[purchaseOrder.documentAssociatedNo] ?? null,
+        numberLocale,
+      });
+    } catch (generateError: any) {
+      setActionError(
+        generateError?.message || t("Unable to generate the PDF for this order.")
+      );
+    } finally {
+      setGeneratingOrderId(null);
+    }
+  };
+
   useEffect(() => {
-    document.title = "Detalle de Orden de Compra | Docuware";
+    document.title = `${t("Purchase Order Details")} | Docuware`;
 
     const fetchPurchaseOrders = async () => {
       try {
         setLoading(true);
-        const response = await fetch(buildApiUrl("purchase-orders"));
-        const data = await response.json();
+        setError(null);
+        setActionError(null);
 
-        if (!data?.success || !Array.isArray(data?.data)) {
+        const [purchaseOrdersResponse, documentsResponse] = await Promise.all([
+          fetch(buildApiUrl("purchase-orders/")),
+          fetch(buildApiUrl("documents")),
+        ]);
+        const purchaseOrdersData = await purchaseOrdersResponse
+          .json()
+          .catch(() => null);
+
+        if (
+          !purchaseOrdersResponse.ok ||
+          !purchaseOrdersData?.success ||
+          !Array.isArray(purchaseOrdersData?.data)
+        ) {
           throw new Error(
-            data?.message || "No fue posible obtener las ordenes de compra."
+            purchaseOrdersData?.message || t("Unable to get purchase orders.")
           );
         }
 
-        setPurchaseOrders(data.data);
+        setPurchaseOrders(purchaseOrdersData.data);
+
+        const documentsData = await documentsResponse.json().catch(() => null);
+
+        if (
+          documentsResponse.ok &&
+          documentsData?.success &&
+          Array.isArray(documentsData?.data)
+        ) {
+          const indexedDocuments = documentsData.data.reduce(
+            (acc: Record<string, Document>, document: Document) => {
+              const associatedNo = getDocumentAssociatedNo(document);
+
+              if (associatedNo) {
+                acc[associatedNo] = document;
+              }
+
+              return acc;
+            },
+            {}
+          );
+
+          setDocumentsByAssociatedNo(indexedDocuments);
+        } else {
+          setDocumentsByAssociatedNo({});
+        }
       } catch (fetchError: any) {
         setError(
           fetchError?.message ||
-            "Ocurrio un error al cargar el detalle de ordenes de compra."
+            t("An error occurred while loading purchase order details.")
         );
       } finally {
         setLoading(false);
@@ -193,24 +270,24 @@ const PurchaseOrderDetails = () => {
     };
 
     fetchPurchaseOrders();
-  }, []);
+  }, [t]);
 
   return (
     <React.Fragment>
       <div className="page-content">
         <Container fluid>
           <BreadCrumb
-            title="Detalle de Orden de Compra"
-            pageTitle="Ordenes de Compra"
+            title="Purchase Order Details"
+            pageTitle="Purchase Orders"
           />
 
           <Card className="border-0 shadow-sm">
             <CardBody>
               <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
-                  <h5 className="mb-1">Listado de Ordenes de Compra</h5>
+                  <h5 className="mb-1">{t("Purchase Order List")}</h5>
                   <p className="text-muted mb-0">
-                    Últimas ordenes registradas.
+                    {t("Latest registered orders.")}
                   </p>
                 </div>
                 <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -219,7 +296,7 @@ const PurchaseOrderDetails = () => {
                       <i className="ri-search-line" />
                     </InputGroupText>
                     <Input
-                      placeholder="Buscar..."
+                      placeholder={t("Search...")}
                       value={searchTerm}
                       onChange={(event) => {
                         setSearchTerm(event.target.value);
@@ -237,6 +314,9 @@ const PurchaseOrderDetails = () => {
               )}
 
               {!loading && error && <Alert color="danger">{error}</Alert>}
+              {!loading && !error && actionError && (
+                <Alert color="danger">{actionError}</Alert>
+              )}
 
               {!loading && !error && (
                 <div className="table-responsive">
@@ -244,34 +324,37 @@ const PurchaseOrderDetails = () => {
                     <thead className="table-light">
                       <tr>
                         <th>ID</th>
-                        <th>Orden</th>
-                        <th>Supplier ID</th>
-                        <th>Doc. Asociado</th>
-                        <th>Cond. Pago</th>
-                        <th>Moneda</th>
-                        <th>Guia</th>
-                        <th>Almacen</th>
-                        <th>Estado</th>
-                        <th>Creado por</th>
-                        <th>Fecha</th>
-                        <th className="text-center">Items</th>
-                        <th className="text-end">Total Orden</th>
+                        <th>{t("Order Number")}</th>
+                        <th>{t("Supplier ID")}</th>
+                        <th>{t("Associated Doc.")}</th>
+                        <th>{t("Payment Cond.")}</th>
+                        <th>{t("Currency")}</th>
+                        <th>{t("Guide")}</th>
+                        <th>{t("Warehouse")}</th>
+                        <th>{t("Status")}</th>
+                        <th>{t("Created by")}</th>
+                        <th>{t("Date")}</th>
+                        <th className="text-center">{t("Items")}</th>
+                        <th className="text-end">{t("Order Total")}</th>
+                        <th className="text-center">{t("Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedPurchaseOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={13} className="text-center">
-                            No se encontraron ordenes de compra registradas.
+                          <td colSpan={14} className="text-center">
+                            {t("No registered purchase orders were found.")}
                           </td>
                         </tr>
                       ) : (
                         paginatedPurchaseOrders.map((purchaseOrder) => {
                           const currency = getCurrencyMeta(
-                            purchaseOrder.currency
+                            purchaseOrder.currency,
+                            t
                           );
                           const purchaseState = getPurchaseStateMeta(
-                            purchaseOrder.purchaseState
+                            purchaseOrder.purchaseState,
+                            t
                           );
 
                           return (
@@ -318,6 +401,28 @@ const PurchaseOrderDetails = () => {
                                 {formatAmount(
                                   getOrderTotal(purchaseOrder.details)
                                 )}
+                              </td>
+                              <td className="text-center">
+                                <Button
+                                  color="primary"
+                                  size="sm"
+                                  outline
+                                  disabled={
+                                    generatingOrderId ===
+                                    purchaseOrder.purchaseOrderID
+                                  }
+                                  onClick={() => handleGeneratePdf(purchaseOrder)}
+                                >
+                                  {generatingOrderId ===
+                                  purchaseOrder.purchaseOrderID ? (
+                                    <>
+                                      <Spinner size="sm" className="me-2" />
+                                      {t("Generating...")}
+                                    </>
+                                  ) : (
+                                    t("Generate Order C.")
+                                  )}
+                                </Button>
                               </td>
                             </tr>
                           );

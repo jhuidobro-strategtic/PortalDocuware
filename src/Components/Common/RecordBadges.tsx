@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 type CurrencyValue = string | number | null | undefined;
 
@@ -44,11 +45,14 @@ export const getCurrencyMeta = (currency: CurrencyValue): CurrencyMeta => {
 };
 
 export const getDocumentStatusMeta = (
-  status?: boolean | null
+  status?: boolean | null,
+  t?: (key: string) => string
 ): StatusMeta => {
+  const translate = t || ((value: string) => value);
+
   if (status === true) {
     return {
-      label: "Activo",
+      label: translate("Active"),
       className: `${baseStatusClassName} bg-success-subtle text-success border-success-subtle`,
       icon: "ri-checkbox-circle-line",
     };
@@ -56,16 +60,16 @@ export const getDocumentStatusMeta = (
 
   if (status === false) {
     return {
-      label: "Pendiente",
+      label: translate("Pending"),
       className: `${baseStatusClassName} bg-warning-subtle text-warning border-warning-subtle`,
       icon: "ri-time-line",
     };
   }
 
   return {
-    label: "Sin estado",
-    className: `${baseStatusClassName} bg-secondary-subtle text-secondary border-secondary-subtle`,
-    icon: "ri-subtract-line",
+    label: translate("No status"),
+      className: `${baseStatusClassName} bg-secondary-subtle text-secondary border-secondary-subtle`,
+      icon: "ri-subtract-line",
   };
 };
 
@@ -99,7 +103,8 @@ interface DocumentStatusBadgeProps {
 export const DocumentStatusBadge: React.FC<DocumentStatusBadgeProps> = ({
   status,
 }) => {
-  const meta = getDocumentStatusMeta(status);
+  const { t } = useTranslation();
+  const meta = getDocumentStatusMeta(status, t);
 
   return (
     <span className={meta.className}>

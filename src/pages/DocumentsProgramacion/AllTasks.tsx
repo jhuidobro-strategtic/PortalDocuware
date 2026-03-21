@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
 import moment from "moment";
+import { useTranslation } from "react-i18next";
 import DocumentFilters from "./components/ProgramacionFilters";
 import DocumentTable from "./components/ProgramacionTable";
 import ProgramacionFormModal from "./components/ProgramacionFormModal";
@@ -21,6 +22,7 @@ const initialProgramacion: NuevaProgramacion = {
 };
 
 const ProgramacionDiaria: React.FC = () => {
+  const { t } = useTranslation();
   const [programaciones, setProgramaciones] = useState<Programacion[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [conductores, setConductores] = useState<Conductor[]>([]);
@@ -61,7 +63,7 @@ const ProgramacionDiaria: React.FC = () => {
       if (Array.isArray(data)) {
         setProgramaciones(data);
       } else {
-        throw new Error("Error fetching programaciones");
+        throw new Error(t("Error fetching schedules"));
       }
     } catch (err: any) {
       setError(err.message);
@@ -69,7 +71,7 @@ const ProgramacionDiaria: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchVehiculos = async () => {
     try {
@@ -109,7 +111,7 @@ const ProgramacionDiaria: React.FC = () => {
       !nuevaProgramacion.idvehiculo ||
       !nuevaProgramacion.idconductor
     ) {
-      addNotification("danger", "Complete all fields");
+      addNotification("danger", t("Complete all fields"));
       return;
     }
 
@@ -128,19 +130,19 @@ const ProgramacionDiaria: React.FC = () => {
       const data = await response.json();
 
       if (response.ok || data.success) {
-        addNotification("success", "Programacion registrada correctamente");
+        addNotification("success", t("Scheduling registered successfully"));
         setRegistroModal(false);
         fetchProgramaciones();
         setNuevaProgramacion(initialProgramacion);
       } else {
         addNotification(
           "danger",
-          data.message || "Error registering programacion"
+          data.message || t("Error registering scheduling")
         );
       }
     } catch (error) {
       console.error("Error registering:", error);
-      addNotification("danger", "Error in registration process");
+      addNotification("danger", t("Error in the registration process"));
     }
   };
 
@@ -152,7 +154,7 @@ const ProgramacionDiaria: React.FC = () => {
       !editProgramacion.vehiculo.idvehiculo ||
       !editProgramacion.conductor.idconductor
     ) {
-      addNotification("danger", "Complete all fields");
+      addNotification("danger", t("Complete all fields"));
       return;
     }
 
@@ -176,18 +178,18 @@ const ProgramacionDiaria: React.FC = () => {
       const data = await response.json();
 
       if (response.ok || data.success) {
-        addNotification("success", "Programacion actualizada correctamente");
+        addNotification("success", t("Scheduling updated successfully"));
         setEditModal(false);
         fetchProgramaciones();
       } else {
         addNotification(
           "danger",
-          data.message || "Error updating programacion"
+          data.message || t("Error updating scheduling")
         );
       }
     } catch (error) {
       console.error("Error updating:", error);
-      addNotification("danger", "Error in update process");
+      addNotification("danger", t("Error in the update process"));
     }
   };
 
@@ -221,7 +223,7 @@ const ProgramacionDiaria: React.FC = () => {
   if (error) {
     return (
       <Container fluid>
-        <Alert color="danger">Error: {error}</Alert>
+        <Alert color="danger">{error}</Alert>
       </Container>
     );
   }
@@ -258,7 +260,7 @@ const ProgramacionDiaria: React.FC = () => {
       <ProgramacionFormModal
         isOpen={registroModal}
         toggle={() => setRegistroModal((prev) => !prev)}
-        title="Nueva Programacion Diaria"
+        title="New Daily Scheduling"
         date={nuevaProgramacion.programacionfecha}
         onDateChange={(value) =>
           setNuevaProgramacion((prev) => ({ ...prev, programacionfecha: value }))
@@ -273,7 +275,7 @@ const ProgramacionDiaria: React.FC = () => {
         }
         vehicles={vehiculos}
         conductores={conductores}
-        submitLabel="Registrar"
+        submitLabel="Register"
         onSubmit={handleRegistrar}
       />
 
@@ -281,7 +283,7 @@ const ProgramacionDiaria: React.FC = () => {
         <ProgramacionFormModal
           isOpen={editModal}
           toggle={() => setEditModal((prev) => !prev)}
-          title="Editar Programacion Diaria"
+          title="Edit Daily Scheduling"
           date={editProgramacion.programacionfecha}
           onDateChange={(value) =>
             setEditProgramacion((prev) =>
@@ -316,7 +318,7 @@ const ProgramacionDiaria: React.FC = () => {
           }
           vehicles={vehiculos}
           conductores={conductores}
-          submitLabel="Actualizar"
+          submitLabel="Update"
           onSubmit={handleUpdate}
         />
       )}

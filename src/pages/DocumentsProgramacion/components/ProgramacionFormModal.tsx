@@ -14,6 +14,7 @@ import {
 import Flatpickr from "react-flatpickr";
 import Select from "react-select";
 import moment from "moment";
+import { useTranslation } from "react-i18next";
 import { Conductor, Vehiculo } from "../types";
 
 interface SelectOption {
@@ -67,6 +68,7 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
   submitLabel,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
   const vehicleOptions: SelectOption[] = vehicles.map((veh) => ({
     value: veh.idvehiculo,
     label: veh.no_vehiculo,
@@ -83,14 +85,14 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} toggle={toggle} centered size="lg">
-      <ModalHeader toggle={toggle}>{title}</ModalHeader>
+      <ModalHeader toggle={toggle}>{t(title)}</ModalHeader>
       <ModalBody>
         <Form>
           <FormGroup>
             <Row className="align-items-center">
               <Col md="3">
                 <Label className="form-label mb-0">
-                  Fecha de Programación <span className="text-danger">*</span>
+                  {t("Scheduling date")} <span className="text-danger">*</span>
                 </Label>
               </Col>
               <Col md="9">
@@ -115,7 +117,7 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
             <Row className="align-items-center">
               <Col md="3">
                 <Label className="form-label mb-0">
-                  Vehículo <span className="text-danger">*</span>
+                  {t("Vehicle")} <span className="text-danger">*</span>
                 </Label>
               </Col>
               <Col md="9">
@@ -125,10 +127,10 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
                   onChange={(selected: SelectOption | null) =>
                     onVehicleChange(selected ? selected.value : null)
                   }
-                  placeholder="Seleccione un vehículo"
+                  placeholder={t("Select a vehicle")}
                   isClearable
                   isSearchable
-                  noOptionsMessage={() => "No hay resultados"}
+                  noOptionsMessage={() => t("No results")}
                   styles={selectStyles}
                   menuPortalTarget={document.body}
                 />
@@ -140,7 +142,7 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
             <Row className="align-items-center">
               <Col md="3">
                 <Label className="form-label mb-0">
-                  Conductor <span className="text-danger">*</span>
+                  {t("Driver")} <span className="text-danger">*</span>
                 </Label>
               </Col>
               <Col md="9">
@@ -150,10 +152,10 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
                   onChange={(selected: SelectOption | null) =>
                     onConductorChange(selected ? selected.value : null)
                   }
-                  placeholder="Seleccione un conductor"
+                  placeholder={t("Select a driver")}
                   isClearable
                   isSearchable
-                  noOptionsMessage={() => "No hay resultados"}
+                  noOptionsMessage={() => t("No results")}
                   styles={selectStyles}
                   menuPortalTarget={document.body}
                 />
@@ -165,10 +167,10 @@ const ProgramacionFormModal: React.FC<ProgramacionFormModalProps> = ({
       <ModalFooter>
         <Button color="primary" onClick={onSubmit}>
           <i className="ri-save-line align-bottom me-1" />
-          {submitLabel}
+          {t(submitLabel)}
         </Button>
         <Button color="secondary" onClick={toggle}>
-          Cancelar
+          {t("Cancel")}
         </Button>
       </ModalFooter>
     </Modal>

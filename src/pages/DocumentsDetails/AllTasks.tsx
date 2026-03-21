@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner, Alert, Pagination,
   PaginationItem, PaginationLink } from "reactstrap";
 import moment from "moment";
+import { useTranslation } from "react-i18next";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
 import { buildApiUrl } from "../../helpers/api-url";
 import DocumentFilters from "./components/DocumentFilters";
@@ -9,6 +10,7 @@ import DocumentTable from "./components/DocumentTable";
 import { DocumentDetailsRow } from "./types";
 
 const DocumentDetails: React.FC = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState<DocumentDetailsRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,19 +32,19 @@ const DocumentDetails: React.FC = () => {
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-          throw new Error("Respuesta inesperada del servidor");
+          throw new Error(t("Unexpected server response"));
         }
 
         setDocuments(data);
       } catch (err: any) {
-        setError(err.message || "Error al obtener documentos");
+        setError(err.message || t("Error getting documents"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchDocuments();
-  }, []);
+  }, [t]);
 
   // filtrado
   const filteredDocuments = documents.filter((doc) => {

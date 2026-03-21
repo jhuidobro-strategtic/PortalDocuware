@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from 'reactstrap';
+import { useTranslation } from "react-i18next";
 
 import Navdata from '../../Layouts/LayoutMenuData';
 
-const searchableItems = Navdata().flatMap((menuItem: any) => (
-    menuItem.subItems?.map((subItem: any) => ({
-        label: subItem.label,
-        link: subItem.link,
-        icon: menuItem.icon,
-    })) || []
-));
-
 const SearchOption = () => {
+    const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
+    const searchableItems = Navdata(t).flatMap((menuItem: any) => (
+        menuItem.subItems?.map((subItem: any) => ({
+            label: subItem.label,
+            link: subItem.link,
+            icon: menuItem.icon,
+        })) || []
+    ));
 
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const filteredItems = normalizedSearch
@@ -30,7 +31,7 @@ const SearchOption = () => {
                     <Input
                         type="text"
                         className="form-control"
-                        placeholder="Search..."
+                        placeholder={t("Search...")}
                         id="search-options"
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
@@ -50,7 +51,7 @@ const SearchOption = () => {
                 {searchTerm && (
                     <div className="dropdown-menu dropdown-menu-lg show" id="search-dropdown">
                         <div className="dropdown-header">
-                            <h6 className="text-overflow text-muted mb-0 text-uppercase">Modules</h6>
+                            <h6 className="text-overflow text-muted mb-0 text-uppercase">{t("Modules")}</h6>
                         </div>
 
                         {filteredItems.length > 0 ? (
@@ -67,7 +68,7 @@ const SearchOption = () => {
                             ))
                         ) : (
                             <div className="dropdown-item text-muted">
-                                No results found.
+                                {t("No results found.")}
                             </div>
                         )}
                     </div>

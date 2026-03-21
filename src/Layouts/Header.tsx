@@ -13,11 +13,13 @@ import LanguageDropdown from '../Components/Common/LanguageDropdown';
 import FullScreenDropdown from '../Components/Common/FullScreenDropdown';
 import ProfileDropdown from '../Components/Common/ProfileDropdown';
 import LightDark from '../Components/Common/LightDark';
+import { useTranslation } from "react-i18next";
 
 import { changeSidebarVisibility } from '../slices/layouts/thunk';
 import { useSelector, useDispatch } from "react-redux";
 
 const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
+    const { t } = useTranslation();
     const dispatch : any = useDispatch();
     const sidebarVisibilitytype = useSelector(
         (state: any) => state.Layout.sidebarVisibilitytype
@@ -116,7 +118,7 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                                     <Form className="p-3">
                                         <div className="form-group m-0">
                                             <div className="input-group">
-                                                <input type="text" className="form-control" placeholder="Search ..."
+                                                <input type="text" className="form-control" placeholder={t("Search...")}
                                                     aria-label="Recipient's username" />
                                                 <button className="btn btn-primary" type="submit"><i
                                                     className="mdi mdi-magnify"></i></button>

@@ -1,38 +1,38 @@
-const Navdata = () => [
+const Navdata = (t: (key: string) => string) => [
     {
-        label: "Menu",
+        label: t("Menu"),
         isHeader: true,
     },
     {
         id: "document-management",
-        label: "Document management",
+        label: t("Document management"),
         icon: "ri-file-list-3-line",
         subItems: [
             {
                 id: "documents",
-                label: "Documents",
+                label: t("Documents"),
                 link: "/documents",
             },
             {
                 id: "document-details",
-                label: "Document Details",
+                label: t("Document Details"),
                 link: "/document-details",
             },
             {
                 id: "document-programation",
-                label: "Programming",
+                label: t("Programming"),
                 link: "/document-programation",
             },
         ],
     },
     {
         id: "purchase-orders",
-        label: "Ordenes de Compra",
+        label: t("Purchase Orders"),
         icon: "ri-shopping-bag-3-line",
         subItems: [
             {
                 id: "purchase-order-details",
-                label: "Detalle de Orden de Compra",
+                label: t("Purchase Order Details"),
                 link: "/purchase-order-details",
             },
         ],

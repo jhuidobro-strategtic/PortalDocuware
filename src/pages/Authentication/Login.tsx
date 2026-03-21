@@ -13,6 +13,7 @@ import {
   Spinner,
 } from "reactstrap";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import withRouter from "../../Components/Common/withRouter";
 import * as Yup from "yup";
 import { useFormik } from "formik";
@@ -23,15 +24,18 @@ import logologin from "../../assets/images/Grupo_Cayala_Color.png";
 import fondoCayala from "../../assets/images/cayala.jpg";
 import "./Login.css";
 
-const getLoginErrorMessage = (message: unknown) => {
+const getLoginErrorMessage = (
+  message: unknown,
+  t: (key: string) => string
+) => {
   if (typeof message !== "string") {
-    return "No se pudo iniciar sesion. Intente nuevamente.";
+    return t("Unable to sign in. Please try again.");
   }
 
   const normalizedMessage = message.trim().toLowerCase();
 
   if (!normalizedMessage) {
-    return "No se pudo iniciar sesion. Intente nuevamente.";
+    return t("Unable to sign in. Please try again.");
   }
 
   if (
@@ -39,7 +43,7 @@ const getLoginErrorMessage = (message: unknown) => {
     normalizedMessage.includes("invalid credentials") ||
     normalizedMessage.includes("unauthorized")
   ) {
-    return "Usuario o contrasena incorrectos.";
+    return t("Incorrect username or password.");
   }
 
   if (
@@ -47,13 +51,14 @@ const getLoginErrorMessage = (message: unknown) => {
     normalizedMessage.includes("failed to fetch") ||
     normalizedMessage.includes("timeout")
   ) {
-    return "No se pudo conectar con el servidor. Intente nuevamente.";
+    return t("Unable to connect to the server. Please try again.");
   }
 
-  return "No se pudo iniciar sesion. Intente nuevamente.";
+  return t("Unable to sign in. Please try again.");
 };
 
 const Login = (props: any) => {
+  const { t } = useTranslation();
   const dispatch: any = useDispatch();
   const { errorMsg } = useSelector((state: any) => state.Login);
 
@@ -70,8 +75,8 @@ const Login = (props: any) => {
       password: "",
     },
     validationSchema: Yup.object({
-      username: Yup.string().required("Por favor ingrese su usuario"),
-      password: Yup.string().required("Por favor ingrese su contrasena"),
+      username: Yup.string().required(t("Please enter your username")),
+      password: Yup.string().required(t("Please enter your password")),
     }),
     onSubmit: (values) => {
       dispatch(loginUser(values, props.router.navigate));
@@ -86,7 +91,7 @@ const Login = (props: any) => {
 
     setLoginToast({
       id: Date.now(),
-      message: getLoginErrorMessage(errorMsg),
+      message: getLoginErrorMessage(errorMsg, t),
     });
     setLoader(false);
 
@@ -96,7 +101,7 @@ const Login = (props: any) => {
     }, 4200);
 
     return () => window.clearTimeout(timer);
-  }, [dispatch, errorMsg]);
+  }, [dispatch, errorMsg, t]);
 
   document.title = "Login - DOCUWARE";
 
@@ -109,7 +114,7 @@ const Login = (props: any) => {
               <i className="ri-error-warning-line"></i>
             </div>
             <div className="login-toast-content">
-              <span className="login-toast-title">Error al iniciar sesion</span>
+              <span className="login-toast-title">{t("Error signing in")}</span>
               <span className="login-toast-message">{loginToast.message}</span>
             </div>
           </div>
@@ -151,7 +156,7 @@ const Login = (props: any) => {
                   <div className="w-50 border-top border-white mb-4" />
 
                   <h3 className="montserrat fs-3.5 fs-lg-1 mb-2 text-white">
-                    BIENVENIDO A
+                    {t("Welcome to").toUpperCase()}
                   </h3>
 
                   <h1 className="montserrat-bold display-4 fw-bold text-white">
@@ -191,12 +196,12 @@ const Login = (props: any) => {
                     >
                       <div className="mb-3">
                         <Label htmlFor="user" className="form-label">
-                          Usuario
+                          {t("Username")}
                         </Label>
                         <Input
                           name="username"
                           type="text"
-                          placeholder="Ingrese su usuario"
+                          placeholder={t("Enter your username")}
                           value={validation.values.username || ""}
                           onChange={validation.handleChange}
                           onBlur={validation.handleBlur}
@@ -217,14 +222,14 @@ const Login = (props: any) => {
 
                       <div className="mb-3">
                         <Label htmlFor="password" className="form-label">
-                          Contrasena
+                          {t("Password")}
                         </Label>
                         <div className="position-relative auth-pass-inputgroup mb-3">
                           <Input
                             name="password"
                             value={validation.values.password || ""}
                             type={passwordShow ? "text" : "password"}
-                            placeholder="Ingrese su contrasena"
+                            placeholder={t("Enter your password")}
                             onChange={validation.handleChange}
                             onBlur={validation.handleBlur}
                             invalid={
@@ -257,7 +262,7 @@ const Login = (props: any) => {
                           disabled={loader}
                         >
                           {loader && <Spinner size="sm" className="me-2" />}{" "}
-                          Iniciar Sesion
+                          {t("Sign In")}
                         </Button>
                       </div>
                     </Form>

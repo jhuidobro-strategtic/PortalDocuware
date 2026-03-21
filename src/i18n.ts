@@ -10,34 +10,68 @@ import translationENG from "./locales/en.json";
 import translationCN from "./locales/ch.json";
 import translationFR from "./locales/fr.json";
 import translationAR from "./locales/ar.json";
+import appTranslations from "./locales/appTranslations";
 
 
 // the translations
 const resources = {
   gr: {
-    translation: translationGr,
+    translation: {
+      ...translationGr,
+      ...appTranslations.gr,
+    },
   },
   it: {
-    translation: translationIT,
+    translation: {
+      ...translationIT,
+      ...appTranslations.it,
+    },
   },
   rs: {
-    translation: translationRS,
+    translation: {
+      ...translationRS,
+      ...appTranslations.rs,
+    },
   },
   sp: {
-    translation: translationSP,
+    translation: {
+      ...translationSP,
+      ...appTranslations.sp,
+    },
   },
   en: {
-    translation: translationENG,
+    translation: {
+      ...translationENG,
+      ...appTranslations.en,
+    },
   },
   cn: {
-    translation: translationCN,
+    translation: {
+      ...translationCN,
+      ...appTranslations.cn,
+    },
   },
   fr: {
-    translation: translationFR,
+    translation: {
+      ...translationFR,
+      ...appTranslations.fr,
+    },
   },
   ar: {
-    translation: translationAR,
+    translation: {
+      ...translationAR,
+      ...appTranslations.ar,
+    },
   },
+};
+
+const applyDocumentLanguage = (lang: string) => {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
 };
 
 const language = localStorage.getItem("I18N_LANGUAGE");
@@ -59,5 +93,8 @@ i18n
       escapeValue: false, // react already safes from xss
     },
   });
+
+applyDocumentLanguage(i18n.language);
+i18n.on("languageChanged", applyDocumentLanguage);
 
 export default i18n;

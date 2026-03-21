@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { isEmpty } from "lodash";
+import { useTranslation } from "react-i18next";
 
 import {
   Container,
@@ -15,41 +16,31 @@ import {
   Form,
 } from "reactstrap";
 
-// Formik Validation
 import * as Yup from "yup";
 import { useFormik } from "formik";
-
-//redux
 import { useSelector, useDispatch } from "react-redux";
-
-import avatar from "../../assets/images/users/avatar-1.jpg";
-// actions
-import { editProfile, resetProfileFlag } from "../../slices/auth/profile/thunk";
 import { createSelector } from "reselect";
 
+import avatar from "../../assets/images/users/avatar-1.jpg";
+import { editProfile, resetProfileFlag } from "../../slices/auth/profile/thunk";
+
 const UserProfile = () => {
+  const { t } = useTranslation();
   const dispatch: any = useDispatch();
 
-  const [email, setemail] = useState("Sin correo");
+  const [email, setemail] = useState(t("No email"));
   const [idx, setidx] = useState("1");
   const [userName, setUserName] = useState("Admin");
-  const [profileName, setProfileName] = useState("Sin perfil");
-
+  const [profileName, setProfileName] = useState(t("No profile"));
 
   const selectLayoutState = (state: any) => state.Profile;
-  const userprofileData = createSelector(
-    selectLayoutState,
-    (state) => ({
-      user: state.user,
-      success: state.success,
-      error: state.error
-    })
-  );
-  // Inside your component
-  const {
-    user, success, error
-  } = useSelector(userprofileData);
+  const userprofileData = createSelector(selectLayoutState, (state) => ({
+    user: state.user,
+    success: state.success,
+    error: state.error,
+  }));
 
+  const { user, success, error } = useSelector(userprofileData);
 
   useEffect(() => {
     if (sessionStorage.getItem("authUser")) {
@@ -58,12 +49,12 @@ const UserProfile = () => {
         const obj = JSON.parse(storedUser);
 
         if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-
           obj.displayName = user.username;
           setUserName(obj.displayName || "Admin");
           setemail(obj.email || "admin@gmail.com");
-          setidx(obj.uid || '1');
-        } else if (process.env.REACT_APP_DEFAULTAUTH === "fake" ||
+          setidx(obj.uid || "1");
+        } else if (
+          process.env.REACT_APP_DEFAULTAUTH === "fake" ||
           process.env.REACT_APP_DEFAULTAUTH === "jwt"
         ) {
           if (!isEmpty(user)) {
@@ -75,37 +66,33 @@ const UserProfile = () => {
           setUserName(
             obj.data.fullname || obj.data.first_name || obj.data.username || "Admin"
           );
-          setemail(obj.data.email || obj.data.username || "Sin correo");
+          setemail(obj.data.email || obj.data.username || t("No email"));
           setidx(String(obj.data.profileID || obj.data._id || "1"));
-          setProfileName(obj.data.profileName || "Sin perfil");
-
+          setProfileName(obj.data.profileName || t("No profile"));
         }
         setTimeout(() => {
           dispatch(resetProfileFlag());
         }, 3000);
       }
     }
-  }, [dispatch, user]);
-
-
+  }, [dispatch, t, user]);
 
   const validation = useFormik({
-    // enableReinitialize : use this flag when initial values needs to be changed
     enableReinitialize: true,
-
     initialValues: {
-      first_name: userName || 'Admin',
-      idx: idx || '',
+      first_name: userName || "Admin",
+      idx: idx || "",
     },
     validationSchema: Yup.object({
-      first_name: Yup.string().required("Please Enter Your UserName"),
+      first_name: Yup.string().required(t("Please enter your username")),
     }),
     onSubmit: (values) => {
       dispatch(editProfile(values));
-    }
+    },
   });
 
-  document.title = "Profile | Velzon - React Admin & Dashboard Template";
+  document.title = `${t("Profile")} | Docuware`;
+
   return (
     <React.Fragment>
       <div className="page-content mt-lg-5">
@@ -113,7 +100,11 @@ const UserProfile = () => {
           <Row>
             <Col lg="12">
               {error && error ? <Alert color="danger">{error}</Alert> : null}
-              {success ? <Alert color="success">Username Updated To {userName}</Alert> : null}
+              {success ? (
+                <Alert color="success">
+                  {t("Username updated to {{name}}", { name: userName })}
+                </Alert>
+              ) : null}
 
               <Card>
                 <CardBody>
@@ -128,9 +119,15 @@ const UserProfile = () => {
                     <div className="flex-grow-1 align-self-center">
                       <div className="text-muted">
                         <h5>{userName || "Admin"}</h5>
-                        <p className="mb-1">Email Id : {email}</p>
-                        <p className="mb-1">Perfil : {profileName}</p>
-                        <p className="mb-0">Id No : #{idx}</p>
+                        <p className="mb-1">
+                          {t("Email: {{email}}", { email })}
+                        </p>
+                        <p className="mb-1">
+                          {t("Profile: {{profile}}", { profile: profileName })}
+                        </p>
+                        <p className="mb-0">
+                          {t("Id No.: #{{id}}", { id: idx })}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -139,7 +136,7 @@ const UserProfile = () => {
             </Col>
           </Row>
 
-          <h4 className="card-title mb-4">Change User Name</h4>
+          <h4 className="card-title mb-4">{t("Change User Name")}</h4>
 
           <Card>
             <CardBody>
@@ -152,28 +149,31 @@ const UserProfile = () => {
                 }}
               >
                 <div className="form-group">
-                  <Label className="form-label">User Name</Label>
+                  <Label className="form-label">{t("User Name")}</Label>
                   <Input
                     name="first_name"
-                    // value={name}
                     className="form-control"
-                    placeholder="Enter User Name"
+                    placeholder={t("Enter user name")}
                     type="text"
                     onChange={validation.handleChange}
                     onBlur={validation.handleBlur}
                     value={validation.values.first_name || ""}
                     invalid={
-                      validation.touched.first_name && validation.errors.first_name ? true : false
+                      validation.touched.first_name && validation.errors.first_name
+                        ? true
+                        : false
                     }
                   />
                   {validation.touched.first_name && validation.errors.first_name ? (
-                    <FormFeedback type="invalid">{validation.errors.first_name}</FormFeedback>
+                    <FormFeedback type="invalid">
+                      {validation.errors.first_name}
+                    </FormFeedback>
                   ) : null}
                   <Input name="idx" value={idx} type="hidden" />
                 </div>
                 <div className="text-center mt-4">
                   <Button type="submit" color="danger">
-                    Update User Name
+                    {t("Update User Name")}
                   </Button>
                 </div>
               </Form>

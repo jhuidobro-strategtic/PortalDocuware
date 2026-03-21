@@ -1,5 +1,6 @@
 import React from "react";
 import { Button, Card, CardBody } from "reactstrap";
+import { useTranslation } from "react-i18next";
 import { Document } from "../types";
 
 interface DocumentPreviewProps {
@@ -20,74 +21,81 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   onRotateLeft,
   onRotateRight,
   onClose,
-}) => (
-  <Card>
-    <CardBody>
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5 className="mb-0 small-text">Vista previa del documento</h5>
-        <div className="d-flex gap-2">
-          <a
-            href={downloadUrl}
-            download
-            className="btn btn-sm btn-success"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <i className="ri-download-2-line" />
-            <span className="d-none d-md-inline"> Descargar</span>
-          </a>
+}) => {
+  const { t } = useTranslation();
 
+  return (
+    <Card>
+      <CardBody>
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h5 className="mb-0 small-text">{t("Document preview")}</h5>
           <div className="d-flex gap-2">
-            <Button size="sm" onClick={onRotateLeft}>
-              <i className="ri-arrow-go-back-line" />
-            </Button>
-            <Button size="sm" onClick={onRotateRight}>
-              <i className="ri-arrow-go-forward-line" />
+            <a
+              href={downloadUrl}
+              download
+              className="btn btn-sm btn-success"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i className="ri-download-2-line" />
+              <span className="d-none d-md-inline"> {t("Download")}</span>
+            </a>
+
+            <div className="d-flex gap-2">
+              <Button size="sm" onClick={onRotateLeft}>
+                <i className="ri-arrow-go-back-line" />
+              </Button>
+              <Button size="sm" onClick={onRotateRight}>
+                <i className="ri-arrow-go-forward-line" />
+              </Button>
+            </div>
+            <Button size="sm" color="danger" onClick={onClose}>
+              <i className="ri-close-line" />
+              <span className="d-none d-md-inline"> {t("Close")}</span>
             </Button>
           </div>
-          <Button size="sm" color="danger" onClick={onClose}>
-            <i className="ri-close-line" />
-            <span className="d-none d-md-inline"> Cerrar</span>
-          </Button>
         </div>
-      </div>
 
-      <div
-        style={{
-          width: "100%",
-          height: "66vh",
-          overflow: "auto",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          background: "#f8f9fa",
-        }}
-      >
         <div
           style={{
-            transform: `rotate(${rotation}deg)`,
-            transformOrigin: "center center",
-            transition: "transform 0.3s ease",
             width: "100%",
-            height: "100%",
+            height: "66vh",
+            overflow: "auto",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
+            background: "#f8f9fa",
           }}
         >
-          <iframe
-            src={previewUrl}
+          <div
             style={{
+              transform: `rotate(${rotation}deg)`,
+              transformOrigin: "center center",
+              transition: "transform 0.3s ease",
               width: "100%",
               height: "100%",
-              border: "none",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
-            title={`Visor PDF ${document.documentserial}-${document.documentnumber}`}
-          />
+          >
+            <iframe
+              src={previewUrl}
+              style={{
+                width: "100%",
+                height: "100%",
+                border: "none",
+              }}
+              title={t("PDF Viewer {{serial}}-{{number}}", {
+                serial: document.documentserial,
+                number: document.documentnumber,
+              })}
+            />
+          </div>
         </div>
-      </div>
-    </CardBody>
-  </Card>
-);
+      </CardBody>
+    </Card>
+  );
+};
 
 export default DocumentPreview;
