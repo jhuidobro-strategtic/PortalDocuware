@@ -10,7 +10,6 @@ import {
   Button,
   Form,
   FormFeedback,
-  Alert,
   Spinner,
 } from "reactstrap";
 import { useSelector, useDispatch } from "react-redux";
@@ -22,13 +21,48 @@ import ParticlesJS from "../AuthenticationInner/ParticlesJS";
 import { loginUser, resetLoginFlag } from "../../slices/auth/login/thunk";
 import logologin from "../../assets/images/Grupo_Cayala_Color.png";
 import fondoCayala from "../../assets/images/cayala.jpg";
+import "./Login.css";
+
+const getLoginErrorMessage = (message: unknown) => {
+  if (typeof message !== "string") {
+    return "No se pudo iniciar sesion. Intente nuevamente.";
+  }
+
+  const normalizedMessage = message.trim().toLowerCase();
+
+  if (!normalizedMessage) {
+    return "No se pudo iniciar sesion. Intente nuevamente.";
+  }
+
+  if (
+    normalizedMessage.includes("invalid username or password") ||
+    normalizedMessage.includes("invalid credentials") ||
+    normalizedMessage.includes("unauthorized")
+  ) {
+    return "Usuario o contrasena incorrectos.";
+  }
+
+  if (
+    normalizedMessage.includes("network") ||
+    normalizedMessage.includes("failed to fetch") ||
+    normalizedMessage.includes("timeout")
+  ) {
+    return "No se pudo conectar con el servidor. Intente nuevamente.";
+  }
+
+  return "No se pudo iniciar sesion. Intente nuevamente.";
+};
 
 const Login = (props: any) => {
   const dispatch: any = useDispatch();
-  const { error, errorMsg } = useSelector((state: any) => state.Login);
+  const { errorMsg } = useSelector((state: any) => state.Login);
 
   const [passwordShow, setPasswordShow] = useState<boolean>(false);
   const [loader, setLoader] = useState<boolean>(false);
+  const [loginToast, setLoginToast] = useState<{
+    id: number;
+    message: string;
+  } | null>(null);
 
   const validation: any = useFormik({
     initialValues: {
@@ -36,7 +70,7 @@ const Login = (props: any) => {
       password: "",
     },
     validationSchema: Yup.object({
-      username: Yup.string().required("Por favor ingrese su username"),
+      username: Yup.string().required("Por favor ingrese su usuario"),
       password: Yup.string().required("Por favor ingrese su contrasena"),
     }),
     onSubmit: (values) => {
@@ -50,10 +84,16 @@ const Login = (props: any) => {
       return;
     }
 
+    setLoginToast({
+      id: Date.now(),
+      message: getLoginErrorMessage(errorMsg),
+    });
+    setLoader(false);
+
     const timer = window.setTimeout(() => {
+      setLoginToast(null);
       dispatch(resetLoginFlag());
-      setLoader(false);
-    }, 3000);
+    }, 4200);
 
     return () => window.clearTimeout(timer);
   }, [dispatch, errorMsg]);
@@ -62,6 +102,20 @@ const Login = (props: any) => {
 
   return (
     <React.Fragment>
+      {loginToast && (
+        <div className="login-toast-container" aria-live="polite" aria-atomic="true">
+          <div key={loginToast.id} className="login-toast" role="alert">
+            <div className="login-toast-icon">
+              <i className="ri-error-warning-line"></i>
+            </div>
+            <div className="login-toast-content">
+              <span className="login-toast-title">Error al iniciar sesion</span>
+              <span className="login-toast-message">{loginToast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="auth-page-content">
         <Container fluid className="px-0">
           <Row className="min-vh-100 g-0">
@@ -126,14 +180,6 @@ const Login = (props: any) => {
                     <div className="text-center mt-2">
                       <img src={logologin} alt="Docuware Logo" height="135" />
                     </div>
-
-                    {error && (
-                      <Alert color="danger">
-                        {typeof error === "string"
-                          ? error
-                          : "Error de autenticacion. Verifique sus credenciales."}
-                      </Alert>
-                    )}
 
                     <Form
                       className="mt-4"
