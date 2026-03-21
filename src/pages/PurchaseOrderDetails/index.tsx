@@ -10,6 +10,10 @@ import {
   Input,
   InputGroup,
   InputGroupText,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Pagination,
   PaginationItem,
   PaginationLink,
@@ -149,9 +153,10 @@ const PurchaseOrderDetails = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(
-    null
-  );
+  const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(null);
+  const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
+  const [selectedState, setSelectedState] = useState<0 | 1 | 2>(1);
+  const [confirmingState, setConfirmingState] = useState(false);
 
   const numberLocale = getNumberLocale(i18n.language);
   const formatAmount = (value: string | number) =>
@@ -186,23 +191,52 @@ const PurchaseOrderDetails = () => {
     currentPage * itemsPerPage
   );
 
-  const handleGeneratePdf = async (purchaseOrder: PurchaseOrder) => {
-    try {
-      setActionError(null);
-      setGeneratingOrderId(purchaseOrder.purchaseOrderID);
+  const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
+    setSelectedState(1);
+    setActionError(null);
+    setOrderModal(purchaseOrder);
+  };
 
-      await generatePurchaseOrderPdf({
-        purchaseOrder,
-        relatedDocument:
-          documentsByAssociatedNo[purchaseOrder.documentAssociatedNo] ?? null,
-        numberLocale,
-      });
+  const handleCloseOrderModal = () => {
+    if (confirmingState) return;
+    setOrderModal(null);
+  };
+
+  const handleConfirmOrderState = async () => {
+    if (!orderModal) return;
+
+    try {
+      setConfirmingState(true);
+      setActionError(null);
+
+      // TODO: llamar API para actualizar estado cuando esté disponible
+      // await fetch(buildApiUrl(`purchase-orders/${orderModal.purchaseOrderID}/state`), {
+      //   method: "PATCH",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ purchaseState: selectedState }),
+      // });
+
+      if (selectedState === 1) {
+        setGeneratingOrderId(orderModal.purchaseOrderID);
+        setOrderModal(null);
+
+        await generatePurchaseOrderPdf({
+          purchaseOrder: { ...orderModal, purchaseState: selectedState },
+          relatedDocument:
+            documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null,
+          numberLocale,
+        });
+      } else {
+        setOrderModal(null);
+      }
     } catch (generateError: any) {
       setActionError(
         generateError?.message || t("Unable to generate the PDF for this order.")
       );
+      setOrderModal(null);
     } finally {
       setGeneratingOrderId(null);
+      setConfirmingState(false);
     }
   };
 
@@ -411,7 +445,7 @@ const PurchaseOrderDetails = () => {
                                     generatingOrderId ===
                                     purchaseOrder.purchaseOrderID
                                   }
-                                  onClick={() => handleGeneratePdf(purchaseOrder)}
+                                  onClick={() => handleOpenOrderModal(purchaseOrder)}
                                 >
                                   {generatingOrderId ===
                                   purchaseOrder.purchaseOrderID ? (
@@ -420,7 +454,10 @@ const PurchaseOrderDetails = () => {
                                       {t("Generating...")}
                                     </>
                                   ) : (
-                                    t("Generate Order C.")
+                                    <>
+                                      <i className="ri-file-text-line me-1" />
+                                      {t("Generate Order C.")}
+                                    </>
                                   )}
                                 </Button>
                               </td>
@@ -471,6 +508,118 @@ const PurchaseOrderDetails = () => {
           </Card>
         </Container>
       </div>
+      <Modal isOpen={!!orderModal} toggle={handleCloseOrderModal} centered size="sm">
+        <ModalHeader toggle={handleCloseOrderModal} className="border-bottom-0 pb-0">
+          <span className="fs-6 fw-semibold">{t("Generate Order C.")}</span>
+          {orderModal && (
+            <div className="text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
+              {orderModal.orderNo}
+            </div>
+          )}
+        </ModalHeader>
+
+        <ModalBody className="pt-2 pb-3">
+          <p className="text-muted mb-3" style={{ fontSize: "0.82rem" }}>
+            {t("Select the status to assign to this purchase order.")}
+          </p>
+
+          <div className="d-flex flex-column gap-2">
+            {(
+              [
+                {
+                  value: 1 as const,
+                  icon: "ri-checkbox-circle-line",
+                  colorClass: "success",
+                  label: t("Approved"),
+                  description: t("Generates the PDF of the purchase order."),
+                },
+                {
+                  value: 0 as const,
+                  icon: "ri-time-line",
+                  colorClass: "warning",
+                  label: t("Pending"),
+                  description: t("Leaves the order pending review."),
+                },
+                {
+                  value: 2 as const,
+                  icon: "ri-close-circle-line",
+                  colorClass: "danger",
+                  label: t("Rejected"),
+                  description: t("Rejects the purchase order."),
+                },
+              ] as const
+            ).map((option) => {
+              const isSelected = selectedState === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSelectedState(option.value)}
+                  className={`d-flex align-items-center gap-3 rounded-3 border p-2 text-start bg-transparent w-100 transition-all ${
+                    isSelected
+                      ? `border-${option.colorClass} bg-${option.colorClass}-subtle`
+                      : "border-light"
+                  }`}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div
+                    className={`d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${
+                      isSelected
+                        ? `bg-${option.colorClass} text-white`
+                        : `text-${option.colorClass} bg-${option.colorClass}-subtle`
+                    }`}
+                    style={{ width: 36, height: 36 }}
+                  >
+                    <i className={`${option.icon} fs-5`} />
+                  </div>
+                  <div className="flex-grow-1">
+                    <div className={`fw-semibold text-${option.colorClass}`} style={{ fontSize: "0.85rem" }}>
+                      {option.label}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                      {option.description}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <i className={`ri-check-line text-${option.colorClass} fs-5 flex-shrink-0`} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </ModalBody>
+
+        <ModalFooter className="border-top-0 pt-0 gap-2">
+          <Button
+            color="light"
+            size="sm"
+            onClick={handleCloseOrderModal}
+            disabled={confirmingState}
+          >
+            {t("Cancel")}
+          </Button>
+          <Button
+            color={selectedState === 1 ? "success" : selectedState === 2 ? "danger" : "warning"}
+            size="sm"
+            onClick={handleConfirmOrderState}
+            disabled={confirmingState}
+          >
+            {confirmingState ? (
+              <>
+                <Spinner size="sm" className="me-1" />
+                {t("Processing...")}
+              </>
+            ) : selectedState === 1 ? (
+              <>
+                <i className="ri-file-download-line me-1" />
+                {t("Approve & Generate")}
+              </>
+            ) : (
+              t("Confirm")
+            )}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </React.Fragment>
   );
 };
