@@ -116,7 +116,7 @@ const drawPageBorder = (doc: jsPDF) => {
   doc.setLineWidth(0.25);
   doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
 };
-
+// 
 const drawFieldGroup = (
   doc: jsPDF,
   x: number,
