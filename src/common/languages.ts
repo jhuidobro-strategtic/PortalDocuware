@@ -7,7 +7,17 @@ import flagchina from "../assets/images/flags/china.svg";
 import flagfrench from "../assets/images/flags/french.svg";
 import flagarabic from "../assets/images/flags/ae.svg";
 
-const languages = {
+export type AppLanguageKey =
+  | "sp"
+  | "gr"
+  | "it"
+  | "rs"
+  | "en"
+  | "cn"
+  | "fr"
+  | "ar";
+
+const languages: Record<AppLanguageKey, { label: string; flag: string }> = {
   sp: {
     label: "Español",
     flag: flagspain,

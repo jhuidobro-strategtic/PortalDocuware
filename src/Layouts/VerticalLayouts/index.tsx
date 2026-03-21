@@ -1,17 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { Collapse } from 'reactstrap';
 import { useTranslation } from "react-i18next";
 import navdata from "../LayoutMenuData";
 
 const VerticalLayout = () => {
-    const { t } = useTranslation();
+    const { i18n } = useTranslation();
     const location = useLocation();
-    const navItems = useMemo(() => navdata(t), [t]);
+    const navItems = navdata((key: string) => i18n.t(key));
     const [openSection, setOpenSection] = useState<string>("document-management");
 
     useEffect(() => {
-        const activeSection = navItems.find(
+        const translatedNavItems = navdata((key: string) => i18n.t(key));
+        const activeSection = translatedNavItems.find(
             (item: any) => item.subItems?.some((subItem: any) => subItem.link === location.pathname)
         );
 
@@ -20,7 +21,7 @@ const VerticalLayout = () => {
         }
 
         window.scrollTo({ top: 0, behavior: "smooth" });
-    }, [location.pathname, navItems]);
+    }, [location.pathname, i18n, i18n.language]);
 
     return (
         <React.Fragment>

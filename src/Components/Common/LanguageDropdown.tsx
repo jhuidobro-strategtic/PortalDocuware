@@ -3,22 +3,45 @@ import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle } from 'reactstrap
 
 //i18n
 import i18n from "../../i18n";
-import languages from "../../common/languages";
+import languages, { AppLanguageKey } from "../../common/languages";
 
-type LanguageKey = keyof typeof languages;
+const normalizeLanguage = (language?: string): AppLanguageKey => {
+    const normalizedLanguage = (language || "en").toLowerCase();
+
+    if (normalizedLanguage.startsWith("es")) return "sp";
+    if (normalizedLanguage.startsWith("de")) return "gr";
+    if (normalizedLanguage.startsWith("ru")) return "rs";
+    if (normalizedLanguage.startsWith("zh")) return "cn";
+    if (normalizedLanguage.startsWith("fr")) return "fr";
+    if (normalizedLanguage.startsWith("ar")) return "ar";
+    if (normalizedLanguage.startsWith("it")) return "it";
+    if (normalizedLanguage.startsWith("en")) return "en";
+
+    return (normalizedLanguage in languages
+        ? normalizedLanguage
+        : "en") as AppLanguageKey;
+};
 
 const LanguageDropdown = () => {
     // Declare a new state variable, which we'll call "menu"
-    const [selectedLang, setSelectedLang] = useState<LanguageKey>("en");
+    const [selectedLang, setSelectedLang] = useState<AppLanguageKey>(
+        normalizeLanguage(i18n.resolvedLanguage || i18n.language)
+    );
 
     useEffect(() => {
-        const currentLanguage = localStorage.getItem("I18N_LANGUAGE") as LanguageKey | null;
-        if (currentLanguage && languages[currentLanguage]) {
-            setSelectedLang(currentLanguage);
-        }
+        const syncLanguage = (language?: string) => {
+            setSelectedLang(normalizeLanguage(language || localStorage.getItem("I18N_LANGUAGE") || undefined));
+        };
+
+        syncLanguage(i18n.resolvedLanguage || i18n.language);
+        i18n.on("languageChanged", syncLanguage);
+
+        return () => {
+            i18n.off("languageChanged", syncLanguage);
+        };
     }, []);
 
-    const changeLanguageAction = (lang : LanguageKey) => {
+    const changeLanguageAction = (lang : AppLanguageKey) => {
         //set language as i18n
         i18n.changeLanguage(lang);
         localStorage.setItem("I18N_LANGUAGE", lang);
@@ -42,7 +65,7 @@ const LanguageDropdown = () => {
                     />
                 </DropdownToggle>
                 <DropdownMenu className="notify-item language py-2">
-                    {(Object.keys(languages) as LanguageKey[]).map((key) => (
+                    {(Object.keys(languages) as AppLanguageKey[]).map((key) => (
                         <DropdownItem
                             key={key}
                             onClick={() => changeLanguageAction(key)}

@@ -1,3 +1,5 @@
+import generatedAppTranslations from "./generatedAppTranslations.json";
+
 export type AppLanguage = "en" | "sp" | "gr" | "it" | "rs" | "cn" | "fr" | "ar";
 
 type TranslationMap = Record<string, string>;
@@ -132,6 +134,13 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Order Total": "Order Total",
     "Generate Order C.": "Generate Order C.",
     "Generating...": "Generating...",
+    "Approve & Generate": "Approve & Generate",
+    "Confirm": "Confirm",
+    "Processing...": "Processing...",
+    "Generates the PDF of the purchase order.": "Generates the PDF of the purchase order.",
+    "Leaves the order pending review.": "Leaves the order pending review.",
+    "Rejects the purchase order.": "Rejects the purchase order.",
+    "Select the status to assign to this purchase order.": "Select the status to assign to this purchase order.",
     "Unable to generate the PDF for this order.": "Unable to generate the PDF for this order.",
     "No registered purchase orders were found.": "No registered purchase orders were found.",
     "Unable to get purchase orders.": "Unable to get purchase orders.",
@@ -321,6 +330,13 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Order Total": "Total Orden",
     "Generate Order C.": "Generar Orden C.",
     "Generating...": "Generando...",
+    "Approve & Generate": "Aprobar y Generar",
+    "Confirm": "Confirmar",
+    "Processing...": "Procesando...",
+    "Generates the PDF of the purchase order.": "Genera el PDF de la orden de compra.",
+    "Leaves the order pending review.": "Deja la orden pendiente de revision.",
+    "Rejects the purchase order.": "Rechaza la orden de compra.",
+    "Select the status to assign to this purchase order.": "Seleccione el estado que desea asignar a esta orden de compra.",
     "Unable to generate the PDF for this order.": "No fue posible generar el PDF de esta orden.",
     "No registered purchase orders were found.": "No se encontraron ordenes de compra registradas.",
     "Unable to get purchase orders.": "No fue posible obtener las ordenes de compra.",
@@ -381,12 +397,12 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Enter user name": "Ingrese nombre de usuario",
     "Update User Name": "Actualizar Nombre de Usuario",
   },
-  gr: {},
-  it: {},
-  rs: {},
-  cn: {},
-  fr: {},
-  ar: {},
+  gr: generatedAppTranslations.gr,
+  it: generatedAppTranslations.it,
+  rs: generatedAppTranslations.rs,
+  cn: generatedAppTranslations.cn,
+  fr: generatedAppTranslations.fr,
+  ar: generatedAppTranslations.ar,
 };
 
 export default appTranslations;

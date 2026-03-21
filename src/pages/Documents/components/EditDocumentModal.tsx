@@ -20,8 +20,10 @@ import Flatpickr from "react-flatpickr";
 import moment from "moment";
 import Select from "react-select";
 import Draggable from "react-draggable";
+import { useTranslation } from "react-i18next";
 import CurrencyDropdown from "../CurrencyDropdown";
 import { CentroCosto, Document, DocumentDetail, TipoDocumento } from "../types";
+import { getNumberLocale } from "../../../common/locale";
 
 type CentroOption = {
   value: string;
@@ -78,6 +80,9 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
   onSearchRuc,
   onSearchDocument,
 }) => {
+  const { t, i18n } = useTranslation();
+  const numberLocale = getNumberLocale(i18n.language);
+
   if (!editDoc) return null;
 
   const handleAmountChange = (value: string) => {
@@ -135,7 +140,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
         <div className="modal-dialog modal-lg" style={{ margin: 0 }}>
           <div className="modal-content">
             <ModalHeader toggle={onClose} className="modal-header">
-              Editar Documento
+              {t("Edit Document")}
             </ModalHeader>
             <ModalBody>
               <Form>
@@ -152,7 +157,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                               suppliernumber: e.target.value,
                             })
                           }
-                          placeholder="Ingrese RUC"
+                          placeholder={t("Enter RUC")}
                         />
                         <Button
                           color="secondary"
@@ -171,7 +176,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                   <Col md="8">
                     <FormGroup>
-                      <Label className="form-label">Razón Social</Label>
+                      <Label className="form-label">{t("Business Name")}</Label>
                       <Input value={editDoc.suppliername} disabled />
                     </FormGroup>
                   </Col>
@@ -180,7 +185,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                 <Row>
                   <Col md="4">
                     <FormGroup>
-                      <Label className="form-label">Tipo Documento</Label>
+                      <Label className="form-label">{t("Document Type")}</Label>
                       <Input
                         type="select"
                         value={
@@ -198,7 +203,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                           })
                         }
                       >
-                        <option value="">Seleccione...</option>
+                        <option value="">{t("Select...")}</option>
                         {tiposDocumento.map((tipo) => (
                           <option key={tipo.tipoid} value={tipo.tipoid}>
                             {tipo.tipo}
@@ -210,7 +215,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                   <Col md="4">
                     <FormGroup>
-                      <Label className="form-label">Nro Serie</Label>
+                      <Label className="form-label">{t("Series No.")}</Label>
                       <Input
                         value={editDoc.documentserial}
                         onChange={(e) =>
@@ -219,14 +224,14 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                             documentserial: e.target.value,
                           })
                         }
-                        placeholder="Ej: F001"
+                        placeholder={t("E.g. F001")}
                       />
                     </FormGroup>
                   </Col>
 
                   <Col md="4">
                     <FormGroup>
-                      <Label className="form-label">Nro Documento</Label>
+                      <Label className="form-label">{t("Document No.")}</Label>
                       <InputGroup>
                         <Input
                           value={editDoc.documentnumber}
@@ -236,7 +241,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                               documentnumber: e.target.value,
                             })
                           }
-                          placeholder="Ej: 000123"
+                        placeholder={t("E.g. 000123")}
                         />
                         <Button
                           color="secondary"
@@ -257,7 +262,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                 <Row>
                   <Col md="3">
                     <FormGroup>
-                      <Label className="form-label">Fecha Emisión</Label>
+                      <Label className="form-label">{t("Issue date")}</Label>
                       <InputGroup>
                         <InputGroupText>
                           <i className="ri-calendar-line" />
@@ -279,7 +284,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                   <Col md={2}>
                     <FormGroup>
-                      <Label>Moneda</Label>
+                      <Label>{t("Currency")}</Label>
                       <CurrencyDropdown
                         value={editDoc.currency || "PEN"}
                         onChange={(val) =>
@@ -291,7 +296,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                   <Col md={2}>
                     <FormGroup>
-                      <Label>Sub Total</Label>
+                      <Label>{t("Subtotal")}</Label>
                       <Input
                         type="number"
                         value={editDoc.amount}
@@ -329,7 +334,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                   <Col md={2}>
                     <FormGroup>
-                      <Label>Total</Label>
+                      <Label>{t("Total")}</Label>
                       <Input
                         type="number"
                         value={editDoc.totalamount}
@@ -343,20 +348,20 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                 <Row>
                   <Col md="6">
                     <FormGroup>
-                      <Label className="form-label">Comprador</Label>
+                      <Label className="form-label">{t("Buyer")}</Label>
                       <Input
                         value={editDoc.driver}
                         onChange={(e) =>
                           setEditDoc({ ...editDoc, driver: e.target.value })
                         }
-                        placeholder="Ingrese nombre comprador"
+                        placeholder={t("Enter buyer name")}
                       />
                     </FormGroup>
                   </Col>
 
                   <Col md="6">
                     <FormGroup>
-                      <Label className="form-label">Centro de Costo</Label>
+                      <Label className="form-label">{t("Cost center")}</Label>
                       <Select
                         value={selectedCentro}
                         options={centroOptions}
@@ -366,10 +371,10 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                             centercost: selected ? Number(selected.value) : null,
                           })
                         }
-                        placeholder="Seleccione centro de costo"
+                        placeholder={t("Select cost center")}
                         isClearable
                         isSearchable
-                        noOptionsMessage={() => "No hay resultados"}
+                        noOptionsMessage={() => t("No results")}
                         styles={selectStyles}
                         menuPortalTarget={document.body}
                       />
@@ -380,7 +385,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                 <Row>
                   <Col md="12">
                     <FormGroup>
-                      <Label className="form-label">Notas</Label>
+                      <Label className="form-label">{t("Notes")}</Label>
                       <Input
                         type="textarea"
                         rows={3}
@@ -388,13 +393,13 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                         onChange={(e) =>
                           setEditDoc({ ...editDoc, notes: e.target.value })
                         }
-                        placeholder="Ingrese observaciones..."
+                        placeholder={t("Enter notes...")}
                       />
                     </FormGroup>
                   </Col>
                 </Row>
 
-                <h5 className="mt-3">Detalles de Factura</h5>
+                <h5 className="mt-3">{t("Invoice Details")}</h5>
                 {loadingDetails ? (
                   <div className="text-center my-3">
                     <Spinner color="primary" />
@@ -422,19 +427,19 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                         }}
                       >
                         <tr>
-                          <th className="text-center">Unidad</th>
-                          <th className="text-center">Descripción</th>
-                          <th className="text-center">Placa</th>
-                          <th className="text-center">Cantidad</th>
-                          <th className="text-center">V. Unitario</th>
-                          <th className="text-center">Total</th>
+                          <th className="text-center">{t("Unit")}</th>
+                          <th className="text-center">{t("Description")}</th>
+                          <th className="text-center">{t("Plate")}</th>
+                          <th className="text-center">{t("Quantity")}</th>
+                          <th className="text-center">{t("Unit Value")}</th>
+                          <th className="text-center">{t("Total")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {docDetails.length === 0 ? (
                           <tr>
                             <td colSpan={7} className="text-center">
-                              No hay detalles disponibles
+                              {t("No details available")}
                             </td>
                           </tr>
                         ) : (
@@ -448,13 +453,13 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                                 <td className="text-center">{d.vehicle_no}</td>
                                 <td className="text-center">{d.quantity}</td>
                                 <td className="text-end">
-                                  {Number(d.unit_value).toLocaleString("es-PE", {
+                                  {Number(d.unit_value).toLocaleString(numberLocale, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
                                 </td>
                                 <td className="text-end">
-                                  {Number(d.total_value).toLocaleString("es-PE", {
+                                  {Number(d.total_value).toLocaleString(numberLocale, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
@@ -464,7 +469,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
 
                             <tr>
                               <td colSpan={5} className="text-end fw-bold">
-                                SubTotal:
+                                {t("Subtotal")}:
                               </td>
                               <td className="text-end fw-bold">
                                 {docDetails
@@ -473,7 +478,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                                       sum + parseFloat(d.unit_value || "0"),
                                     0
                                   )
-                                  .toLocaleString("es-PE", {
+                                  .toLocaleString(numberLocale, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
@@ -490,7 +495,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                                       sum + parseFloat(d.tax_value || "0"),
                                     0
                                   )
-                                  .toLocaleString("es-PE", {
+                                  .toLocaleString(numberLocale, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
@@ -498,7 +503,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                             </tr>
                             <tr>
                               <td colSpan={5} className="text-end fw-bold">
-                                Total:
+                                {t("Total")}:
                               </td>
                               <td className="text-end fw-bold">
                                 {docDetails
@@ -509,7 +514,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                                       parseFloat(d.tax_value || "0"),
                                     0
                                   )
-                                  .toLocaleString("es-PE", {
+                                  .toLocaleString(numberLocale, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
@@ -525,10 +530,10 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
             </ModalBody>
             <ModalFooter>
               <Button color="primary" onClick={onSave}>
-                Guardar
+                {t("Save")}
               </Button>
               <Button color="secondary" onClick={onClose}>
-                Cancelar
+                {t("Cancel")}
               </Button>
             </ModalFooter>
           </div>
