@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
+import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import "./Documents.css";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
+import FloatingAlerts from "../../Components/Common/FloatingAlerts";
 import Notifications from "./components/Notifications";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
@@ -81,10 +82,6 @@ const DocumentList: React.FC = () => {
   const addNotification = (type: Notification["type"], message: string) => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
-
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 5000);
   };
 
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({
@@ -791,7 +788,15 @@ const DocumentList: React.FC = () => {
     );
   }
 
-  if (error) return <Alert color="danger">{error}</Alert>;
+  if (error) {
+    return (
+      <Container fluid className="mt-4 small-text">
+        <FloatingAlerts
+          alerts={[{ id: "documents-error", type: "danger", message: error }]}
+        />
+      </Container>
+    );
+  }
 
   return (
     <Container fluid className="mt-4 small-text">

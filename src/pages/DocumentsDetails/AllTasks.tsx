@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, CardBody, Spinner, Alert, Pagination,
+import { Container, Row, Col, Card, CardBody, Spinner, Pagination,
   PaginationItem, PaginationLink } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import LogoDocuware from "../../assets/images/LogoDocuware.png";
+import FloatingAlerts from "../../Components/Common/FloatingAlerts";
 import { buildApiUrl } from "../../helpers/api-url";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
@@ -344,7 +345,15 @@ const DocumentDetails: React.FC = () => {
       </div>
     );
 
-  if (error) return <Alert color="danger">{error}</Alert>;
+  if (error) {
+    return (
+      <Container fluid className="mt-4 small-text">
+        <FloatingAlerts
+          alerts={[{ id: "document-details-error", type: "danger", message: error }]}
+        />
+      </Container>
+    );
+  }
 
   return (
     <Container fluid className="mt-4 small-text">

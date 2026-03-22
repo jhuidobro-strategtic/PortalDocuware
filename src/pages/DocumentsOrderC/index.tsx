@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -16,6 +15,9 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
+import FloatingAlerts, {
+  FloatingAlertItem,
+} from "../../Components/Common/FloatingAlerts";
 import { buildApiUrl } from "../../helpers/api-url";
 import { buildSunatUrl, getSunatToken } from "../../helpers/external-api";
 import { Document } from "../Documents/types";
@@ -377,6 +379,33 @@ const DocumentOrderC = () => {
   const orderCFields = getOrderCFields();
   const getFieldLabel = (fieldName: OrderCFieldName) =>
     orderCFields.find((field) => field.name === fieldName)?.labelKey || fieldName;
+  const floatingAlerts: FloatingAlertItem[] = [];
+
+  if (prefillingFromSunat) {
+    floatingAlerts.push({
+      id: "order-c-prefill",
+      type: "info",
+      dismissible: false,
+      message: (
+        <span className="d-inline-flex align-items-center gap-2">
+          <Spinner size="sm" />
+          <span>{t("Loading SUNAT data for the selected document...")}</span>
+        </span>
+      ),
+    });
+  }
+
+  if (feedback) {
+    floatingAlerts.push({
+      id: "order-c-feedback",
+      type: feedback.type,
+      message: feedback.message,
+      autoDismissMs:
+        feedback.type === "success" || feedback.type === "info"
+          ? 5000
+          : undefined,
+    });
+  }
 
   useEffect(() => {
     window.document.title = `${t("Order C.")} | Docuware`;
@@ -549,6 +578,12 @@ const DocumentOrderC = () => {
     setValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleRemoveFloatingAlert = (alertId: string | number) => {
+    if (alertId === "order-c-feedback") {
+      setFeedback(null);
+    }
+  };
+
   const handleDetailChange = (
     detailId: string,
     field: OrderCDetailFieldName,
@@ -672,10 +707,16 @@ const DocumentOrderC = () => {
     return (
       <div className="page-content">
         <Container fluid>
+          <FloatingAlerts
+            alerts={[
+              {
+                id: "order-c-load-error",
+                type: "danger",
+                message: error || t("No information was found for this view."),
+              },
+            ]}
+          />
           <BreadCrumb title="Order C." pageTitle="Documents" />
-          <Alert color="danger" className="mb-3">
-            {error || t("No information was found for this view.")}
-          </Alert>
           <Button color="light" onClick={() => navigate("/documents")}>
             {t("Back to Documents")}
           </Button>
@@ -687,6 +728,10 @@ const DocumentOrderC = () => {
   return (
     <div className="page-content">
       <Container fluid>
+        <FloatingAlerts
+          alerts={floatingAlerts}
+          onRemove={handleRemoveFloatingAlert}
+        />
         <BreadCrumb title="Order C." pageTitle="Documents" />
 
         <Card className="border-0 shadow-sm mb-4">
@@ -736,19 +781,6 @@ const DocumentOrderC = () => {
                 )}
               </p>
             </div>
-
-            {prefillingFromSunat && (
-              <Alert color="info" className="d-flex align-items-center gap-2 mb-4">
-                <Spinner size="sm" />
-                <span>{t("Loading SUNAT data for the selected document...")}</span>
-              </Alert>
-            )}
-
-            {feedback && (
-              <Alert color={feedback.type} className="mb-4">
-                {feedback.message}
-              </Alert>
-            )}
 
             <Form onSubmit={handleSubmit}>
               <div className="mb-4">

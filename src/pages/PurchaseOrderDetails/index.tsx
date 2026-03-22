@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -22,6 +21,9 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
+import FloatingAlerts, {
+  FloatingAlertItem,
+} from "../../Components/Common/FloatingAlerts";
 import { buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import { Document } from "../Documents/types";
@@ -190,6 +192,23 @@ const PurchaseOrderDetails = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const floatingAlerts: FloatingAlertItem[] = [];
+
+  if (error) {
+    floatingAlerts.push({
+      id: "purchase-orders-error",
+      type: "danger",
+      message: error,
+    });
+  }
+
+  if (actionError) {
+    floatingAlerts.push({
+      id: "purchase-orders-action-error",
+      type: "danger",
+      message: actionError,
+    });
+  }
 
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
     setSelectedState(1);
@@ -200,6 +219,17 @@ const PurchaseOrderDetails = () => {
   const handleCloseOrderModal = () => {
     if (confirmingState) return;
     setOrderModal(null);
+  };
+
+  const handleRemoveFloatingAlert = (alertId: string | number) => {
+    if (alertId === "purchase-orders-error") {
+      setError(null);
+      return;
+    }
+
+    if (alertId === "purchase-orders-action-error") {
+      setActionError(null);
+    }
   };
 
   const handleConfirmOrderState = async () => {
@@ -310,6 +340,10 @@ const PurchaseOrderDetails = () => {
     <React.Fragment>
       <div className="page-content">
         <Container fluid>
+          <FloatingAlerts
+            alerts={floatingAlerts}
+            onRemove={handleRemoveFloatingAlert}
+          />
           <BreadCrumb
             title="Purchase Order Details"
             pageTitle="Purchase Orders"
@@ -345,11 +379,6 @@ const PurchaseOrderDetails = () => {
                 <div className="text-center my-5">
                   <Spinner color="primary" />
                 </div>
-              )}
-
-              {!loading && error && <Alert color="danger">{error}</Alert>}
-              {!loading && !error && actionError && (
-                <Alert color="danger">{actionError}</Alert>
               )}
 
               {!loading && !error && (

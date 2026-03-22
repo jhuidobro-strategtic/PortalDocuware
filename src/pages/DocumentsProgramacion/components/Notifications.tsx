@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert } from "reactstrap";
+import FloatingAlerts from "../../../Components/Common/FloatingAlerts";
 import { Notification } from "../types";
 
 interface NotificationsProps {
@@ -11,18 +11,17 @@ const Notifications: React.FC<NotificationsProps> = ({
   notifications,
   onRemove,
 }) => (
-  <div className="position-fixed top-0 end-0 p-3" style={{ zIndex: 9999 }}>
-    {notifications.map((notif) => (
-      <Alert
-        key={notif.id}
-        color={notif.type}
-        className="mb-2"
-        toggle={() => onRemove(notif.id)}
-      >
-        {notif.message}
-      </Alert>
-    ))}
-  </div>
+  <FloatingAlerts
+    alerts={notifications.map((notification) => ({
+      ...notification,
+      autoDismissMs: 5000,
+    }))}
+    onRemove={(id) => {
+      if (typeof id === "number") {
+        onRemove(id);
+      }
+    }}
+  />
 );
 
 export default Notifications;

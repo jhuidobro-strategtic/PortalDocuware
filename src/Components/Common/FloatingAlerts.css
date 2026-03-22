@@ -1,0 +1,67 @@
+.floating-alerts-container {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.floating-alert {
+  margin-bottom: 0;
+  border: 0;
+  border-radius: 0.9rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
+  animation: floating-alert-in 220ms ease-out forwards;
+}
+
+.floating-alert.floating-alert-autoclose {
+  animation:
+    floating-alert-in 220ms ease-out forwards,
+    floating-alert-out 320ms ease-in calc(var(--floating-alert-autoclose-ms) - 320ms) forwards;
+}
+
+.floating-alert .btn-close {
+  opacity: 0.65;
+}
+
+.floating-alert .btn-close:hover {
+  opacity: 1;
+}
+
+@keyframes floating-alert-in {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, -6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes floating-alert-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(28px, -6px, 0);
+  }
+}
+
+@media (max-width: 576px) {
+  .floating-alerts-container {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+}

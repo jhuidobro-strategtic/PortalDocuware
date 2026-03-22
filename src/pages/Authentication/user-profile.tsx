@@ -7,7 +7,6 @@ import {
   Row,
   Col,
   Card,
-  Alert,
   CardBody,
   Button,
   Label,
@@ -22,6 +21,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { createSelector } from "reselect";
 
 import avatar from "../../assets/images/users/avatar-1.jpg";
+import FloatingAlerts, {
+  FloatingAlertItem,
+} from "../../Components/Common/FloatingAlerts";
 import { editProfile, resetProfileFlag } from "../../slices/auth/profile/thunk";
 
 const UserProfile = () => {
@@ -92,20 +94,31 @@ const UserProfile = () => {
   });
 
   document.title = `${t("Profile")} | Docuware`;
+  const floatingAlerts: FloatingAlertItem[] = [];
+
+  if (error) {
+    floatingAlerts.push({
+      id: "profile-error",
+      type: "danger",
+      message: error,
+    });
+  }
+
+  if (success) {
+    floatingAlerts.push({
+      id: "profile-success",
+      type: "success",
+      message: t("Username updated to {{name}}", { name: userName }),
+    });
+  }
 
   return (
     <React.Fragment>
       <div className="page-content mt-lg-5">
         <Container fluid>
+          <FloatingAlerts alerts={floatingAlerts} />
           <Row>
             <Col lg="12">
-              {error && error ? <Alert color="danger">{error}</Alert> : null}
-              {success ? (
-                <Alert color="success">
-                  {t("Username updated to {{name}}", { name: userName })}
-                </Alert>
-              ) : null}
-
               <Card>
                 <CardBody>
                   <div className="d-flex">

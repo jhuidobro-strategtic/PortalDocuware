@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, Card, CardBody, Col, Container, Row, Form, Label, Input, FormFeedback } from 'reactstrap';
+import { Card, CardBody, Col, Container, Row, Form, Label, Input, FormFeedback } from 'reactstrap';
 import ParticlesAuth from '../ParticlesAuth';
 import logoLight from "../../../assets/images/logo-light.png";
+import FloatingAlerts from "../../../Components/Common/FloatingAlerts";
 
 //formik
 import { useFormik } from 'formik';
@@ -31,6 +32,15 @@ const BasicPasswReset = () => {
             <ParticlesAuth>
                 <div className="auth-page-content mt-lg-5">
                     <Container>
+                        <FloatingAlerts
+                            alerts={[
+                                {
+                                    id: "password-reset-info",
+                                    type: "warning",
+                                    message: "Enter your email and instructions will be sent to you!",
+                                },
+                            ]}
+                        />
                         <Row>
                             <Col lg={12}>
                                 <div className="text-center mt-sm-5 mb-4 text-white-50">
@@ -54,9 +64,6 @@ const BasicPasswReset = () => {
                                             <i className="ri-mail-send-line display-5 text-success"></i>
                                         </div>
 
-                                        <Alert className="border-0 alert-warning text-center mb-2 mx-2" role="alert">
-                                            Enter your email and instructions will be sent to you!
-                                        </Alert>
                                         <div className="p-2">
                                             <Form onSubmit={validation.handleSubmit}>
                                                 <div className="mb-4">

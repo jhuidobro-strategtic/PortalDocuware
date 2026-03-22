@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Container, Row, Col, Card, CardBody, Spinner, Alert } from "reactstrap";
+import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
+import FloatingAlerts from "../../Components/Common/FloatingAlerts";
 import DocumentFilters from "./components/ProgramacionFilters";
 import DocumentTable from "./components/ProgramacionTable";
 import ProgramacionFormModal from "./components/ProgramacionFormModal";
@@ -45,10 +46,6 @@ const ProgramacionDiaria: React.FC = () => {
   const addNotification = (type: Notification["type"], message: string) => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
-
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 5000);
   };
 
   const removeNotification = (id: number) =>
@@ -223,7 +220,9 @@ const ProgramacionDiaria: React.FC = () => {
   if (error) {
     return (
       <Container fluid>
-        <Alert color="danger">{error}</Alert>
+        <FloatingAlerts
+          alerts={[{ id: "programacion-error", type: "danger", message: error }]}
+        />
       </Container>
     );
   }
