@@ -17,6 +17,7 @@ import {
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
 import { buildApiUrl } from "../../helpers/api-url";
+import { buildSunatUrl, getSunatToken } from "../../helpers/external-api";
 import { Document } from "../Documents/types";
 
 interface OrderCFormValues {
@@ -57,6 +58,29 @@ interface OrderCFieldConfig {
 interface FeedbackState {
   type: "success" | "danger" | "info";
   message: string;
+}
+
+interface SunatInvoiceItem {
+  descripcion?: string;
+  cantidad?: number | string;
+  valor_unitario?: number | string;
+  precio_unitario?: number | string;
+}
+
+interface SunatInvoicePayload {
+  detalle?: {
+    codigo_moneda?: string;
+    fecha_emision?: string;
+    serie?: string;
+    numero?: string;
+  };
+  emisor?: {
+    ruc?: string;
+    razon_social?: string;
+    nombre_o_razon_social?: string;
+    nombre_razon_social?: string;
+  };
+  items?: SunatInvoiceItem[];
 }
 
 const getOrderCFields = (): OrderCFieldConfig[] => [
@@ -188,23 +212,98 @@ const getDocumentAssociatedNo = (document: Document | null) => {
   return parts.join("-");
 };
 
+const getSunatDocumentType = (document: Document | null) => {
+  const documentTypeId = getDocumentTypeId(document);
+  return documentTypeId ? documentTypeId.padStart(2, "0") : "";
+};
+
+const mapSunatCurrencyToOrderCurrency = (currencyCode: unknown) => {
+  switch (String(currencyCode ?? "").trim().toUpperCase()) {
+    case "1":
+    case "PEN":
+    case "SOL":
+    case "SOLES":
+      return "1";
+    case "2":
+    case "USD":
+      return "2";
+    default:
+      return "";
+  }
+};
+
+const formatDecimalValue = (value: unknown, fallback = "0.00") => {
+  const parsedValue = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(parsedValue) ? parsedValue.toFixed(2) : fallback;
+};
+
+const formatQuantityValue = (value: unknown) => {
+  const parsedValue = Number.parseFloat(String(value ?? ""));
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return "1";
+  }
+
+  const normalizedValue = Number.isInteger(parsedValue)
+    ? String(parsedValue)
+    : parsedValue.toFixed(2);
+
+  return normalizedValue.replace(/\.?0+$/, "");
+};
+
+const getSunatSupplierName = (
+  payload: SunatInvoicePayload,
+  fallbackValue: string
+) =>
+  payload.emisor?.razon_social ||
+  payload.emisor?.nombre_o_razon_social ||
+  payload.emisor?.nombre_razon_social ||
+  fallbackValue;
+
+const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
+  const mappedItems = items
+    .map((item) => ({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      descriptionItem: String(item.descripcion ?? "").trim(),
+      quantity: formatQuantityValue(item.cantidad),
+      unitPrice: formatDecimalValue(
+        item.valor_unitario ?? item.precio_unitario,
+        ""
+      ),
+    }))
+    .filter((item) => item.descriptionItem || item.unitPrice);
+
+  return mappedItems.length > 0 ? mappedItems : [createDetailRow()];
+};
+
+const getOrderCurrencyLabel = (currencyValue: string) => {
+  switch (currencyValue) {
+    case "1":
+      return "PEN";
+    case "2":
+      return "USD";
+    default:
+      return currencyValue;
+  }
+};
+
 const createInitialValues = (document: Document | null): OrderCFormValues => {
   const sessionUser = getCurrentSessionUser();
 
   return {
-  suppliernumber: document?.suppliernumber ?? "",
-  suppliername: document?.suppliername ?? "",
-  orderNo: "",
-  supplierID: "",
-  documentAssociatedType: getDocumentTypeId(document),
-  documentAssociatedNo: getDocumentAssociatedNo(document),
-  paymentCondition: "",
-  currency: "",
-  guideNo: "",
-  store: "",
-  purchaseState: "1",
-  createdBy: sessionUser.id,
-  createdByName: sessionUser.name,
+    suppliernumber: document?.suppliernumber ?? "",
+    suppliername: document?.suppliername ?? "",
+    orderNo: "",
+    supplierID: "",
+    documentAssociatedType: getDocumentTypeId(document),
+    documentAssociatedNo: getDocumentAssociatedNo(document),
+    paymentCondition: "",
+    currency: mapSunatCurrencyToOrderCurrency(document?.currency),
+    guideNo: "",
+    store: "",
+    purchaseState: "1",
+    createdBy: sessionUser.id,
+    createdByName: sessionUser.name,
   };
 };
 
@@ -272,6 +371,7 @@ const DocumentOrderC = () => {
   ]);
   const [loading, setLoading] = useState(!locationState?.document);
   const [submitting, setSubmitting] = useState(false);
+  const [prefillingFromSunat, setPrefillingFromSunat] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const orderCFields = getOrderCFields();
@@ -285,6 +385,7 @@ const DocumentOrderC = () => {
   useEffect(() => {
     setValues(createInitialValues(document));
     setDetails([createDetailRow()]);
+    setFeedback(null);
   }, [document]);
 
   useEffect(() => {
@@ -324,6 +425,125 @@ const DocumentOrderC = () => {
 
     fetchDocument();
   }, [documentId, locationState?.document, t]);
+
+  useEffect(() => {
+    if (!document?.documentid) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const prefillFromSunat = async () => {
+      const sunatToken = getSunatToken();
+      if (!sunatToken) {
+        if (!isCancelled) {
+          setFeedback({
+            type: "danger",
+            message: t("SUNAT token is not configured in the environment"),
+          });
+        }
+        return;
+      }
+
+      const tipoComprobante = getSunatDocumentType(document);
+      if (
+        !tipoComprobante ||
+        !document.documentserial ||
+        !document.documentnumber ||
+        !document.suppliernumber
+      ) {
+        if (!isCancelled) {
+          setFeedback({
+            type: "danger",
+            message: t("Complete Type, Series and Number before querying SUNAT"),
+          });
+        }
+        return;
+      }
+
+      try {
+        if (!isCancelled) {
+          setPrefillingFromSunat(true);
+        }
+
+        const response = await fetch(buildSunatUrl("sunat/comprobante"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sunatToken}`,
+          },
+          body: JSON.stringify({
+            tipo_comprobante: tipoComprobante,
+            ruc_emisor: document.suppliernumber,
+            serie: document.documentserial,
+            numero: document.documentnumber,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.success || !data?.payload) {
+          throw new Error(
+            data?.message || t("Error fetching invoice data from SUNAT")
+          );
+        }
+
+        const payload = data.payload as SunatInvoicePayload;
+        const detailRows = mapSunatItemsToOrderDetails(payload.items);
+        const hasSunatDetails = detailRows.some((detail) =>
+          detail.descriptionItem.trim()
+        );
+        const currencyCode = payload.detalle?.codigo_moneda || document.currency;
+        const associatedDocumentNo =
+          [payload.detalle?.serie, payload.detalle?.numero]
+            .filter(Boolean)
+            .join("-") || getDocumentAssociatedNo(document);
+
+        if (!isCancelled) {
+          setValues((prev) => ({
+            ...prev,
+            suppliernumber: payload.emisor?.ruc || document.suppliernumber || "",
+            suppliername: getSunatSupplierName(
+              payload,
+              document.suppliername || prev.suppliername
+            ),
+            documentAssociatedType:
+              prev.documentAssociatedType || getDocumentTypeId(document),
+            documentAssociatedNo: associatedDocumentNo,
+            currency:
+              mapSunatCurrencyToOrderCurrency(currencyCode) || prev.currency,
+          }));
+          setDetails(detailRows);
+          setFeedback({
+            type: hasSunatDetails ? "info" : "danger",
+            message: hasSunatDetails
+              ? t(
+                  "The selected document was loaded from SUNAT and the details were auto-filled."
+                )
+              : t("No details found in SUNAT"),
+          });
+        }
+      } catch (prefillError: any) {
+        if (!isCancelled) {
+          setFeedback({
+            type: "danger",
+            message:
+              prefillError?.message ||
+              t("Unable to query SUNAT for the selected document."),
+          });
+        }
+      } finally {
+        if (!isCancelled) {
+          setPrefillingFromSunat(false);
+        }
+      }
+    };
+
+    prefillFromSunat();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [document, t]);
 
   const handleChange = (field: OrderCFieldName, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -490,7 +710,8 @@ const DocumentOrderC = () => {
                   </span>
                   <span className="badge bg-light text-secondary border">
                     {t("Currency: {{currency}}", {
-                      currency: document.currency,
+                      currency:
+                        getOrderCurrencyLabel(values.currency) || document.currency,
                     })}
                   </span>
                 </div>
@@ -511,10 +732,17 @@ const DocumentOrderC = () => {
               <h5 className="mb-1">{t("Order C. form")}</h5>
               <p className="text-muted mb-0">
                 {t(
-                  "The form is aligned with the purchase payload and keeps RUC and Business Name auto-filled from the document."
+                  "The form uses the selected document and SUNAT to auto-fill the general data and details."
                 )}
               </p>
             </div>
+
+            {prefillingFromSunat && (
+              <Alert color="info" className="d-flex align-items-center gap-2 mb-4">
+                <Spinner size="sm" />
+                <span>{t("Loading SUNAT data for the selected document...")}</span>
+              </Alert>
+            )}
 
             {feedback && (
               <Alert color={feedback.type} className="mb-4">
@@ -611,7 +839,7 @@ const DocumentOrderC = () => {
                               <Input
                                 type="number"
                                 min="0"
-                                step="1"
+                                step="0.01"
                                 value={detail.quantity}
                                 onChange={(event) =>
                                   handleDetailChange(
