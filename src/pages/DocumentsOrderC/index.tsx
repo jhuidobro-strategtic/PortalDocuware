@@ -676,10 +676,7 @@ const DocumentOrderC = () => {
         );
       }
 
-      setFeedback({
-        type: "success",
-        message: data?.message || t("Order C. registered successfully."),
-      });
+      navigate("/documents");
     } catch (submitError: any) {
       setFeedback({
         type: "danger",
