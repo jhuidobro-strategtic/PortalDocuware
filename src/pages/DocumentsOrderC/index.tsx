@@ -22,6 +22,8 @@ import { buildApiUrl } from "../../helpers/api-url";
 import { buildSunatUrl, getSunatToken } from "../../helpers/external-api";
 import { Document } from "../Documents/types";
 
+const DOCUMENTS_FLASH_NOTIFICATION_KEY = "documents-flash-notification";
+
 interface OrderCFormValues {
   suppliernumber: string;
   suppliername: string;
@@ -676,6 +678,13 @@ const DocumentOrderC = () => {
         );
       }
 
+      sessionStorage.setItem(
+        DOCUMENTS_FLASH_NOTIFICATION_KEY,
+        JSON.stringify({
+          type: "success",
+          message: data?.message || t("Order C. registered successfully."),
+        })
+      );
       navigate("/documents");
     } catch (submitError: any) {
       setFeedback({

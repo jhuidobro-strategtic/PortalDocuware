@@ -28,6 +28,8 @@ import {
   Notification,
 } from "./types";
 
+const DOCUMENTS_FLASH_NOTIFICATION_KEY = "documents-flash-notification";
+
 const DocumentList: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -83,6 +85,40 @@ const DocumentList: React.FC = () => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
   };
+
+  useEffect(() => {
+    const flashNotification = sessionStorage.getItem(
+      DOCUMENTS_FLASH_NOTIFICATION_KEY
+    );
+
+    if (!flashNotification) {
+      return;
+    }
+
+    try {
+      const parsedNotification = JSON.parse(flashNotification) as {
+        type?: Notification["type"];
+        message?: string;
+      };
+      const notificationType = parsedNotification.type;
+      const notificationMessage = parsedNotification.message;
+
+      if (notificationType && notificationMessage) {
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            type: notificationType,
+            message: notificationMessage,
+          },
+        ]);
+      }
+    } catch {
+      // Ignore invalid flash notification payloads.
+    } finally {
+      sessionStorage.removeItem(DOCUMENTS_FLASH_NOTIFICATION_KEY);
+    }
+  }, []);
 
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({
     id: 80,
