@@ -9,6 +9,7 @@ const DocumentOrderC = lazy(() => import("../pages/DocumentsOrderC"));
 const DocumentDetails = lazy(() => import("../pages/DocumentsDetails"));
 const DocumentProgramacion = lazy(() => import("../pages/DocumentsProgramacion"));
 const PurchaseOrderDetails = lazy(() => import("../pages/PurchaseOrderDetails"));
+const Suppliers = lazy(() => import("../pages/Suppliers"));
 
 const authProtectedRoutes = [
   { path: "/", component: <Navigate to="/documents" replace /> },
@@ -19,6 +20,7 @@ const authProtectedRoutes = [
   { path: "/document-details", component: <DocumentDetails /> },
   { path: "/document-programation", component: <DocumentProgramacion /> },
   { path: "/purchase-order-details", component: <PurchaseOrderDetails /> },
+  { path: "/suppliers", component: <Suppliers /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Navigate to="/documents" replace /> },
 ];

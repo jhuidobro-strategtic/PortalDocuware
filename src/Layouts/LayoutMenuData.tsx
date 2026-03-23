@@ -37,6 +37,18 @@ const Navdata = (t: (key: string) => string) => [
             },
         ],
     },
+    {
+        id: "suppliers",
+        label: t("Suppliers"),
+        icon: "ri-store-2-line",
+        subItems: [
+            {
+                id: "supplier-list",
+                label: t("Supplier List"),
+                link: "/suppliers",
+            },
+        ],
+    },
 ];
 
 export default Navdata;
