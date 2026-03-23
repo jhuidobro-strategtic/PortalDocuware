@@ -305,9 +305,10 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         <Col md={5}>
           <FormGroup className="mb-0">
             <Label className="form-label">IGV</Label>
-            <InputGroup>
+            <InputGroup className="document-edit-igv-group">
               <Input
                 type="select"
+                className="document-edit-igv-percent"
                 value={editIgvPercent}
                 onChange={(event) =>
                   handleIgvPercentChange(parseFloat(event.target.value))

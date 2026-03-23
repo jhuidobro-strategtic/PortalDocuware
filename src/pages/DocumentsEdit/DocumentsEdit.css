@@ -43,6 +43,16 @@
   border-top: 1px solid #eef2f7;
 }
 
+.document-edit-igv-group > .document-edit-igv-percent {
+  flex: 0 0 92px;
+  width: 92px;
+  max-width: 92px;
+}
+
+.document-edit-igv-group > .form-control:last-child {
+  min-width: 0;
+}
+
 .document-edit-preview-card {
   position: sticky;
   top: 1rem;
