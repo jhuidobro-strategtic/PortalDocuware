@@ -28,6 +28,10 @@ import BreadCrumb from "../../Components/Common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../Components/Common/FloatingAlerts";
+import {
+  buildFactilizaUrl,
+  getFactilizaToken,
+} from "../../helpers/external-api";
 
 const SUPPLIERS_STORAGE_KEY = "suppliers-local-data";
 
@@ -86,6 +90,8 @@ const createEmptySupplierForm = (): SupplierFormValues => ({
   accountNo2: "",
 });
 
+const normalizeRuc = (value: string) => value.replace(/\D/g, "").slice(0, 11);
+
 const getCurrentSessionUser = (): SessionUser => {
   try {
     const authUser = sessionStorage.getItem("authUser");
@@ -116,7 +122,7 @@ const getCurrentSessionUser = (): SessionUser => {
 const buildInitialSuppliers = (createdBy: number | null): Supplier[] => [
   {
     supplierID: 1,
-    supplierNo: "PRV-0001",
+    supplierNo: "20568477236",
     supplierName: "TCC MOTORS S.A.",
     address: "Av. Javier Prado Este 410, San Isidro",
     phone: "987654321",
@@ -132,7 +138,7 @@ const buildInitialSuppliers = (createdBy: number | null): Supplier[] => [
   },
   {
     supplierID: 2,
-    supplierNo: "PRV-0002",
+    supplierNo: "20600045521",
     supplierName: "Servicios Integrales del Norte S.A.C.",
     address: "Mz. B Lt. 12 Parque Industrial, Trujillo",
     phone: "944221133",
@@ -148,7 +154,7 @@ const buildInitialSuppliers = (createdBy: number | null): Supplier[] => [
   },
   {
     supplierID: 3,
-    supplierNo: "PRV-0003",
+    supplierNo: "20481234567",
     supplierName: "Transportes y Repuestos del Sur E.I.R.L.",
     address: "Calle Los Talleres 245, Arequipa",
     phone: "956778899",
@@ -243,6 +249,7 @@ const SuppliersPage = () => {
   );
   const [formErrors, setFormErrors] = useState<SupplierFormErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [isFetchingRuc, setIsFetchingRuc] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -311,19 +318,89 @@ const SuppliersPage = () => {
     field: SupplierFormField,
     value: string
   ) => {
-    setFormValues((prev) => ({ ...prev, [field]: value }));
+    setFormValues((prev) => ({
+      ...prev,
+      [field]: field === "supplierNo" ? normalizeRuc(value) : value,
+    }));
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleLookupSupplierRuc = async () => {
+    const normalizedRuc = normalizeRuc(formValues.supplierNo);
+
+    if (normalizedRuc.length !== 11) {
+      setFormErrors((prev) => ({
+        ...prev,
+        supplierNo: t("Enter a valid RUC"),
+      }));
+      return;
+    }
+
+    const factilizaToken = getFactilizaToken();
+
+    if (!factilizaToken) {
+      setFeedback({
+        type: "danger",
+        message: t("Factiliza token is not configured in the environment"),
+      });
+      return;
+    }
+
+    setIsFetchingRuc(true);
+
+    try {
+      const response = await fetch(buildFactilizaUrl(`ruc/info/${normalizedRuc}`), {
+        headers: {
+          Authorization: `Bearer ${factilizaToken}`,
+        },
+      });
+      const result = await response.json();
+      const supplierData = result?.data;
+
+      if (
+        !response.ok ||
+        !result?.success ||
+        !supplierData?.nombre_o_razon_social
+      ) {
+        throw new Error(result?.message || t("RUC not found"));
+      }
+
+      setFormValues((prev) => ({
+        ...prev,
+        supplierNo: normalizedRuc,
+        supplierName: supplierData.nombre_o_razon_social?.trim() || "",
+        address: supplierData.direccion_completa?.trim() || "",
+      }));
+      setFormErrors((prev) => ({
+        ...prev,
+        supplierNo: undefined,
+        supplierName: undefined,
+      }));
+      setFeedback({
+        type: "success",
+        message: t("RUC found successfully"),
+      });
+    } catch {
+      setFeedback({
+        type: "danger",
+        message: t("Error consulting RUC or SUNAT"),
+      });
+    } finally {
+      setIsFetchingRuc(false);
+    }
   };
 
   const validateForm = () => {
     const nextErrors: SupplierFormErrors = {};
-    const normalizedCode = formValues.supplierNo.trim().toLowerCase();
+    const normalizedRuc = normalizeRuc(formValues.supplierNo);
     const normalizedEmail = formValues.email.trim();
 
-    if (!formValues.supplierNo.trim()) {
+    if (!normalizedRuc) {
       nextErrors.supplierNo = t("Complete the {{field}} field.", {
-        field: t("Supplier Code"),
+        field: t("RUC"),
       });
+    } else if (normalizedRuc.length !== 11) {
+      nextErrors.supplierNo = t("Enter a valid RUC");
     }
 
     if (!formValues.supplierName.trim()) {
@@ -335,11 +412,11 @@ const SuppliersPage = () => {
     const duplicatedSupplierCode = suppliers.some(
       (supplier) =>
         supplier.supplierID !== editingSupplier?.supplierID &&
-        supplier.supplierNo.trim().toLowerCase() === normalizedCode
+        normalizeRuc(supplier.supplierNo) === normalizedRuc
     );
 
     if (duplicatedSupplierCode) {
-      nextErrors.supplierNo = t("A supplier with this code already exists.");
+      nextErrors.supplierNo = t("A supplier with this RUC already exists.");
     }
 
     if (
@@ -394,7 +471,7 @@ const SuppliersPage = () => {
             ? {
                 ...supplier,
                 ...{
-                  supplierNo: formValues.supplierNo.trim(),
+                  supplierNo: normalizeRuc(formValues.supplierNo),
                   supplierName: formValues.supplierName.trim(),
                   address: formValues.address.trim(),
                   phone: formValues.phone.trim(),
@@ -425,7 +502,7 @@ const SuppliersPage = () => {
 
       const newSupplier: Supplier = {
         supplierID: nextSupplierId,
-        supplierNo: formValues.supplierNo.trim(),
+        supplierNo: normalizeRuc(formValues.supplierNo),
         supplierName: formValues.supplierName.trim(),
         address: formValues.address.trim(),
         phone: formValues.phone.trim(),
@@ -491,18 +568,13 @@ const SuppliersPage = () => {
 
         <Card className="border-0 shadow-sm">
           <CardBody className="p-4">
-            <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-              <div>
+            <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+              <div className="flex-grow-1">
                 <h5 className="mb-1">{t("Supplier List")}</h5>
-                <p className="text-muted mb-0">
-                  {t(
-                    "There is no supplier API yet. This screen uses local data for layout and validation."
-                  )}
-                </p>
               </div>
 
-              <div className="d-flex flex-wrap align-items-center gap-2">
-                <InputGroup style={{ maxWidth: "320px" }}>
+              <div className="d-flex flex-column flex-sm-row align-items-stretch gap-2 flex-shrink-0">
+                <InputGroup style={{ width: "320px", maxWidth: "100%" }}>
                   <InputGroupText>
                     <i className="ri-search-line" />
                   </InputGroupText>
@@ -516,7 +588,11 @@ const SuppliersPage = () => {
                   />
                 </InputGroup>
 
-                <Button color="primary" onClick={handleOpenCreateModal}>
+                <Button
+                  color="primary"
+                  onClick={handleOpenCreateModal}
+                  className="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                >
                   <i className="ri-add-line align-bottom me-1" />
                   {t("New Supplier")}
                 </Button>
@@ -528,7 +604,7 @@ const SuppliersPage = () => {
                 <thead className="table-light">
                   <tr>
                     <th style={{ width: "90px" }}>ID</th>
-                    <th style={{ width: "140px" }}>{t("Code")}</th>
+                    <th style={{ width: "140px" }}>{t("RUC")}</th>
                     <th>{t("Supplier")}</th>
                     <th style={{ width: "220px" }}>{t("Contact")}</th>
                     <th style={{ width: "220px" }}>{t("Bank 1")}</th>
@@ -647,44 +723,83 @@ const SuppliersPage = () => {
                 </h6>
                 <Row className="g-4">
                   <Col md={6}>
-                    <Label className="form-label">{t("Supplier Code")}</Label>
-                    <Input
-                      value={formValues.supplierNo}
-                      onChange={(event) =>
-                        handleFormValueChange("supplierNo", event.target.value)
-                      }
-                      invalid={Boolean(formErrors.supplierNo)}
-                      placeholder="PRV-0001"
-                    />
+                    <Label className="form-label">{t("RUC")}</Label>
+                    <InputGroup>
+                      <Input
+                        value={formValues.supplierNo}
+                        onChange={(event) =>
+                          handleFormValueChange("supplierNo", event.target.value)
+                        }
+                        invalid={Boolean(formErrors.supplierNo)}
+                        placeholder="20600045521"
+                        inputMode="numeric"
+                        maxLength={11}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            handleLookupSupplierRuc();
+                          }
+                        }}
+                      />
+                      <Button
+                        color="primary"
+                        type="button"
+                        onClick={handleLookupSupplierRuc}
+                        disabled={isFetchingRuc}
+                      >
+                        {isFetchingRuc ? (
+                          <span
+                            className="spinner-border spinner-border-sm align-middle me-1"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <i className="ri-search-line align-bottom me-1" />
+                        )}
+                        {isFetchingRuc ? t("Searching RUC...") : t("Search RUC")}
+                      </Button>
+                    </InputGroup>
                     {formErrors.supplierNo && (
                       <FormFeedback>{formErrors.supplierNo}</FormFeedback>
                     )}
+                    <div className="form-text">
+                      {t(
+                        "Use the RUC to auto-fill the supplier name and full address."
+                      )}
+                    </div>
                   </Col>
                   <Col md={6}>
                     <Label className="form-label">{t("Supplier Name")}</Label>
                     <Input
+                      readOnly
+                      className="bg-light"
                       value={formValues.supplierName}
-                      onChange={(event) =>
-                        handleFormValueChange("supplierName", event.target.value)
-                      }
                       invalid={Boolean(formErrors.supplierName)}
                       placeholder={t("Enter the supplier name")}
                     />
                     {formErrors.supplierName && (
                       <FormFeedback>{formErrors.supplierName}</FormFeedback>
                     )}
+                    <div className="form-text">
+                      {t(
+                        "It is completed automatically with the supplier name returned by the RUC query."
+                      )}
+                    </div>
                   </Col>
                   <Col md={12}>
                     <Label className="form-label">{t("Address")}</Label>
                     <Input
                       type="textarea"
                       rows={3}
+                      readOnly
+                      className="bg-light"
                       value={formValues.address}
-                      onChange={(event) =>
-                        handleFormValueChange("address", event.target.value)
-                      }
                       placeholder={t("Enter the supplier address")}
                     />
+                    <div className="form-text">
+                      {t(
+                        "It is completed automatically with the full address returned by the RUC query."
+                      )}
+                    </div>
                   </Col>
                   <Col md={6}>
                     <Label className="form-label">{t("Phone")}</Label>
@@ -713,7 +828,7 @@ const SuppliersPage = () => {
                 </Row>
               </div>
 
-              <div className="border-top pt-4 mb-4">
+              <div className="border-top pt-4">
                 <h6 className="text-uppercase text-muted mb-3">
                   {t("Bank Accounts")}
                 </h6>
@@ -775,66 +890,6 @@ const SuppliersPage = () => {
                     {formErrors.accountNo2 && (
                       <FormFeedback>{formErrors.accountNo2}</FormFeedback>
                     )}
-                  </Col>
-                </Row>
-              </div>
-
-              <div className="border-top pt-4">
-                <h6 className="text-uppercase text-muted mb-3">
-                  {t("Audit Information")}
-                </h6>
-                <Row className="g-4">
-                  <Col md={6}>
-                    <Label className="form-label">{t("Created by")}</Label>
-                    <Input
-                      readOnly
-                      className="bg-light"
-                      value={
-                        editingSupplier?.createdBy
-                          ? `#${editingSupplier.createdBy}`
-                          : sessionUser.id
-                            ? `#${sessionUser.id}`
-                            : "-"
-                      }
-                    />
-                  </Col>
-                  <Col md={6}>
-                    <Label className="form-label">{t("Created on")}</Label>
-                    <Input
-                      readOnly
-                      className="bg-light"
-                      value={
-                        editingSupplier
-                          ? formatAuditDate(editingSupplier.createdAt)
-                          : formatAuditDate(new Date().toISOString())
-                      }
-                    />
-                  </Col>
-                  <Col md={6}>
-                    <Label className="form-label">{t("Updated by")}</Label>
-                    <Input
-                      readOnly
-                      className="bg-light"
-                      value={
-                        editingSupplier?.updatedBy
-                          ? `#${editingSupplier.updatedBy}`
-                          : sessionUser.id
-                            ? `#${sessionUser.id}`
-                            : "-"
-                      }
-                    />
-                  </Col>
-                  <Col md={6}>
-                    <Label className="form-label">{t("Updated on")}</Label>
-                    <Input
-                      readOnly
-                      className="bg-light"
-                      value={
-                        editingSupplier
-                          ? formatAuditDate(editingSupplier.updatedAt)
-                          : formatAuditDate(new Date().toISOString())
-                      }
-                    />
                   </Col>
                 </Row>
               </div>
