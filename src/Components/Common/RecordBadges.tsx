@@ -52,7 +52,7 @@ export const getDocumentStatusMeta = (
 
   if (status === true) {
     return {
-      label: translate("Active"),
+      label: translate("Active status"),
       className: `${baseStatusClassName} bg-success-subtle text-success border-success-subtle`,
       icon: "ri-checkbox-circle-line",
     };
@@ -60,7 +60,7 @@ export const getDocumentStatusMeta = (
 
   if (status === false) {
     return {
-      label: translate("Pending"),
+      label: translate("Pending status"),
       className: `${baseStatusClassName} bg-warning-subtle text-warning border-warning-subtle`,
       icon: "ri-time-line",
     };
@@ -68,8 +68,8 @@ export const getDocumentStatusMeta = (
 
   return {
     label: translate("No status"),
-      className: `${baseStatusClassName} bg-secondary-subtle text-secondary border-secondary-subtle`,
-      icon: "ri-subtract-line",
+    className: `${baseStatusClassName} bg-secondary-subtle text-secondary border-secondary-subtle`,
+    icon: "ri-subtract-line",
   };
 };
 

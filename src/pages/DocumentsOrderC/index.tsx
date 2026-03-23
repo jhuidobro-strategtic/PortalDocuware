@@ -12,6 +12,7 @@ import {
   Label,
   Row,
   Spinner,
+  Table,
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
@@ -47,8 +48,13 @@ interface OrderCDetailFormValues {
   unitPrice: string;
 }
 
+interface SunatSearchValues {
+  tipoComprobante: string;
+  serie: string;
+  numero: string;
+}
+
 type OrderCFieldName = keyof OrderCFormValues;
-type OrderCDetailFieldName = keyof Omit<OrderCDetailFormValues, "id">;
 
 interface OrderCFieldConfig {
   name: OrderCFieldName;
@@ -115,17 +121,6 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
     type: "number",
   },
   {
-    name: "documentAssociatedType",
-    labelKey: "Associated Document Type",
-    placeholderKey: "E.g. 2",
-    type: "number",
-  },
-  {
-    name: "documentAssociatedNo",
-    labelKey: "Associated Document Number",
-    placeholderKey: "E.g. FAC-1001",
-  },
-  {
     name: "paymentCondition",
     labelKey: "Payment Condition",
     placeholderKey: "E.g. 1",
@@ -161,13 +156,6 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
     readOnly: true,
   },
 ];
-
-const createDetailRow = (): OrderCDetailFormValues => ({
-  id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  descriptionItem: "",
-  quantity: "1",
-  unitPrice: "",
-});
 
 const getCurrentSessionUser = () => {
   try {
@@ -220,6 +208,14 @@ const getSunatDocumentType = (document: Document | null) => {
   const documentTypeId = getDocumentTypeId(document);
   return documentTypeId ? documentTypeId.padStart(2, "0") : "";
 };
+
+const createInitialSunatSearchValues = (
+  document: Document | null
+): SunatSearchValues => ({
+  tipoComprobante: getSunatDocumentType(document),
+  serie: document?.documentserial ?? "",
+  numero: document?.documentnumber ?? "",
+});
 
 const mapSunatCurrencyToOrderCurrency = (currencyCode: unknown) => {
   switch (String(currencyCode ?? "").trim().toUpperCase()) {
@@ -277,7 +273,7 @@ const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
     }))
     .filter((item) => item.descriptionItem || item.unitPrice);
 
-  return mappedItems.length > 0 ? mappedItems : [createDetailRow()];
+  return mappedItems;
 };
 
 const getOrderCurrencyLabel = (currencyValue: string) => {
@@ -321,6 +317,12 @@ const getDetailTotal = (detail: OrderCDetailFormValues) => {
 
   return (quantity * unitPrice).toFixed(2);
 };
+
+const formatListAmount = (value: string) =>
+  Number(value || 0).toLocaleString("es-PE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const buildPurchaseOrderPayload = (
   values: OrderCFormValues,
@@ -370,9 +372,10 @@ const DocumentOrderC = () => {
   const [values, setValues] = useState<OrderCFormValues>(
     createInitialValues(locationState?.document ?? null)
   );
-  const [details, setDetails] = useState<OrderCDetailFormValues[]>([
-    createDetailRow(),
-  ]);
+  const [sunatSearchValues, setSunatSearchValues] = useState<SunatSearchValues>(
+    createInitialSunatSearchValues(locationState?.document ?? null)
+  );
+  const [details, setDetails] = useState<OrderCDetailFormValues[]>([]);
   const [loading, setLoading] = useState(!locationState?.document);
   const [submitting, setSubmitting] = useState(false);
   const [prefillingFromSunat, setPrefillingFromSunat] = useState(false);
@@ -391,7 +394,7 @@ const DocumentOrderC = () => {
       message: (
         <span className="d-inline-flex align-items-center gap-2">
           <Spinner size="sm" />
-          <span>{t("Loading SUNAT data for the selected document...")}</span>
+          <span>{t("Querying SUNAT with the entered document data...")}</span>
         </span>
       ),
     });
@@ -415,9 +418,23 @@ const DocumentOrderC = () => {
 
   useEffect(() => {
     setValues(createInitialValues(document));
-    setDetails([createDetailRow()]);
+    setSunatSearchValues(createInitialSunatSearchValues(document));
+    setDetails([]);
     setFeedback(null);
   }, [document]);
+
+  useEffect(() => {
+    setValues((prev) => ({
+      ...prev,
+      documentAssociatedType:
+        sunatSearchValues.tipoComprobante.replace(/^0+/, "") ||
+        getDocumentTypeId(document),
+      documentAssociatedNo:
+        [sunatSearchValues.serie, sunatSearchValues.numero]
+          .filter(Boolean)
+          .join("-") || getDocumentAssociatedNo(document),
+    }));
+  }, [document, sunatSearchValues]);
 
   useEffect(() => {
     if (locationState?.document || !documentId) {
@@ -457,127 +474,15 @@ const DocumentOrderC = () => {
     fetchDocument();
   }, [documentId, locationState?.document, t]);
 
-  useEffect(() => {
-    if (!document?.documentid) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const prefillFromSunat = async () => {
-      const sunatToken = getSunatToken();
-      if (!sunatToken) {
-        if (!isCancelled) {
-          setFeedback({
-            type: "danger",
-            message: t("SUNAT token is not configured in the environment"),
-          });
-        }
-        return;
-      }
-
-      const tipoComprobante = getSunatDocumentType(document);
-      if (
-        !tipoComprobante ||
-        !document.documentserial ||
-        !document.documentnumber ||
-        !document.suppliernumber
-      ) {
-        if (!isCancelled) {
-          setFeedback({
-            type: "danger",
-            message: t("Complete Type, Series and Number before querying SUNAT"),
-          });
-        }
-        return;
-      }
-
-      try {
-        if (!isCancelled) {
-          setPrefillingFromSunat(true);
-        }
-
-        const response = await fetch(buildSunatUrl("sunat/comprobante"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sunatToken}`,
-          },
-          body: JSON.stringify({
-            tipo_comprobante: tipoComprobante,
-            ruc_emisor: document.suppliernumber,
-            serie: document.documentserial,
-            numero: document.documentnumber,
-          }),
-        });
-
-        const data = await response.json().catch(() => null);
-        if (!response.ok || !data?.success || !data?.payload) {
-          throw new Error(
-            data?.message || t("Error fetching invoice data from SUNAT")
-          );
-        }
-
-        const payload = data.payload as SunatInvoicePayload;
-        const detailRows = mapSunatItemsToOrderDetails(payload.items);
-        const hasSunatDetails = detailRows.some((detail) =>
-          detail.descriptionItem.trim()
-        );
-        const currencyCode = payload.detalle?.codigo_moneda || document.currency;
-        const associatedDocumentNo =
-          [payload.detalle?.serie, payload.detalle?.numero]
-            .filter(Boolean)
-            .join("-") || getDocumentAssociatedNo(document);
-
-        if (!isCancelled) {
-          setValues((prev) => ({
-            ...prev,
-            suppliernumber: payload.emisor?.ruc || document.suppliernumber || "",
-            suppliername: getSunatSupplierName(
-              payload,
-              document.suppliername || prev.suppliername
-            ),
-            documentAssociatedType:
-              prev.documentAssociatedType || getDocumentTypeId(document),
-            documentAssociatedNo: associatedDocumentNo,
-            currency:
-              mapSunatCurrencyToOrderCurrency(currencyCode) || prev.currency,
-          }));
-          setDetails(detailRows);
-          setFeedback({
-            type: hasSunatDetails ? "info" : "danger",
-            message: hasSunatDetails
-              ? t(
-                  "The selected document was loaded from SUNAT and the details were auto-filled."
-                )
-              : t("No details found in SUNAT"),
-          });
-        }
-      } catch (prefillError: any) {
-        if (!isCancelled) {
-          setFeedback({
-            type: "danger",
-            message:
-              prefillError?.message ||
-              t("Unable to query SUNAT for the selected document."),
-          });
-        }
-      } finally {
-        if (!isCancelled) {
-          setPrefillingFromSunat(false);
-        }
-      }
-    };
-
-    prefillFromSunat();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [document, t]);
-
   const handleChange = (field: OrderCFieldName, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSunatSearchValueChange = (
+    field: keyof SunatSearchValues,
+    value: string
+  ) => {
+    setSunatSearchValues((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleRemoveFloatingAlert = (alertId: string | number) => {
@@ -586,26 +491,111 @@ const DocumentOrderC = () => {
     }
   };
 
-  const handleDetailChange = (
-    detailId: string,
-    field: OrderCDetailFieldName,
-    value: string
-  ) => {
-    setDetails((prev) =>
-      prev.map((detail) =>
-        detail.id === detailId ? { ...detail, [field]: value } : detail
-      )
-    );
-  };
+  const isSunatSearchReady = [
+    sunatSearchValues.tipoComprobante,
+    values.suppliernumber,
+    sunatSearchValues.serie,
+    sunatSearchValues.numero,
+  ].every((value) => String(value || "").trim());
 
-  const handleAddDetail = () => {
-    setDetails((prev) => [...prev, createDetailRow()]);
-  };
+  const handleSearchSunat = async () => {
+    if (!document) {
+      return;
+    }
 
-  const handleRemoveDetail = (detailId: string) => {
-    setDetails((prev) =>
-      prev.length === 1 ? prev : prev.filter((detail) => detail.id !== detailId)
-    );
+    const sunatToken = getSunatToken();
+    if (!sunatToken) {
+      setFeedback({
+        type: "danger",
+        message: t("SUNAT token is not configured in the environment"),
+      });
+      return;
+    }
+
+    if (!isSunatSearchReady) {
+      setFeedback({
+        type: "danger",
+        message: t(
+          "Complete Voucher Type, Series and Number before querying SUNAT"
+        ),
+      });
+      return;
+    }
+
+    try {
+      setFeedback(null);
+      setPrefillingFromSunat(true);
+
+      const response = await fetch(buildSunatUrl("sunat/comprobante"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sunatToken}`,
+        },
+        body: JSON.stringify({
+          tipo_comprobante: sunatSearchValues.tipoComprobante.trim(),
+          ruc_emisor: values.suppliernumber.trim(),
+          serie: sunatSearchValues.serie.trim(),
+          numero: sunatSearchValues.numero.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success || !data?.payload) {
+        throw new Error(
+          data?.message || t("Error fetching invoice data from SUNAT")
+        );
+      }
+
+      const payload = data.payload as SunatInvoicePayload;
+      const detailRows = mapSunatItemsToOrderDetails(payload.items);
+      const hasSunatDetails = detailRows.some((detail) =>
+        detail.descriptionItem.trim()
+      );
+      const currencyCode = payload.detalle?.codigo_moneda || document.currency;
+      const associatedDocumentNo =
+        [
+          payload.detalle?.serie || sunatSearchValues.serie,
+          payload.detalle?.numero || sunatSearchValues.numero,
+        ]
+          .filter(Boolean)
+          .join("-") || getDocumentAssociatedNo(document);
+
+      setValues((prev) => ({
+        ...prev,
+        suppliernumber:
+          payload.emisor?.ruc || values.suppliernumber || prev.suppliernumber,
+        suppliername: getSunatSupplierName(
+          payload,
+          document.suppliername || prev.suppliername
+        ),
+        documentAssociatedNo: associatedDocumentNo,
+        currency: mapSunatCurrencyToOrderCurrency(currencyCode) || prev.currency,
+      }));
+      setSunatSearchValues((prev) => ({
+        ...prev,
+        serie: payload.detalle?.serie || prev.serie,
+        numero: payload.detalle?.numero || prev.numero,
+      }));
+      setDetails(detailRows);
+      setFeedback({
+        type: hasSunatDetails ? "info" : "danger",
+        message: hasSunatDetails
+          ? t(
+              "The selected document was loaded from SUNAT and the details were auto-filled."
+            )
+          : t("No details found in SUNAT"),
+      });
+    } catch (prefillError: any) {
+      setFeedback({
+        type: "danger",
+        message:
+          prefillError?.message ||
+          t("Unable to query SUNAT for the selected document."),
+      });
+    } finally {
+      setPrefillingFromSunat(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -641,19 +631,10 @@ const DocumentOrderC = () => {
       return;
     }
 
-    const invalidDetail = details.find(
-      (detail) =>
-        !detail.descriptionItem.trim() ||
-        Number(detail.quantity) <= 0 ||
-        Number(detail.unitPrice) <= 0
-    );
-
-    if (invalidDetail) {
+    if (details.length === 0) {
       setFeedback({
         type: "danger",
-        message: t(
-          "Complete the Details section with valid description, quantity and unit price."
-        ),
+        message: t("Load the detail lines from SUNAT before saving."),
       });
       return;
     }
@@ -756,7 +737,9 @@ const DocumentOrderC = () => {
                 <div className="d-flex flex-wrap gap-2 text-muted small">
                   <span className="badge bg-light text-secondary border">
                     {t("Status: {{status}}", {
-                      status: document.status ? t("Active") : t("Pending"),
+                      status: document.status
+                        ? t("Active status")
+                        : t("Pending status"),
                     })}
                   </span>
                   <span className="badge bg-light text-secondary border">
@@ -783,12 +766,90 @@ const DocumentOrderC = () => {
               <h5 className="mb-1">{t("Order C. form")}</h5>
               <p className="text-muted mb-0">
                 {t(
-                  "The form uses the selected document and SUNAT to auto-fill the general data and details."
+                  "Use the selected document as a base, then query SUNAT to auto-fill the general data and detail lines."
                 )}
               </p>
             </div>
 
             <Form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <h6 className="text-uppercase text-muted mb-3">
+                  {t("SUNAT Query")}
+                </h6>
+                <Row className="g-4 align-items-end">
+                  <Col md={4}>
+                    <Label className="form-label">{t("Voucher Type")}</Label>
+                    <Input
+                      value={sunatSearchValues.tipoComprobante}
+                      onChange={(event) =>
+                        handleSunatSearchValueChange(
+                          "tipoComprobante",
+                          event.target.value
+                        )
+                      }
+                      placeholder="01"
+                    />
+                  </Col>
+                  <Col md={4}>
+                    <Label className="form-label">{t("Series")}</Label>
+                    <Input
+                      value={sunatSearchValues.serie}
+                      onChange={(event) =>
+                        handleSunatSearchValueChange("serie", event.target.value)
+                      }
+                      placeholder="F001"
+                    />
+                  </Col>
+                  <Col md={4}>
+                    <Label className="form-label">{t("Number")}</Label>
+                    <Input
+                      value={sunatSearchValues.numero}
+                      onChange={(event) =>
+                        handleSunatSearchValueChange("numero", event.target.value)
+                      }
+                      placeholder="2603"
+                    />
+                  </Col>
+                  <Col xs={12}>
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 rounded-3 border bg-light-subtle px-3 py-3">
+                      <div className="d-flex flex-wrap align-items-center gap-2">
+                        <small className="text-muted">
+                          {t(
+                            "Complete Voucher Type, Series and Number. The issuer RUC is taken from the selected record."
+                          )}
+                        </small>
+                        <span className="badge bg-light text-secondary border">
+                          {t("Issuer RUC: {{ruc}}", {
+                            ruc: values.suppliernumber || "-",
+                          })}
+                        </span>
+                      </div>
+
+                      {isSunatSearchReady && (
+                        <Button
+                          type="button"
+                          color="primary"
+                          onClick={handleSearchSunat}
+                          disabled={prefillingFromSunat}
+                        >
+                          {prefillingFromSunat ? (
+                            <>
+                              <Spinner size="sm" className="me-2" />
+                              {t("Querying SUNAT...")}
+                            </>
+                          ) : (
+                            <>
+                              <i className="ri-search-line align-bottom me-1" />
+                              {t("Search SUNAT")}
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+
               <div className="mb-4">
                 <h6 className="text-uppercase text-muted mb-3">
                   {t("General Data")}
@@ -820,108 +881,63 @@ const DocumentOrderC = () => {
               </div>
 
               <div className="border-top pt-4">
-                <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-                  <div>
-                    <h6 className="text-uppercase text-muted">{t("Details")}</h6>
-                  </div>
-                  <Button
-                    type="button"
-                    color="primary"
-                    outline
-                    onClick={handleAddDetail}
-                  >
-                    {t("Add Detail")}
-                  </Button>
+                <div className="mb-3">
+                  <h6 className="text-uppercase text-muted">{t("Details")}</h6>
                 </div>
 
-                <Row className="g-3">
-                  {details.map((detail, index) => (
-                    <Col xs={12} key={detail.id}>
-                      <Card className="border shadow-none mb-0">
-                        <CardBody className="p-3">
-                          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                            <h6 className="mb-0">
-                              {t("Detail {{index}}", { index: index + 1 })}
-                            </h6>
-                            <Button
-                              type="button"
-                              color="danger"
-                              outline
-                              size="sm"
-                              disabled={details.length === 1}
-                              onClick={() => handleRemoveDetail(detail.id)}
-                            >
-                              {t("Remove")}
-                            </Button>
-                          </div>
-
-                          <Row className="g-3">
-                            <Col md={6}>
-                              <Label className="form-label">
-                                {t("Item description")}
-                              </Label>
-                              <Input
-                                value={detail.descriptionItem}
-                                onChange={(event) =>
-                                  handleDetailChange(
-                                    detail.id,
-                                    "descriptionItem",
-                                    event.target.value
-                                  )
-                                }
-                                placeholder={t("Enter the item description")}
-                              />
-                            </Col>
-                            <Col md={2}>
-                              <Label className="form-label">{t("Quantity")}</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={detail.quantity}
-                                onChange={(event) =>
-                                  handleDetailChange(
-                                    detail.id,
-                                    "quantity",
-                                    event.target.value
-                                  )
-                                }
-                                placeholder="0"
-                              />
-                            </Col>
-                            <Col md={2}>
-                              <Label className="form-label">
-                                {t("Unit price")}
-                              </Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={detail.unitPrice}
-                                onChange={(event) =>
-                                  handleDetailChange(
-                                    detail.id,
-                                    "unitPrice",
-                                    event.target.value
-                                  )
-                                }
-                                placeholder="0.00"
-                              />
-                            </Col>
-                            <Col md={2}>
-                              <Label className="form-label">{t("Total")}</Label>
-                              <Input
-                                value={getDetailTotal(detail)}
-                                readOnly
-                                className="bg-light"
-                              />
-                            </Col>
-                          </Row>
-                        </CardBody>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
+                <div className="table-responsive">
+                  <Table className="table align-middle table-nowrap mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th style={{ width: "72px" }}>#</th>
+                        <th>{t("Item description")}</th>
+                        <th style={{ width: "160px" }} className="text-center">
+                          {t("Quantity")}
+                        </th>
+                        <th style={{ width: "180px" }} className="text-end">
+                          {t("Unit price")}
+                        </th>
+                        <th style={{ width: "180px" }} className="text-end">
+                          {t("Total")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {details.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-4">
+                            <div>
+                              <h6 className="mb-1">
+                                {t("No details found in SUNAT")}
+                              </h6>
+                              <p className="text-muted mb-0">
+                                {t(
+                                  "Query SUNAT to display the detail lines associated with the document."
+                                )}
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        details.map((detail, index) => (
+                          <tr key={detail.id}>
+                            <td className="fw-semibold text-muted">
+                              {index + 1}
+                            </td>
+                            <td>{detail.descriptionItem || t("No description")}</td>
+                            <td className="text-center">{detail.quantity}</td>
+                            <td className="text-end">
+                              {formatListAmount(detail.unitPrice)}
+                            </td>
+                            <td className="text-end fw-semibold">
+                              {formatListAmount(getDetailTotal(detail))}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </Table>
+                </div>
               </div>
 
               <div className="d-flex flex-wrap justify-content-end gap-2 mt-4">
