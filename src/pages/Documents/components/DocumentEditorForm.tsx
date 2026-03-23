@@ -238,7 +238,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           </FormGroup>
         </Col>
 
-        <Col md={3}>
+        <Col md={4}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Issue date")}</Label>
             <InputGroup>
@@ -260,7 +260,23 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           </FormGroup>
         </Col>
 
-        <Col md={2}>
+        <Col md={5}>
+          <FormGroup className="mb-0">
+            <Label className="form-label">{t("Buyer")}</Label>
+            <Input
+              value={editDoc.driver}
+              onChange={(event) =>
+                setEditDoc({
+                  ...editDoc,
+                  driver: event.target.value,
+                })
+              }
+              placeholder={t("Enter buyer name")}
+            />
+          </FormGroup>
+        </Col>
+
+        <Col md={3}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Currency")}</Label>
             <CurrencyDropdown
@@ -275,7 +291,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           </FormGroup>
         </Col>
 
-        <Col md={2}>
+        <Col md={4}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Subtotal")}</Label>
             <Input
@@ -286,7 +302,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           </FormGroup>
         </Col>
 
-        <Col md={3}>
+        <Col md={5}>
           <FormGroup className="mb-0">
             <Label className="form-label">IGV</Label>
             <InputGroup>
@@ -308,30 +324,14 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           </FormGroup>
         </Col>
 
-        <Col md={2}>
+        <Col md={3}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Total")}</Label>
             <Input type="number" value={editDoc.totalamount} disabled />
           </FormGroup>
-        </Col>
+        </Col>        
 
-        <Col md={6}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Buyer")}</Label>
-            <Input
-              value={editDoc.driver}
-              onChange={(event) =>
-                setEditDoc({
-                  ...editDoc,
-                  driver: event.target.value,
-                })
-              }
-              placeholder={t("Enter buyer name")}
-            />
-          </FormGroup>
-        </Col>
-
-        <Col md={6}>
+        <Col md={12}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Cost center")}</Label>
             <Select
