@@ -5,6 +5,7 @@ const Login = lazy(() => import("../pages/Authentication/Login"));
 const Logout = lazy(() => import("../pages/Authentication/Logout"));
 const UserProfile = lazy(() => import("../pages/Authentication/user-profile"));
 const Documents = lazy(() => import("../pages/Documents"));
+const DocumentsEdit = lazy(() => import("../pages/DocumentsEdit"));
 const DocumentOrderC = lazy(() => import("../pages/DocumentsOrderC"));
 const DocumentDetails = lazy(() => import("../pages/DocumentsDetails"));
 const DocumentProgramacion = lazy(() => import("../pages/DocumentsProgramacion"));
@@ -16,6 +17,7 @@ const authProtectedRoutes = [
   { path: "/dashboard", component: <Navigate to="/documents" replace /> },
   { path: "/index", component: <Navigate to="/documents" replace /> },
   { path: "/documents", component: <Documents /> },
+  { path: "/documents/edit/:documentId", component: <DocumentsEdit /> },
   { path: "/documents/order-c/:documentId", component: <DocumentOrderC /> },
   { path: "/document-details", component: <DocumentDetails /> },
   { path: "/document-programation", component: <DocumentProgramacion /> },
