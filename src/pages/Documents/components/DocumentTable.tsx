@@ -286,16 +286,25 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                   >
                     <DocumentStatusBadge status={doc.status} />
                   </td>
-                  <td style={{ ...style, width: columnWidths.acciones }}>
-                    <div className="d-flex flex-wrap gap-2">
-                      <Button
+                  <td
+                    style={{
+                      ...style,
+                      width: columnWidths.acciones,
+                      textAlign: "center",
+                      overflow: "visible",
+                      textOverflow: "clip",
+                      whiteSpace: "normal",
+                    }}
+                  >
+                    <div className="document-actions-group">
+                      {/* <Button
                         size="sm"
                         color="info"
                         outline
                         onClick={() => onView(doc)}
                       >
                         <i className="ri-eye-line align-bottom" /> {t("View")}
-                      </Button>
+                      </Button> */}
                       <Button
                         size="sm"
                         color="primary"

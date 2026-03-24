@@ -56,7 +56,7 @@ const DocumentList: React.FC = () => {
     igv: 100,
     total: 120,
     estado: 120,
-    acciones: 360,
+    acciones: 320,
   });
 
   const addNotification = (type: Notification["type"], message: string) => {

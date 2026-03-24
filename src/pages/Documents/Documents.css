@@ -1,9 +1,12 @@
 .small-text {
-  font-size: 0.80rem !important;
+  font-size: 0.8rem !important;
 }
+
 .custom-modal .modal-content {
   border-radius: 10px;
   padding: 10px;
+  width: auto;
+  margin: 0;
 }
 
 .form-label {
@@ -12,11 +15,12 @@
   margin-bottom: 4px;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   font-size: 0.9rem;
 }
 
-/* 📌 Contenedor fijo en la esquina superior derecha */
 .notification-container {
   position: fixed;
   top: 20px;
@@ -27,27 +31,42 @@ input, select, textarea {
   gap: 10px;
 }
 
-/* 📌 Animación entrada/salida */
 .notification-fade {
   animation: fadeIn 0.5s, fadeOut 0.5s 4.5s;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateX(50px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(50px); }
-}
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
 
-.custom-modal .modal-content {
-  width: auto;
-  margin: 0; /* evita centrado automático */
+  to {
+    opacity: 0;
+    transform: translateX(50px);
+  }
 }
 
 .modal-header {
-  cursor: move; /* ✅ indica que se puede arrastrar */
+  cursor: move;
 }
 
+.document-actions-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
