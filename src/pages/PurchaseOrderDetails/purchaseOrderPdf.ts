@@ -307,6 +307,7 @@ export const generatePurchaseOrderPdf = async ({
     startY: 68,
     theme: "grid",
     margin: { left: 5, right: 5 },
+    tableWidth: pageWidth - 10,
     styles: {
       font: "helvetica",
       fontSize: 7,
@@ -325,18 +326,38 @@ export const generatePurchaseOrderPdf = async ({
     bodyStyles: {
       minCellHeight: 6,
     },
-    columnStyles: {
-      0: { cellWidth: 10, halign: "center" },
-      1: { cellWidth: 84 },
-      2: { cellWidth: 18, halign: "center" },
-      3: { cellWidth: 22, halign: "center" },
-      4: { cellWidth: 22, halign: "center" },
-      5: { cellWidth: 24, halign: "center" },
-      6: { cellWidth: 16, halign: "center" },
-      7: { cellWidth: 16, halign: "right" },
-      8: { cellWidth: 18, halign: "right" },
-      9: { cellWidth: 22, halign: "right" },
-    },
+    columnStyles: (() => {
+      const tableWidth = pageWidth - 10;
+      const fixedWidths = {
+        0: 10,
+        2: 18,
+        3: 24,
+        4: 24,
+        5: 27,
+        6: 18,
+        7: 18,
+        8: 20,
+        9: 24,
+      } as const;
+      const occupiedWidth = Object.values(fixedWidths).reduce(
+        (sum, width) => sum + width,
+        0
+      );
+      const descriptionWidth = Math.max(tableWidth - occupiedWidth, 84);
+
+      return {
+        0: { cellWidth: fixedWidths[0], halign: "center" },
+        1: { cellWidth: descriptionWidth },
+        2: { cellWidth: fixedWidths[2], halign: "center" },
+        3: { cellWidth: fixedWidths[3], halign: "center" },
+        4: { cellWidth: fixedWidths[4], halign: "center" },
+        5: { cellWidth: fixedWidths[5], halign: "center" },
+        6: { cellWidth: fixedWidths[6], halign: "center" },
+        7: { cellWidth: fixedWidths[7], halign: "right" },
+        8: { cellWidth: fixedWidths[8], halign: "right" },
+        9: { cellWidth: fixedWidths[9], halign: "right" },
+      };
+    })(),
     head: [
       [
         "ITEM",
