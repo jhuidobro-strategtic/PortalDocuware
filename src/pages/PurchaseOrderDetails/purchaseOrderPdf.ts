@@ -29,9 +29,32 @@ interface PurchaseOrderPdfOrder {
   details: PurchaseOrderPdfDetail[];
 }
 
+interface PurchaseOrderPdfBankInfo {
+  id: number;
+  descripcion: string;
+}
+
+interface PurchaseOrderPdfSupplier {
+  supplierid: number;
+  supplierno?: string;
+  suppliername?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  bank1?: PurchaseOrderPdfBankInfo | null;
+  accountno1?: string;
+  bank2?: PurchaseOrderPdfBankInfo | null;
+  accountno2?: string;
+}
+
 interface GeneratePurchaseOrderPdfParams {
   purchaseOrder: PurchaseOrderPdfOrder;
   relatedDocument?: Document | null;
+  supplier?: PurchaseOrderPdfSupplier | null;
+  paymentConditionLabel?: string;
+  currencyLabel?: string;
+  storeLabel?: string;
+  executedByName?: string;
   numberLocale: string;
 }
 
@@ -83,7 +106,14 @@ const getDocumentTypeLabel = (
   return safeValue(documentAssociatedType);
 };
 
-const getPaymentConditionLabel = (paymentCondition: number) => {
+const getPaymentConditionLabel = (
+  paymentCondition: number,
+  paymentConditionLabel?: string
+) => {
+  if (String(paymentConditionLabel ?? "").trim()) {
+    return safeValue(paymentConditionLabel);
+  }
+
   switch (paymentCondition) {
     case 1:
       return "DEPOSITO";
@@ -96,15 +126,32 @@ const getPaymentConditionLabel = (paymentCondition: number) => {
   }
 };
 
-const getCurrencyLabel = (currency: number) => {
+const getCurrencyLabel = (currency: number, currencyLabel?: string) => {
+  if (String(currencyLabel ?? "").trim()) {
+    return safeValue(currencyLabel);
+  }
+
   switch (currency) {
     case 1:
+    case 3:
       return "SOLES";
     case 2:
+    case 4:
       return "DOLARES";
     default:
       return safeValue(currency);
   }
+};
+
+const getBankAccountLabel = (
+  bank?: PurchaseOrderPdfBankInfo | null,
+  accountNo?: string
+) => {
+  const bankLabel = String(bank?.descripcion ?? "").trim();
+  const accountLabel = String(accountNo ?? "").trim();
+  const value = [bankLabel, accountLabel].filter(Boolean).join(" - ");
+
+  return value || "-";
 };
 
 
@@ -142,6 +189,11 @@ const drawFieldGroup = (
 export const generatePurchaseOrderPdf = async ({
   purchaseOrder,
   relatedDocument,
+  supplier,
+  paymentConditionLabel,
+  currencyLabel,
+  storeLabel,
+  executedByName,
   numberLocale,
 }: GeneratePurchaseOrderPdfParams) => {
   const doc = new jsPDF({
@@ -206,20 +258,30 @@ export const generatePurchaseOrderPdf = async ({
   });
 
   const infoTop = 27;
-  const infoHeight = 38;
+  const infoHeight = 40;
 
   doc.rect(5, infoTop, pageWidth - 10, infoHeight);
 
-  drawFieldGroup(doc, 8, 32, 4.4, [
-    ["RUC", safeValue(relatedDocument?.suppliernumber)],
-    ["RAZON SOCIAL", safeValue(relatedDocument?.suppliername)],
-    ["DIRECCION", "-"],
-    ["TELEFONO", "-"],
-    ["EMAIL", "-"],
-    ["CTA. BANCO 1", "-"],
-    ["CTA. BANCO 2", "-"],
-    ["REQUERIDO POR", safeValue(relatedDocument?.driver, safeValue(purchaseOrder.createdBy))],
-  ]);
+  drawFieldGroup(
+    doc,
+    8,
+    32,
+    4.4,
+    [
+      ["RUC", safeValue(supplier?.supplierno, relatedDocument?.suppliernumber)],
+      [
+        "RAZON SOCIAL",
+        safeValue(supplier?.suppliername, relatedDocument?.suppliername),
+      ],
+      ["DIRECCION", safeValue(supplier?.address)],
+      ["TELEFONO", safeValue(supplier?.phone)],
+      ["EMAIL", safeValue(supplier?.email)],
+      ["CTA. BANCO 1", getBankAccountLabel(supplier?.bank1, supplier?.accountno1)],
+      ["CTA. BANCO 2", getBankAccountLabel(supplier?.bank2, supplier?.accountno2)],
+      ["REQUERIDO POR", safeValue(relatedDocument?.driver, executedByName)],
+    ],
+    140
+  );
 
   drawFieldGroup(doc, 193, 32, 4.4, [
     ["NRO DOC", safeValue(purchaseOrder.documentAssociatedNo)],
@@ -230,12 +292,15 @@ export const generatePurchaseOrderPdf = async ({
         relatedDocument
       ),
     ],
-    ["CONDICION DE PAGO", getPaymentConditionLabel(purchaseOrder.paymentCondition)],
-    ["UNIDAD MONETARIA", getCurrencyLabel(purchaseOrder.currency)],
+    [
+      "CONDICION DE PAGO",
+      getPaymentConditionLabel(purchaseOrder.paymentCondition, paymentConditionLabel),
+    ],
+    ["UNIDAD MONETARIA", getCurrencyLabel(purchaseOrder.currency, currencyLabel)],
     ["GUIA REMISION", safeValue(purchaseOrder.guideNo)],
     ["COTIZACION / PROF.", "-"],
-    ["ALMACEN", safeValue(purchaseOrder.store)],
-    ["EJECUTADO POR", safeValue(purchaseOrder.createdBy)],
+    ["ALMACEN", safeValue(storeLabel)],
+    ["EJECUTADO POR", safeValue(executedByName)],
   ], 57, 40);
 
   autoTable(doc, {

@@ -65,10 +65,22 @@ interface CatalogItem {
   descripcion: string;
 }
 
+interface BankReference {
+  id: number;
+  descripcion: string;
+}
+
 interface SupplierReference {
   supplierid: number;
   supplierno?: string;
   suppliername?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  bank1?: BankReference | null;
+  accountno1?: string;
+  bank2?: BankReference | null;
+  accountno2?: string;
 }
 
 const getDocumentAssociatedNo = (document: Document) =>
@@ -89,6 +101,39 @@ const mapSupplierLookup = (items: SupplierReference[]) =>
     acc[item.supplierid] = label;
     return acc;
   }, {});
+
+const mapSupplierDetailsLookup = (items: SupplierReference[]) =>
+  items.reduce((acc: Record<number, SupplierReference>, item) => {
+    acc[item.supplierid] = item;
+    return acc;
+  }, {});
+
+const getCurrentSessionUser = () => {
+  try {
+    const authUser = sessionStorage.getItem("authUser");
+    if (!authUser) {
+      return { id: null as number | null, name: "" };
+    }
+
+    const parsedUser = JSON.parse(authUser);
+    const sessionData = parsedUser?.data || {};
+    const parsedId = Number(
+      sessionData?.userID ?? sessionData?.id ?? sessionData?.profileID ?? ""
+    );
+
+    return {
+      id: Number.isFinite(parsedId) ? parsedId : null,
+      name:
+        sessionData?.fullname ||
+        sessionData?.first_name ||
+        sessionData?.username ||
+        sessionData?.email ||
+        "",
+    };
+  } catch {
+    return { id: null as number | null, name: "" };
+  }
+};
 
 const getLookupLabel = (lookup: Record<number, string>, value: number) =>
   lookup[value] || String(value ?? "-");
@@ -187,6 +232,9 @@ const PurchaseOrderDetails = () => {
     Record<string, Document>
   >({});
   const [supplierLookup, setSupplierLookup] = useState<Record<number, string>>({});
+  const [supplierDetailsLookup, setSupplierDetailsLookup] = useState<
+    Record<number, SupplierReference>
+  >({});
   const [paymentConditionLookup, setPaymentConditionLookup] = useState<
     Record<number, string>
   >({});
@@ -202,6 +250,7 @@ const PurchaseOrderDetails = () => {
   const [selectedState, setSelectedState] = useState<0 | 1 | 2>(1);
   const [confirmingState, setConfirmingState] = useState(false);
 
+  const sessionUser = getCurrentSessionUser();
   const numberLocale = getNumberLocale(i18n.language);
   const formatAmount = (value: string | number) =>
     Number(value || 0).toLocaleString(numberLocale, {
@@ -319,6 +368,18 @@ const PurchaseOrderDetails = () => {
           purchaseOrder: { ...orderModal, purchaseState: selectedState },
           relatedDocument:
             documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null,
+          supplier: supplierDetailsLookup[orderModal.supplierID] ?? null,
+          paymentConditionLabel:
+            paymentConditionLookup[orderModal.paymentCondition] ?? "",
+          currencyLabel:
+            getCurrencyMeta(
+              orderModal.currency,
+              t,
+              currencyLookup[orderModal.currency]
+            ).label ?? "",
+          storeLabel: storeLookup[orderModal.store] ?? "",
+          executedByName:
+            orderModal.createdBy === sessionUser.id ? sessionUser.name : "",
           numberLocale,
         });
       } else {
@@ -412,8 +473,10 @@ const PurchaseOrderDetails = () => {
           Array.isArray(suppliersData?.data)
         ) {
           setSupplierLookup(mapSupplierLookup(suppliersData.data));
+          setSupplierDetailsLookup(mapSupplierDetailsLookup(suppliersData.data));
         } else {
           setSupplierLookup({});
+          setSupplierDetailsLookup({});
         }
 
         if (
