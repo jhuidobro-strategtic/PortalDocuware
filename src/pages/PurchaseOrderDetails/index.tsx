@@ -512,10 +512,10 @@ const PurchaseOrderDetails = () => {
       : null;
 
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
-    const approvedStateOption = modalStateOptions.find(
-      (option) => option.kind === "approved"
+    const currentStateOption = modalStateOptions.find(
+      (option) => option.value === purchaseOrder.purchaseState
     );
-    setSelectedState(approvedStateOption?.value ?? purchaseOrder.purchaseState);
+    setSelectedState(currentStateOption?.value ?? purchaseOrder.purchaseState);
     setActionError(null);
     setOrderModal(purchaseOrder);
   };
