@@ -46,13 +46,19 @@ interface PurchaseOrder {
   purchaseOrderID: number;
   orderNo: string;
   supplierID: number;
+  supplierLabel?: string;
   documentAssociatedType: number;
+  documentAssociatedTypeLabel?: string;
   documentAssociatedNo: string;
   paymentCondition: number;
+  paymentConditionLabel?: string;
   currency: number;
+  currencyLabel?: string;
   guideNo: string;
   store: number;
+  storeLabel?: string;
   purchaseState: number;
+  purchaseStateLabel?: string;
   createdBy: number;
   createAt: string;
   updatedBy: number | null;
@@ -70,6 +76,11 @@ interface BankReference {
   descripcion: string;
 }
 
+interface DocumentTypeReference {
+  tipoid: number;
+  tipo: string;
+}
+
 interface SupplierReference {
   supplierid: number;
   supplierno?: string;
@@ -81,6 +92,24 @@ interface SupplierReference {
   accountno1?: string;
   bank2?: BankReference | null;
   accountno2?: string;
+}
+
+interface PurchaseOrderApiItem {
+  purchaseOrderID: number;
+  orderNo: string;
+  supplierID: number | SupplierReference;
+  documentAssociatedType: number | DocumentTypeReference;
+  documentAssociatedNo: string;
+  paymentCondition: number | CatalogItem;
+  currency: number | CatalogItem;
+  guideNo: string;
+  store: number | CatalogItem;
+  purchaseState: number | CatalogItem;
+  createdBy: number;
+  createAt: string;
+  updatedBy: number | null;
+  updatedAt: string | null;
+  details: PurchaseOrderDetail[];
 }
 
 const getDocumentAssociatedNo = (document: Document) =>
@@ -107,6 +136,56 @@ const mapSupplierDetailsLookup = (items: SupplierReference[]) =>
     acc[item.supplierid] = item;
     return acc;
   }, {});
+
+const getCatalogId = (value: number | CatalogItem) =>
+  typeof value === "number" ? value : Number(value?.id ?? 0);
+
+const getCatalogLabel = (value: number | CatalogItem) =>
+  typeof value === "number" ? "" : value?.descripcion ?? "";
+
+const getSupplierId = (value: number | SupplierReference) =>
+  typeof value === "number" ? value : Number(value?.supplierid ?? 0);
+
+const getSupplierLabel = (value: number | SupplierReference) => {
+  if (typeof value === "number") {
+    return "";
+  }
+
+  return (
+    [value.supplierno, value.suppliername].filter(Boolean).join(" - ") ||
+    String(value.supplierid ?? "")
+  );
+};
+
+const getDocumentTypeId = (value: number | DocumentTypeReference) =>
+  typeof value === "number" ? value : Number(value?.tipoid ?? 0);
+
+const getDocumentTypeLabel = (value: number | DocumentTypeReference) =>
+  typeof value === "number" ? "" : value?.tipo ?? "";
+
+const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
+  purchaseOrderID: item.purchaseOrderID,
+  orderNo: item.orderNo,
+  supplierID: getSupplierId(item.supplierID),
+  supplierLabel: getSupplierLabel(item.supplierID),
+  documentAssociatedType: getDocumentTypeId(item.documentAssociatedType),
+  documentAssociatedTypeLabel: getDocumentTypeLabel(item.documentAssociatedType),
+  documentAssociatedNo: item.documentAssociatedNo,
+  paymentCondition: getCatalogId(item.paymentCondition),
+  paymentConditionLabel: getCatalogLabel(item.paymentCondition),
+  currency: getCatalogId(item.currency),
+  currencyLabel: getCatalogLabel(item.currency),
+  guideNo: item.guideNo,
+  store: getCatalogId(item.store),
+  storeLabel: getCatalogLabel(item.store),
+  purchaseState: getCatalogId(item.purchaseState),
+  purchaseStateLabel: getCatalogLabel(item.purchaseState),
+  createdBy: item.createdBy,
+  createAt: item.createAt,
+  updatedBy: item.updatedBy,
+  updatedAt: item.updatedAt,
+  details: item.details ?? [],
+});
 
 const getCurrentSessionUser = () => {
   try {
@@ -167,33 +246,103 @@ const getCurrencyMeta = (
   }
 };
 
-const getPurchaseStateMeta = (
+const getPurchaseStateKind = (
   purchaseState: number,
-  t: (key: string) => string
+  purchaseStateLabel?: string
 ) => {
+  const normalizedLabel = String(purchaseStateLabel ?? "").trim().toLowerCase();
+
+  if (
+    normalizedLabel.includes("aprob") ||
+    normalizedLabel.includes("approv")
+  ) {
+    return "approved" as const;
+  }
+
+  if (
+    normalizedLabel.includes("rechaz") ||
+    normalizedLabel.includes("reject")
+  ) {
+    return "rejected" as const;
+  }
+
+  if (normalizedLabel.includes("pend")) {
+    return "pending" as const;
+  }
+
   switch (purchaseState) {
     case 1:
+      return "approved" as const;
+    case 2:
+      return "rejected" as const;
+    case 0:
+      return "pending" as const;
+    default:
+      return "other" as const;
+  }
+};
+
+const getPurchaseStateMeta = (
+  purchaseState: number,
+  t: (key: string) => string,
+  purchaseStateLabel?: string
+) => {
+  switch (getPurchaseStateKind(purchaseState, purchaseStateLabel)) {
+    case "approved":
       return {
-        label: t("Approved"),
+        kind: "approved" as const,
+        label: purchaseStateLabel || t("Approved"),
         className:
           "badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        colorClass: "success" as const,
         icon: "ri-checkbox-circle-line",
       };
-    case 2:
+    case "rejected":
       return {
-        label: t("Rejected"),
+        kind: "rejected" as const,
+        label: purchaseStateLabel || t("Rejected"),
         className:
           "badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        colorClass: "danger" as const,
         icon: "ri-close-circle-line",
       };
-    case 0:
-    default:
+    case "pending":
       return {
-        label: t("Pending"),
+        kind: "pending" as const,
+        label: purchaseStateLabel || t("Pending"),
         className:
           "badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        colorClass: "warning" as const,
         icon: "ri-time-line",
       };
+    default:
+      return {
+        kind: "other" as const,
+        label: purchaseStateLabel || t("No status"),
+        className:
+          "badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        colorClass: "secondary" as const,
+        icon: "ri-information-line",
+      };
+  }
+};
+
+const getPurchaseStateDescription = (
+  purchaseState: number,
+  t: (key: string) => string,
+  purchaseStateLabel?: string
+) => {
+  switch (getPurchaseStateKind(purchaseState, purchaseStateLabel)) {
+    case "approved":
+      return t("Generates the PDF of the purchase order.");
+    case "pending":
+      return t("Leaves the order pending review.");
+    case "rejected":
+      return t("Rejects the purchase order.");
+    default:
+      return (
+        purchaseStateLabel || t("Select the status to assign to this purchase order.")
+      );
   }
 };
 
@@ -240,6 +389,12 @@ const PurchaseOrderDetails = () => {
   >({});
   const [currencyLookup, setCurrencyLookup] = useState<Record<number, string>>({});
   const [storeLookup, setStoreLookup] = useState<Record<number, string>>({});
+  const [purchaseStateLookup, setPurchaseStateLookup] = useState<
+    Record<number, string>
+  >({});
+  const [purchaseStateOptions, setPurchaseStateOptions] = useState<CatalogItem[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -247,7 +402,7 @@ const PurchaseOrderDetails = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(null);
   const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
-  const [selectedState, setSelectedState] = useState<0 | 1 | 2>(1);
+  const [selectedState, setSelectedState] = useState<number | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
 
   const sessionUser = getCurrentSessionUser();
@@ -269,20 +424,29 @@ const PurchaseOrderDetails = () => {
       return true;
     }
 
-    const supplierLabel = getLookupLabel(
-      supplierLookup,
-      purchaseOrder.supplierID
+    const supplierLabel = (
+      purchaseOrder.supplierLabel ||
+      getLookupLabel(supplierLookup, purchaseOrder.supplierID)
     ).toLowerCase();
-    const paymentConditionLabel = getLookupLabel(
-      paymentConditionLookup,
-      purchaseOrder.paymentCondition
+    const paymentConditionLabel = (
+      purchaseOrder.paymentConditionLabel ||
+      getLookupLabel(paymentConditionLookup, purchaseOrder.paymentCondition)
     ).toLowerCase();
     const currencyLabel = getCurrencyMeta(
       purchaseOrder.currency,
       t,
-      currencyLookup[purchaseOrder.currency]
+      purchaseOrder.currencyLabel || currencyLookup[purchaseOrder.currency]
     ).label.toLowerCase();
-    const storeLabel = getLookupLabel(storeLookup, purchaseOrder.store).toLowerCase();
+    const storeLabel = (
+      purchaseOrder.storeLabel ||
+      getLookupLabel(storeLookup, purchaseOrder.store)
+    ).toLowerCase();
+    const purchaseStateLabel = getPurchaseStateMeta(
+      purchaseOrder.purchaseState,
+      t,
+      purchaseOrder.purchaseStateLabel ||
+        purchaseStateLookup[purchaseOrder.purchaseState]
+    ).label.toLowerCase();
 
     return (
       matchesSearchValue(purchaseOrder, term) ||
@@ -290,14 +454,7 @@ const PurchaseOrderDetails = () => {
       paymentConditionLabel.includes(term) ||
       currencyLabel.includes(term) ||
       storeLabel.includes(term) ||
-      getCurrencyMeta(
-        purchaseOrder.currency,
-        t,
-        currencyLookup[purchaseOrder.currency]
-      ).label.toLowerCase().includes(term) ||
-      getPurchaseStateMeta(purchaseOrder.purchaseState, t).label
-        .toLowerCase()
-        .includes(term)
+      purchaseStateLabel.includes(term)
     );
   });
 
@@ -324,8 +481,41 @@ const PurchaseOrderDetails = () => {
     });
   }
 
+  const modalStateOptions = (
+    purchaseStateOptions.length > 0
+      ? purchaseStateOptions
+      : [
+          { id: 1, descripcion: t("Approved") },
+          { id: 0, descripcion: t("Pending") },
+          { id: 2, descripcion: t("Rejected") },
+        ]
+  ).map((option) => {
+    const stateMeta = getPurchaseStateMeta(option.id, t, option.descripcion);
+
+    return {
+      value: option.id,
+      label: stateMeta.label,
+      icon: stateMeta.icon,
+      colorClass: stateMeta.colorClass,
+      kind: stateMeta.kind,
+      description: getPurchaseStateDescription(option.id, t, option.descripcion),
+    };
+  });
+  const selectedStateMeta =
+    selectedState !== null
+      ? getPurchaseStateMeta(
+          selectedState,
+          t,
+          purchaseStateLookup[selectedState] ||
+            modalStateOptions.find((option) => option.value === selectedState)?.label
+        )
+      : null;
+
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
-    setSelectedState(1);
+    const approvedStateOption = modalStateOptions.find(
+      (option) => option.kind === "approved"
+    );
+    setSelectedState(approvedStateOption?.value ?? purchaseOrder.purchaseState);
     setActionError(null);
     setOrderModal(purchaseOrder);
   };
@@ -347,11 +537,56 @@ const PurchaseOrderDetails = () => {
   };
 
   const handleConfirmOrderState = async () => {
-    if (!orderModal) return;
+    if (!orderModal || selectedState === null) return;
+
+    if (!sessionUser.id) {
+      setActionError(
+        t("Unable to identify the signed-in user to update this purchase order.")
+      );
+      return;
+    }
+
+    let statusUpdated = false;
 
     try {
       setConfirmingState(true);
       setActionError(null);
+
+      const response = await fetch(buildApiUrl("purchase-orders/status/"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          purchaseOrderID: orderModal.purchaseOrderID,
+          purchaseState: selectedState,
+          updatedBy: sessionUser.id,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(
+          data?.message || t("Unable to update purchase order status.")
+        );
+      }
+
+      statusUpdated = true;
+
+      const updatedOrder = {
+        ...orderModal,
+          purchaseState: selectedState,
+          purchaseStateLabel:
+            purchaseStateLookup[selectedState] ||
+            modalStateOptions.find((option) => option.value === selectedState)?.label,
+          updatedBy: sessionUser.id,
+        };
+
+      setPurchaseOrders((currentOrders) =>
+        currentOrders.map((purchaseOrder) =>
+          purchaseOrder.purchaseOrderID === updatedOrder.purchaseOrderID
+            ? updatedOrder
+            : purchaseOrder
+        )
+      );
 
       // TODO: llamar API para actualizar estado cuando esté disponible
       // await fetch(buildApiUrl(`purchase-orders/${orderModal.purchaseOrderID}/state`), {
@@ -360,24 +595,34 @@ const PurchaseOrderDetails = () => {
       //   body: JSON.stringify({ purchaseState: selectedState }),
       // });
 
-      if (selectedState === 1) {
+      if (
+        getPurchaseStateKind(
+          selectedState,
+          purchaseStateLookup[selectedState]
+        ) === "approved"
+      ) {
         setGeneratingOrderId(orderModal.purchaseOrderID);
         setOrderModal(null);
 
         await generatePurchaseOrderPdf({
-          purchaseOrder: { ...orderModal, purchaseState: selectedState },
+          purchaseOrder: updatedOrder,
           relatedDocument:
             documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null,
           supplier: supplierDetailsLookup[orderModal.supplierID] ?? null,
           paymentConditionLabel:
-            paymentConditionLookup[orderModal.paymentCondition] ?? "",
+            orderModal.paymentConditionLabel ||
+            paymentConditionLookup[orderModal.paymentCondition] ||
+            "",
           currencyLabel:
             getCurrencyMeta(
               orderModal.currency,
               t,
-              currencyLookup[orderModal.currency]
+              orderModal.currencyLabel || currencyLookup[orderModal.currency]
             ).label ?? "",
-          storeLabel: storeLookup[orderModal.store] ?? "",
+          storeLabel:
+            orderModal.storeLabel || storeLookup[orderModal.store] || "",
+          documentAssociatedTypeLabel:
+            orderModal.documentAssociatedTypeLabel || "",
           executedByName:
             orderModal.createdBy === sessionUser.id ? sessionUser.name : "",
           numberLocale,
@@ -387,9 +632,13 @@ const PurchaseOrderDetails = () => {
       }
     } catch (generateError: any) {
       setActionError(
-        generateError?.message || t("Unable to generate the PDF for this order.")
+        generateError?.message ||
+          t("Unable to update purchase order status.")
       );
-      setOrderModal(null);
+
+      if (statusUpdated) {
+        setOrderModal(null);
+      }
     } finally {
       setGeneratingOrderId(null);
       setConfirmingState(false);
@@ -412,6 +661,7 @@ const PurchaseOrderDetails = () => {
           paymentConditionResponse,
           currencyResponse,
           storeResponse,
+          purchaseStateResponse,
         ] = await Promise.all([
           fetch(buildApiUrl("purchase-orders/")),
           fetch(buildApiUrl("documents")),
@@ -419,6 +669,7 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_CONDITION")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
+          fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER")),
         ]);
         const purchaseOrdersData = await purchaseOrdersResponse
           .json()
@@ -434,7 +685,9 @@ const PurchaseOrderDetails = () => {
           );
         }
 
-        setPurchaseOrders(purchaseOrdersData.data);
+        setPurchaseOrders(
+          (purchaseOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
+        );
 
         const documentsData = await documentsResponse.json().catch(() => null);
         const suppliersData = await suppliersResponse.json().catch(() => null);
@@ -443,6 +696,9 @@ const PurchaseOrderDetails = () => {
           .catch(() => null);
         const currencyData = await currencyResponse.json().catch(() => null);
         const storeData = await storeResponse.json().catch(() => null);
+        const purchaseStateData = await purchaseStateResponse
+          .json()
+          .catch(() => null);
 
         if (
           documentsResponse.ok &&
@@ -507,6 +763,18 @@ const PurchaseOrderDetails = () => {
           setStoreLookup(mapCatalogLookup(storeData.data));
         } else {
           setStoreLookup({});
+        }
+
+        if (
+          purchaseStateResponse.ok &&
+          purchaseStateData?.success &&
+          Array.isArray(purchaseStateData?.data)
+        ) {
+          setPurchaseStateLookup(mapCatalogLookup(purchaseStateData.data));
+          setPurchaseStateOptions(purchaseStateData.data);
+        } else {
+          setPurchaseStateLookup({});
+          setPurchaseStateOptions([]);
         }
       } catch (fetchError: any) {
         setError(
@@ -599,24 +867,27 @@ const PurchaseOrderDetails = () => {
                           const currency = getCurrencyMeta(
                             purchaseOrder.currency,
                             t,
-                            currencyLookup[purchaseOrder.currency]
+                            purchaseOrder.currencyLabel ||
+                              currencyLookup[purchaseOrder.currency]
                           );
                           const purchaseState = getPurchaseStateMeta(
                             purchaseOrder.purchaseState,
-                            t
+                            t,
+                            purchaseOrder.purchaseStateLabel ||
+                              purchaseStateLookup[purchaseOrder.purchaseState]
                           );
-                          const supplierLabel = getLookupLabel(
-                            supplierLookup,
-                            purchaseOrder.supplierID
-                          );
-                          const paymentConditionLabel = getLookupLabel(
-                            paymentConditionLookup,
-                            purchaseOrder.paymentCondition
-                          );
-                          const storeLabel = getLookupLabel(
-                            storeLookup,
-                            purchaseOrder.store
-                          );
+                          const supplierLabel =
+                            purchaseOrder.supplierLabel ||
+                            getLookupLabel(supplierLookup, purchaseOrder.supplierID);
+                          const paymentConditionLabel =
+                            purchaseOrder.paymentConditionLabel ||
+                            getLookupLabel(
+                              paymentConditionLookup,
+                              purchaseOrder.paymentCondition
+                            );
+                          const storeLabel =
+                            purchaseOrder.storeLabel ||
+                            getLookupLabel(storeLookup, purchaseOrder.store);
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
@@ -751,31 +1022,7 @@ const PurchaseOrderDetails = () => {
           </p>
 
           <div className="d-flex flex-column gap-2">
-            {(
-              [
-                {
-                  value: 1 as const,
-                  icon: "ri-checkbox-circle-line",
-                  colorClass: "success",
-                  label: t("Approved"),
-                  description: t("Generates the PDF of the purchase order."),
-                },
-                {
-                  value: 0 as const,
-                  icon: "ri-time-line",
-                  colorClass: "warning",
-                  label: t("Pending"),
-                  description: t("Leaves the order pending review."),
-                },
-                {
-                  value: 2 as const,
-                  icon: "ri-close-circle-line",
-                  colorClass: "danger",
-                  label: t("Rejected"),
-                  description: t("Rejects the purchase order."),
-                },
-              ] as const
-            ).map((option) => {
+            {modalStateOptions.map((option) => {
               const isSelected = selectedState === option.value;
               return (
                 <button
@@ -826,17 +1073,17 @@ const PurchaseOrderDetails = () => {
             {t("Cancel")}
           </Button>
           <Button
-            color={selectedState === 1 ? "success" : selectedState === 2 ? "danger" : "warning"}
+            color={selectedStateMeta?.colorClass || "primary"}
             size="sm"
             onClick={handleConfirmOrderState}
-            disabled={confirmingState}
+            disabled={confirmingState || selectedState === null}
           >
             {confirmingState ? (
               <>
                 <Spinner size="sm" className="me-1" />
                 {t("Processing...")}
               </>
-            ) : selectedState === 1 ? (
+            ) : selectedStateMeta?.kind === "approved" ? (
               <>
                 <i className="ri-file-download-line me-1" />
                 {t("Approve & Generate")}

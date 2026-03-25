@@ -51,6 +51,7 @@ interface GeneratePurchaseOrderPdfParams {
   purchaseOrder: PurchaseOrderPdfOrder;
   relatedDocument?: Document | null;
   supplier?: PurchaseOrderPdfSupplier | null;
+  documentAssociatedTypeLabel?: string;
   paymentConditionLabel?: string;
   currencyLabel?: string;
   storeLabel?: string;
@@ -93,10 +94,15 @@ const formatAmount = (value: number | string, numberLocale: string) =>
 
 const getDocumentTypeLabel = (
   documentAssociatedType: number,
-  relatedDocument?: Document | null
+  relatedDocument?: Document | null,
+  documentAssociatedTypeLabel?: string
 ) => {
   if (relatedDocument?.documenttype && typeof relatedDocument.documenttype === "object") {
     return safeValue(relatedDocument.documenttype.tipo);
+  }
+
+  if (String(documentAssociatedTypeLabel ?? "").trim()) {
+    return safeValue(documentAssociatedTypeLabel);
   }
 
   if (typeof relatedDocument?.documenttype === "number") {
@@ -190,6 +196,7 @@ export const generatePurchaseOrderPdf = async ({
   purchaseOrder,
   relatedDocument,
   supplier,
+  documentAssociatedTypeLabel,
   paymentConditionLabel,
   currencyLabel,
   storeLabel,
@@ -289,7 +296,8 @@ export const generatePurchaseOrderPdf = async ({
       "DOC. ASOCIADO",
       getDocumentTypeLabel(
         purchaseOrder.documentAssociatedType,
-        relatedDocument
+        relatedDocument,
+        documentAssociatedTypeLabel
       ),
     ],
     [
