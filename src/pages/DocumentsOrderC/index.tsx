@@ -17,9 +17,8 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
-import FloatingAlerts, {
-  FloatingAlertItem,
-} from "../../Components/Common/FloatingAlerts";
+import FloatingAlerts from "../../Components/Common/FloatingAlerts";
+import type { FloatingAlertItem } from "../../Components/Common/FloatingAlerts";
 import { buildApiUrl } from "../../helpers/api-url";
 import { buildSunatUrl, getSunatToken } from "../../helpers/external-api";
 import { Document } from "../Documents/types";
@@ -76,6 +75,18 @@ interface CatalogoItem {
   descripcion: string;
 }
 
+interface SupplierApiItem {
+  supplierid: number;
+  supplierno?: string;
+  suppliername?: string;
+}
+
+interface SupplierOptionItem {
+  supplierID: number;
+  supplierNo: string;
+  supplierName: string;
+}
+
 type SelectOption = { value: string; label: string };
 
 const CATALOG_ENDPOINTS: Record<string, string> = {
@@ -85,16 +96,28 @@ const CATALOG_ENDPOINTS: Record<string, string> = {
   purchaseState: "STATE_OF_PURCHASE_ORDER",
 };
 
-const CATALOG_API_BASE =
-  "https://docuware-api-a09ab977636d.herokuapp.com/api/catalogos/?tipo_catalogo=";
-
 const fetchCatalog = async (tipo: string): Promise<SelectOption[]> => {
-  const response = await fetch(`${CATALOG_API_BASE}${tipo}`);
+  const response = await fetch(buildApiUrl(`catalogos/?tipo_catalogo=${tipo}`));
   const data = await response.json();
   if (!data.success || !Array.isArray(data.data)) return [];
   return (data.data as CatalogoItem[]).map((item) => ({
     value: String(item.id),
     label: item.descripcion,
+  }));
+};
+
+const fetchSuppliers = async (): Promise<SupplierOptionItem[]> => {
+  const response = await fetch(buildApiUrl("proveedores"));
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
+    throw new Error(data?.message || "Error loading suppliers");
+  }
+
+  return (data.data as SupplierApiItem[]).map((item) => ({
+    supplierID: item.supplierid,
+    supplierNo: item.supplierno ?? "",
+    supplierName: item.suppliername ?? "",
   }));
 };
 
@@ -144,9 +167,8 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
   },
   {
     name: "supplierID",
-    labelKey: "Supplier ID",
-    placeholderKey: "Enter the supplier identifier",
-    type: "number",
+    labelKey: "Supplier",
+    placeholderKey: "Select supplier",
   },
   {
     name: "paymentCondition",
@@ -311,6 +333,8 @@ const getOrderCurrencyLabel = (currencyValue: string) => {
   }
 };
 
+const normalizeSupplierNumber = (value: string) => value.replace(/\D/g, "");
+
 const createInitialValues = (document: Document | null): OrderCFormValues => {
   const sessionUser = getCurrentSessionUser();
 
@@ -413,6 +437,7 @@ const DocumentOrderC = () => {
     store: [],
     purchaseState: [],
   });
+  const [supplierOptions, setSupplierOptions] = useState<SupplierOptionItem[]>([]);
   const orderCFields = getOrderCFields();
 
   useEffect(() => {
@@ -427,9 +452,31 @@ const DocumentOrderC = () => {
     };
     loadCatalogs();
   }, []);
+
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      try {
+        setSupplierOptions(await fetchSuppliers());
+      } catch (fetchError: any) {
+        setFeedback({
+          type: "danger",
+          message: fetchError?.message || t("Error loading suppliers"),
+        });
+      }
+    };
+
+    loadSuppliers();
+  }, [t]);
   const getFieldLabel = (fieldName: OrderCFieldName) =>
     orderCFields.find((field) => field.name === fieldName)?.labelKey || fieldName;
   const floatingAlerts: FloatingAlertItem[] = [];
+  const supplierSelectOptions: SelectOption[] = supplierOptions.map((supplier) => ({
+    value: String(supplier.supplierID),
+    label:
+      [supplier.supplierNo, supplier.supplierName]
+        .filter(Boolean)
+        .join(" - ") || String(supplier.supplierID),
+  }));
 
   if (prefillingFromSunat) {
     floatingAlerts.push({
@@ -482,6 +529,44 @@ const DocumentOrderC = () => {
   }, [document, sunatSearchValues]);
 
   useEffect(() => {
+    const normalizedSupplierNumber = normalizeSupplierNumber(values.suppliernumber);
+
+    if (!normalizedSupplierNumber || supplierOptions.length === 0) {
+      return;
+    }
+
+    const matchedSupplier = supplierOptions.find(
+      (supplier) =>
+        normalizeSupplierNumber(supplier.supplierNo) === normalizedSupplierNumber
+    );
+
+    if (!matchedSupplier) {
+      return;
+    }
+
+    setValues((prev) => {
+      const nextSupplierID = String(matchedSupplier.supplierID);
+      const nextSupplierNo = matchedSupplier.supplierNo || prev.suppliernumber;
+      const nextSupplierName = matchedSupplier.supplierName || prev.suppliername;
+
+      if (
+        prev.supplierID === nextSupplierID &&
+        prev.suppliernumber === nextSupplierNo &&
+        prev.suppliername === nextSupplierName
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        supplierID: nextSupplierID,
+        suppliernumber: nextSupplierNo,
+        suppliername: nextSupplierName,
+      };
+    });
+  }, [supplierOptions, values.suppliernumber]);
+
+  useEffect(() => {
     if (locationState?.document || !documentId) {
       setLoading(false);
       return;
@@ -521,6 +606,24 @@ const DocumentOrderC = () => {
 
   const handleChange = (field: OrderCFieldName, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSupplierChange = (selected: SelectOption | null) => {
+    if (!selected) {
+      setValues((prev) => ({ ...prev, supplierID: "" }));
+      return;
+    }
+
+    const selectedSupplier = supplierOptions.find(
+      (supplier) => String(supplier.supplierID) === selected.value
+    );
+
+    setValues((prev) => ({
+      ...prev,
+      supplierID: selected.value,
+      suppliernumber: selectedSupplier?.supplierNo || prev.suppliernumber,
+      suppliername: selectedSupplier?.supplierName || prev.suppliername,
+    }));
   };
 
   const handleSunatSearchValueChange = (
@@ -902,25 +1005,31 @@ const DocumentOrderC = () => {
                 <Row className="g-4">
                   {orderCFields.map((field) => {
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
+                    const isSupplierSelect = field.name === "supplierID";
+                    const selectOptions = isSupplierSelect
+                      ? supplierSelectOptions
+                      : catalogOptions[field.name] ?? [];
                     return (
                       <Col md={6} key={field.name}>
                         <div>
                           <Label className="form-label">
                             {t(field.labelKey)}
                           </Label>
-                          {isCatalogSelect ? (
+                          {isCatalogSelect || isSupplierSelect ? (
                             <Select
-                              options={catalogOptions[field.name] ?? []}
+                              options={selectOptions}
                               value={
-                                (catalogOptions[field.name] ?? []).find(
+                                selectOptions.find(
                                   (opt) => opt.value === values[field.name]
                                 ) ?? null
                               }
                               onChange={(selected: SelectOption | null) =>
-                                handleChange(
-                                  field.name,
-                                  selected ? selected.value : ""
-                                )
+                                isSupplierSelect
+                                  ? handleSupplierChange(selected)
+                                  : handleChange(
+                                      field.name,
+                                      selected ? selected.value : ""
+                                    )
                               }
                               placeholder={t(field.placeholderKey)}
                               isClearable

@@ -60,26 +60,60 @@ interface PurchaseOrder {
   details: PurchaseOrderDetail[];
 }
 
+interface CatalogItem {
+  id: number;
+  descripcion: string;
+}
+
+interface SupplierReference {
+  supplierid: number;
+  supplierno?: string;
+  suppliername?: string;
+}
+
 const getDocumentAssociatedNo = (document: Document) =>
   [document.documentserial, document.documentnumber].filter(Boolean).join("-");
 
-const getCurrencyMeta = (currency: number, t: (key: string) => string) => {
+const mapCatalogLookup = (items: CatalogItem[]) =>
+  items.reduce((acc: Record<number, string>, item) => {
+    acc[item.id] = item.descripcion;
+    return acc;
+  }, {});
+
+const mapSupplierLookup = (items: SupplierReference[]) =>
+  items.reduce((acc: Record<number, string>, item) => {
+    const label =
+      [item.supplierno, item.suppliername].filter(Boolean).join(" - ") ||
+      String(item.supplierid);
+
+    acc[item.supplierid] = label;
+    return acc;
+  }, {});
+
+const getLookupLabel = (lookup: Record<number, string>, value: number) =>
+  lookup[value] || String(value ?? "-");
+
+const getCurrencyMeta = (
+  currency: number,
+  t: (key: string) => string,
+  currencyLabel?: string
+) => {
   switch (currency) {
     case 1:
       return {
-        label: "PEN",
+        label: currencyLabel || "PEN",
         alt: "Peru",
         imageUrl: "https://flagcdn.com/w40/pe.png",
       };
     case 2:
       return {
-        label: "USD",
+        label: currencyLabel || "USD",
         alt: "USA",
         imageUrl: "https://flagcdn.com/w40/us.png",
       };
     default:
       return {
-        label: String(currency ?? "-"),
+        label: currencyLabel || String(currency ?? "-"),
         alt: t("Currency"),
         imageUrl: null,
       };
@@ -150,6 +184,12 @@ const PurchaseOrderDetails = () => {
   const [documentsByAssociatedNo, setDocumentsByAssociatedNo] = useState<
     Record<string, Document>
   >({});
+  const [supplierLookup, setSupplierLookup] = useState<Record<number, string>>({});
+  const [paymentConditionLookup, setPaymentConditionLookup] = useState<
+    Record<number, string>
+  >({});
+  const [currencyLookup, setCurrencyLookup] = useState<Record<number, string>>({});
+  const [storeLookup, setStoreLookup] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -178,9 +218,32 @@ const PurchaseOrderDetails = () => {
       return true;
     }
 
+    const supplierLabel = getLookupLabel(
+      supplierLookup,
+      purchaseOrder.supplierID
+    ).toLowerCase();
+    const paymentConditionLabel = getLookupLabel(
+      paymentConditionLookup,
+      purchaseOrder.paymentCondition
+    ).toLowerCase();
+    const currencyLabel = getCurrencyMeta(
+      purchaseOrder.currency,
+      t,
+      currencyLookup[purchaseOrder.currency]
+    ).label.toLowerCase();
+    const storeLabel = getLookupLabel(storeLookup, purchaseOrder.store).toLowerCase();
+
     return (
       matchesSearchValue(purchaseOrder, term) ||
-      getCurrencyMeta(purchaseOrder.currency, t).label.toLowerCase().includes(term) ||
+      supplierLabel.includes(term) ||
+      paymentConditionLabel.includes(term) ||
+      currencyLabel.includes(term) ||
+      storeLabel.includes(term) ||
+      getCurrencyMeta(
+        purchaseOrder.currency,
+        t,
+        currencyLookup[purchaseOrder.currency]
+      ).label.toLowerCase().includes(term) ||
       getPurchaseStateMeta(purchaseOrder.purchaseState, t).label
         .toLowerCase()
         .includes(term)
@@ -279,9 +342,20 @@ const PurchaseOrderDetails = () => {
         setError(null);
         setActionError(null);
 
-        const [purchaseOrdersResponse, documentsResponse] = await Promise.all([
+        const [
+          purchaseOrdersResponse,
+          documentsResponse,
+          suppliersResponse,
+          paymentConditionResponse,
+          currencyResponse,
+          storeResponse,
+        ] = await Promise.all([
           fetch(buildApiUrl("purchase-orders/")),
           fetch(buildApiUrl("documents")),
+          fetch(buildApiUrl("proveedores")),
+          fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_CONDITION")),
+          fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
+          fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
         ]);
         const purchaseOrdersData = await purchaseOrdersResponse
           .json()
@@ -300,6 +374,12 @@ const PurchaseOrderDetails = () => {
         setPurchaseOrders(purchaseOrdersData.data);
 
         const documentsData = await documentsResponse.json().catch(() => null);
+        const suppliersData = await suppliersResponse.json().catch(() => null);
+        const paymentConditionData = await paymentConditionResponse
+          .json()
+          .catch(() => null);
+        const currencyData = await currencyResponse.json().catch(() => null);
+        const storeData = await storeResponse.json().catch(() => null);
 
         if (
           documentsResponse.ok &&
@@ -322,6 +402,46 @@ const PurchaseOrderDetails = () => {
           setDocumentsByAssociatedNo(indexedDocuments);
         } else {
           setDocumentsByAssociatedNo({});
+        }
+
+        if (
+          suppliersResponse.ok &&
+          suppliersData?.success &&
+          Array.isArray(suppliersData?.data)
+        ) {
+          setSupplierLookup(mapSupplierLookup(suppliersData.data));
+        } else {
+          setSupplierLookup({});
+        }
+
+        if (
+          paymentConditionResponse.ok &&
+          paymentConditionData?.success &&
+          Array.isArray(paymentConditionData?.data)
+        ) {
+          setPaymentConditionLookup(mapCatalogLookup(paymentConditionData.data));
+        } else {
+          setPaymentConditionLookup({});
+        }
+
+        if (
+          currencyResponse.ok &&
+          currencyData?.success &&
+          Array.isArray(currencyData?.data)
+        ) {
+          setCurrencyLookup(mapCatalogLookup(currencyData.data));
+        } else {
+          setCurrencyLookup({});
+        }
+
+        if (
+          storeResponse.ok &&
+          storeData?.success &&
+          Array.isArray(storeData?.data)
+        ) {
+          setStoreLookup(mapCatalogLookup(storeData.data));
+        } else {
+          setStoreLookup({});
         }
       } catch (fetchError: any) {
         setError(
@@ -413,20 +533,33 @@ const PurchaseOrderDetails = () => {
                         paginatedPurchaseOrders.map((purchaseOrder) => {
                           const currency = getCurrencyMeta(
                             purchaseOrder.currency,
-                            t
+                            t,
+                            currencyLookup[purchaseOrder.currency]
                           );
                           const purchaseState = getPurchaseStateMeta(
                             purchaseOrder.purchaseState,
                             t
+                          );
+                          const supplierLabel = getLookupLabel(
+                            supplierLookup,
+                            purchaseOrder.supplierID
+                          );
+                          const paymentConditionLabel = getLookupLabel(
+                            paymentConditionLookup,
+                            purchaseOrder.paymentCondition
+                          );
+                          const storeLabel = getLookupLabel(
+                            storeLookup,
+                            purchaseOrder.store
                           );
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
                               <td>#{purchaseOrder.purchaseOrderID}</td>
                               <td>{purchaseOrder.orderNo}</td>
-                              <td>{purchaseOrder.supplierID}</td>
+                              <td>{supplierLabel}</td>
                               <td>{purchaseOrder.documentAssociatedNo}</td>
-                              <td>{purchaseOrder.paymentCondition}</td>
+                              <td>{paymentConditionLabel}</td>
                               <td>
                                 <div className="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-pill bg-light border">
                                   {currency.imageUrl && (
@@ -444,7 +577,7 @@ const PurchaseOrderDetails = () => {
                                 </div>
                               </td>
                               <td>{purchaseOrder.guideNo}</td>
-                              <td>{purchaseOrder.store}</td>
+                              <td>{storeLabel}</td>
                               <td>
                                 <span className={purchaseState.className}>
                                   <i className={purchaseState.icon} />

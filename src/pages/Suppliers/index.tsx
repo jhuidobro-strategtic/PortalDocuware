@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
+import Select from "react-select";
 import {
   Button,
   Card,
@@ -26,16 +27,15 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../Components/Common/BreadCrumb";
-import FloatingAlerts, {
-  FloatingAlertItem,
-} from "../../Components/Common/FloatingAlerts";
+import FloatingAlerts from "../../Components/Common/FloatingAlerts";
+import type { FloatingAlertItem } from "../../Components/Common/FloatingAlerts";
+import { buildApiUrl } from "../../helpers/api-url";
 import {
   buildFactilizaUrl,
   getFactilizaToken,
 } from "../../helpers/external-api";
 
-const SUPPLIERS_API_URL =
-  "https://docuware-api-a09ab977636d.herokuapp.com/api/proveedores";
+type SelectOption = { value: string; label: string };
 
 interface BankInfo {
   id: number;
@@ -147,10 +147,12 @@ const mapApiSupplier = (item: any): Supplier => ({
   updatedAt: item.updatedat ?? "",
 });
 
-const buildCreatePayload = (
+const buildSupplierPayload = (
   formValues: SupplierFormValues,
-  userId: number | null
+  userId: number | null,
+  editingSupplier: Supplier | null
 ) => ({
+  ...(editingSupplier ? { supplierid: editingSupplier.supplierID } : {}),
   supplierno: formValues.supplierNo.trim(),
   suppliername: formValues.supplierName.trim(),
   address: formValues.address.trim(),
@@ -160,7 +162,7 @@ const buildCreatePayload = (
   accountno1: formValues.accountNo1.trim(),
   bank2_id: formValues.bank2.trim() ? Number(formValues.bank2) : null,
   accountno2: formValues.accountNo2.trim(),
-  createdby: userId,
+  createdby: editingSupplier?.createdBy ?? userId,
   updatedby: userId,
 });
 
@@ -175,11 +177,6 @@ const mapSupplierToFormValues = (supplier: Supplier): SupplierFormValues => ({
   bank2: supplier.bank2 ? String(supplier.bank2.id) : "",
   accountNo2: supplier.accountNo2,
 });
-
-const parseOptionalNumber = (value: string) => {
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) && value.trim() !== "" ? parsedValue : null;
-};
 
 const formatAuditDate = (value: string) =>
   value ? moment(value).format("DD/MM/YYYY HH:mm") : "-";
@@ -228,6 +225,7 @@ const SuppliersPage = () => {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isFetchingRuc, setIsFetchingRuc] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bankOptions, setBankOptions] = useState<SelectOption[]>([]);
 
   const itemsPerPage = 10;
 
@@ -236,10 +234,26 @@ const SuppliersPage = () => {
   }, [t]);
 
   useEffect(() => {
+    fetch(buildApiUrl("catalogos/?tipo_catalogo=BANK"))
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setBankOptions(
+            data.data.map((item: { id: number; descripcion: string }) => ({
+              value: String(item.id),
+              label: item.descripcion,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const fetchSuppliers = async () => {
       try {
         setLoadingSuppliers(true);
-        const response = await fetch(SUPPLIERS_API_URL);
+        const response = await fetch(buildApiUrl("proveedores"));
         const data = await response.json();
         if (!data.success || !Array.isArray(data.data)) {
           throw new Error(data.message || t("Error loading suppliers"));
@@ -460,50 +474,14 @@ const SuppliersPage = () => {
       return;
     }
 
-    if (editingSupplier) {
-      const now = new Date().toISOString();
-      setSuppliers((prev) =>
-        prev.map((supplier) =>
-          supplier.supplierID === editingSupplier.supplierID
-            ? {
-                ...supplier,
-                supplierNo: normalizeRuc(formValues.supplierNo),
-                supplierName: formValues.supplierName.trim(),
-                address: formValues.address.trim(),
-                phone: formValues.phone.trim(),
-                email: formValues.email.trim(),
-                bank1: formValues.bank1.trim()
-                  ? {
-                      id: parseOptionalNumber(formValues.bank1) as number,
-                      descripcion: formValues.bank1.trim(),
-                    }
-                  : null,
-                accountNo1: formValues.accountNo1.trim(),
-                bank2: formValues.bank2.trim()
-                  ? {
-                      id: parseOptionalNumber(formValues.bank2) as number,
-                      descripcion: formValues.bank2.trim(),
-                    }
-                  : null,
-                accountNo2: formValues.accountNo2.trim(),
-                updatedBy: sessionUser.id,
-                updatedAt: now,
-              }
-            : supplier
-        )
-      );
-      setFeedback({
-        type: "success",
-        message: t("Supplier updated successfully."),
-      });
-      handleCloseModal();
-      return;
-    }
-
     try {
       setSubmitting(true);
-      const payload = buildCreatePayload(formValues, sessionUser.id);
-      const response = await fetch(`${SUPPLIERS_API_URL}/`, {
+      const payload = buildSupplierPayload(
+        formValues,
+        sessionUser.id,
+        editingSupplier
+      );
+      const response = await fetch(buildApiUrl("proveedores/"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -511,21 +489,44 @@ const SuppliersPage = () => {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data?.message || t("Error registering supplier"));
+        throw new Error(
+          data?.message ||
+            (editingSupplier
+              ? t("Error updating supplier")
+              : t("Error registering supplier"))
+        );
       }
 
-      const newSupplier = mapApiSupplier(data.data ?? data);
-      setSuppliers((prev) => [newSupplier, ...prev]);
+      const persistedSupplier = mapApiSupplier(data.data ?? data);
+      setSuppliers((prev) =>
+        editingSupplier
+          ? prev.map((supplier) =>
+              supplier.supplierID === editingSupplier.supplierID
+                ? persistedSupplier
+                : supplier
+            )
+          : [persistedSupplier, ...prev]
+      );
       setFeedback({
         type: "success",
-        message: data?.message || t("Supplier registered successfully."),
+        message:
+          data?.message ||
+          (editingSupplier
+            ? t("Supplier updated successfully.")
+            : t("Supplier registered successfully.")),
       });
       handleCloseModal();
-      setCurrentPage(1);
+      if (!editingSupplier) {
+        setCurrentPage(1);
+      }
     } catch (err: any) {
       setFeedback({
         type: "danger",
-        message: err.message || t("Error registering supplier"),
+        message:
+          err.message ||
+          (editingSupplier
+            ? t("Error updating supplier")
+            : t("Error registering supplier")),
       });
     } finally {
       setSubmitting(false);
@@ -857,17 +858,24 @@ const SuppliersPage = () => {
                 <Row className="g-4">
                   <Col md={3}>
                     <Label className="form-label">{t("Bank 1")}</Label>
-                    <Input
-                      type="number"
-                      value={formValues.bank1}
-                      onChange={(event) =>
-                        handleFormValueChange("bank1", event.target.value)
+                    <Select
+                      options={bankOptions}
+                      value={
+                        bankOptions.find(
+                          (opt) => opt.value === formValues.bank1
+                        ) ?? null
                       }
-                      invalid={Boolean(formErrors.bank1)}
-                      placeholder="1"
+                      onChange={(selected: SelectOption | null) => {
+                        handleFormValueChange("bank1", selected ? selected.value : "");
+                      }}
+                      placeholder={t("Select bank")}
+                      isClearable
+                      classNamePrefix="select2-selection"
                     />
                     {formErrors.bank1 && (
-                      <FormFeedback>{formErrors.bank1}</FormFeedback>
+                      <div className="text-danger small mt-1">
+                        {formErrors.bank1}
+                      </div>
                     )}
                   </Col>
                   <Col md={9}>
@@ -886,17 +894,24 @@ const SuppliersPage = () => {
                   </Col>
                   <Col md={3}>
                     <Label className="form-label">{t("Bank 2")}</Label>
-                    <Input
-                      type="number"
-                      value={formValues.bank2}
-                      onChange={(event) =>
-                        handleFormValueChange("bank2", event.target.value)
+                    <Select
+                      options={bankOptions}
+                      value={
+                        bankOptions.find(
+                          (opt) => opt.value === formValues.bank2
+                        ) ?? null
                       }
-                      invalid={Boolean(formErrors.bank2)}
-                      placeholder="2"
+                      onChange={(selected: SelectOption | null) => {
+                        handleFormValueChange("bank2", selected ? selected.value : "");
+                      }}
+                      placeholder={t("Select bank")}
+                      isClearable
+                      classNamePrefix="select2-selection"
                     />
                     {formErrors.bank2 && (
-                      <FormFeedback>{formErrors.bank2}</FormFeedback>
+                      <div className="text-danger small mt-1">
+                        {formErrors.bank2}
+                      </div>
                     )}
                   </Col>
                   <Col md={9}>
