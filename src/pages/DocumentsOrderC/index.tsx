@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import Select from "react-select";
 import {
   Button,
   Card,
@@ -70,6 +71,33 @@ interface FeedbackState {
   message: string;
 }
 
+interface CatalogoItem {
+  id: number;
+  descripcion: string;
+}
+
+type SelectOption = { value: string; label: string };
+
+const CATALOG_ENDPOINTS: Record<string, string> = {
+  paymentCondition: "PAYMENT_CONDITION",
+  currency: "MONEY",
+  store: "STORE_WAREHOUSE",
+  purchaseState: "STATE_OF_PURCHASE_ORDER",
+};
+
+const CATALOG_API_BASE =
+  "https://docuware-api-a09ab977636d.herokuapp.com/api/catalogos/?tipo_catalogo=";
+
+const fetchCatalog = async (tipo: string): Promise<SelectOption[]> => {
+  const response = await fetch(`${CATALOG_API_BASE}${tipo}`);
+  const data = await response.json();
+  if (!data.success || !Array.isArray(data.data)) return [];
+  return (data.data as CatalogoItem[]).map((item) => ({
+    value: String(item.id),
+    label: item.descripcion,
+  }));
+};
+
 interface SunatInvoiceItem {
   descripcion?: string;
   cantidad?: number | string;
@@ -123,14 +151,12 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
   {
     name: "paymentCondition",
     labelKey: "Payment Condition",
-    placeholderKey: "E.g. 1",
-    type: "number",
+    placeholderKey: "Select payment condition",
   },
   {
     name: "currency",
     labelKey: "Currency",
-    placeholderKey: "E.g. 1",
-    type: "number",
+    placeholderKey: "Select currency",
   },
   {
     name: "guideNo",
@@ -140,14 +166,12 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
   {
     name: "store",
     labelKey: "Warehouse",
-    placeholderKey: "E.g. 2",
-    type: "number",
+    placeholderKey: "Select warehouse",
   },
   {
     name: "purchaseState",
     labelKey: "Purchase Status",
-    placeholderKey: "E.g. 1",
-    type: "number",
+    placeholderKey: "Select purchase status",
   },
   {
     name: "createdByName",
@@ -381,7 +405,28 @@ const DocumentOrderC = () => {
   const [prefillingFromSunat, setPrefillingFromSunat] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [catalogOptions, setCatalogOptions] = useState<
+    Record<string, SelectOption[]>
+  >({
+    paymentCondition: [],
+    currency: [],
+    store: [],
+    purchaseState: [],
+  });
   const orderCFields = getOrderCFields();
+
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      const entries = await Promise.all(
+        Object.entries(CATALOG_ENDPOINTS).map(async ([field, tipo]) => [
+          field,
+          await fetchCatalog(tipo),
+        ])
+      );
+      setCatalogOptions(Object.fromEntries(entries));
+    };
+    loadCatalogs();
+  }, []);
   const getFieldLabel = (fieldName: OrderCFieldName) =>
     orderCFields.find((field) => field.name === fieldName)?.labelKey || fieldName;
   const floatingAlerts: FloatingAlertItem[] = [];
@@ -855,28 +900,53 @@ const DocumentOrderC = () => {
                   {t("General Data")}
                 </h6>
                 <Row className="g-4">
-                  {orderCFields.map((field) => (
-                    <Col md={6} key={field.name}>
-                      <div>
-                        <Label className="form-label">{t(field.labelKey)}</Label>
-                        <Input
-                          type={field.type || "text"}
-                          value={values[field.name]}
-                          onChange={(event) =>
-                            handleChange(field.name, event.target.value)
-                          }
-                          placeholder={t(field.placeholderKey)}
-                          readOnly={field.readOnly}
-                          className={field.readOnly ? "bg-light" : ""}
-                        />
-                        {field.helperTextKey && (
-                          <small className="text-muted d-block mt-1">
-                            {t(field.helperTextKey)}
-                          </small>
-                        )}
-                      </div>
-                    </Col>
-                  ))}
+                  {orderCFields.map((field) => {
+                    const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
+                    return (
+                      <Col md={6} key={field.name}>
+                        <div>
+                          <Label className="form-label">
+                            {t(field.labelKey)}
+                          </Label>
+                          {isCatalogSelect ? (
+                            <Select
+                              options={catalogOptions[field.name] ?? []}
+                              value={
+                                (catalogOptions[field.name] ?? []).find(
+                                  (opt) => opt.value === values[field.name]
+                                ) ?? null
+                              }
+                              onChange={(selected: SelectOption | null) =>
+                                handleChange(
+                                  field.name,
+                                  selected ? selected.value : ""
+                                )
+                              }
+                              placeholder={t(field.placeholderKey)}
+                              isClearable
+                              classNamePrefix="select2-selection"
+                            />
+                          ) : (
+                            <Input
+                              type={field.type || "text"}
+                              value={values[field.name]}
+                              onChange={(event) =>
+                                handleChange(field.name, event.target.value)
+                              }
+                              placeholder={t(field.placeholderKey)}
+                              readOnly={field.readOnly}
+                              className={field.readOnly ? "bg-light" : ""}
+                            />
+                          )}
+                          {field.helperTextKey && (
+                            <small className="text-muted d-block mt-1">
+                              {t(field.helperTextKey)}
+                            </small>
+                          )}
+                        </div>
+                      </Col>
+                    );
+                  })}
                 </Row>
               </div>
 

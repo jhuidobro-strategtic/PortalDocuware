@@ -21,6 +21,7 @@ import {
   PaginationItem,
   PaginationLink,
   Row,
+  Spinner,
   Table,
 } from "reactstrap";
 
@@ -33,7 +34,13 @@ import {
   getFactilizaToken,
 } from "../../helpers/external-api";
 
-const SUPPLIERS_STORAGE_KEY = "suppliers-local-data";
+const SUPPLIERS_API_URL =
+  "https://docuware-api-a09ab977636d.herokuapp.com/api/proveedores";
+
+interface BankInfo {
+  id: number;
+  descripcion: string;
+}
 
 interface Supplier {
   supplierID: number;
@@ -42,9 +49,9 @@ interface Supplier {
   address: string;
   phone: string;
   email: string;
-  bank1: number | null;
+  bank1: BankInfo | null;
   accountNo1: string;
-  bank2: number | null;
+  bank2: BankInfo | null;
   accountNo2: string;
   createdBy: number | null;
   createdAt: string;
@@ -119,72 +126,43 @@ const getCurrentSessionUser = (): SessionUser => {
   }
 };
 
-const buildInitialSuppliers = (createdBy: number | null): Supplier[] => [
-  {
-    supplierID: 1,
-    supplierNo: "20568477236",
-    supplierName: "TCC MOTORS S.A.",
-    address: "Av. Javier Prado Este 410, San Isidro",
-    phone: "987654321",
-    email: "proveedores@tccmotors.pe",
-    bank1: 1,
-    accountNo1: "001-458796321",
-    bank2: 2,
-    accountNo2: "191-000258741",
-    createdBy,
-    createdAt: "2026-03-20T09:15:00.000Z",
-    updatedBy: createdBy,
-    updatedAt: "2026-03-20T09:15:00.000Z",
-  },
-  {
-    supplierID: 2,
-    supplierNo: "20600045521",
-    supplierName: "Servicios Integrales del Norte S.A.C.",
-    address: "Mz. B Lt. 12 Parque Industrial, Trujillo",
-    phone: "944221133",
-    email: "contacto@sinorte.com",
-    bank1: 3,
-    accountNo1: "003-987456123",
-    bank2: null,
-    accountNo2: "",
-    createdBy,
-    createdAt: "2026-03-18T14:20:00.000Z",
-    updatedBy: createdBy,
-    updatedAt: "2026-03-21T10:05:00.000Z",
-  },
-  {
-    supplierID: 3,
-    supplierNo: "20481234567",
-    supplierName: "Transportes y Repuestos del Sur E.I.R.L.",
-    address: "Calle Los Talleres 245, Arequipa",
-    phone: "956778899",
-    email: "ventas@trsureirl.pe",
-    bank1: 4,
-    accountNo1: "004-775544221",
-    bank2: 5,
-    accountNo2: "005-112233445",
-    createdBy,
-    createdAt: "2026-03-15T08:45:00.000Z",
-    updatedBy: createdBy,
-    updatedAt: "2026-03-22T16:30:00.000Z",
-  },
-];
+const mapApiSupplier = (item: any): Supplier => ({
+  supplierID: item.supplierid,
+  supplierNo: item.supplierno ?? "",
+  supplierName: item.suppliername ?? "",
+  address: item.address ?? "",
+  phone: item.phone ?? "",
+  email: item.email ?? "",
+  bank1: item.bank1
+    ? { id: item.bank1.id, descripcion: item.bank1.descripcion }
+    : null,
+  accountNo1: item.accountno1 ?? "",
+  bank2: item.bank2
+    ? { id: item.bank2.id, descripcion: item.bank2.descripcion }
+    : null,
+  accountNo2: item.accountno2 ?? "",
+  createdBy: item.createdby ?? null,
+  createdAt: item.createdat ?? "",
+  updatedBy: item.updatedby ?? null,
+  updatedAt: item.updatedat ?? "",
+});
 
-const loadStoredSuppliers = (createdBy: number | null): Supplier[] => {
-  try {
-    const storedSuppliers = localStorage.getItem(SUPPLIERS_STORAGE_KEY);
-    if (!storedSuppliers) {
-      return buildInitialSuppliers(createdBy);
-    }
-
-    const parsedSuppliers = JSON.parse(storedSuppliers);
-    return Array.isArray(parsedSuppliers)
-      ? parsedSuppliers
-      : buildInitialSuppliers(createdBy);
-  } catch {
-    return buildInitialSuppliers(createdBy);
-  }
-};
+const buildCreatePayload = (
+  formValues: SupplierFormValues,
+  userId: number | null
+) => ({
+  supplierno: formValues.supplierNo.trim(),
+  suppliername: formValues.supplierName.trim(),
+  address: formValues.address.trim(),
+  phone: formValues.phone.trim(),
+  email: formValues.email.trim(),
+  bank1_id: formValues.bank1.trim() ? Number(formValues.bank1) : null,
+  accountno1: formValues.accountNo1.trim(),
+  bank2_id: formValues.bank2.trim() ? Number(formValues.bank2) : null,
+  accountno2: formValues.accountNo2.trim(),
+  createdby: userId,
+  updatedby: userId,
+});
 
 const mapSupplierToFormValues = (supplier: Supplier): SupplierFormValues => ({
   supplierNo: supplier.supplierNo,
@@ -192,9 +170,9 @@ const mapSupplierToFormValues = (supplier: Supplier): SupplierFormValues => ({
   address: supplier.address,
   phone: supplier.phone,
   email: supplier.email,
-  bank1: supplier.bank1 ? String(supplier.bank1) : "",
+  bank1: supplier.bank1 ? String(supplier.bank1.id) : "",
   accountNo1: supplier.accountNo1,
-  bank2: supplier.bank2 ? String(supplier.bank2) : "",
+  bank2: supplier.bank2 ? String(supplier.bank2.id) : "",
   accountNo2: supplier.accountNo2,
 });
 
@@ -237,9 +215,8 @@ const matchesSearchValue = (value: unknown, term: string): boolean => {
 const SuppliersPage = () => {
   const { t } = useTranslation();
   const sessionUser = getCurrentSessionUser();
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() =>
-    loadStoredSuppliers(sessionUser.id)
-  );
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -250,6 +227,7 @@ const SuppliersPage = () => {
   const [formErrors, setFormErrors] = useState<SupplierFormErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isFetchingRuc, setIsFetchingRuc] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -258,8 +236,27 @@ const SuppliersPage = () => {
   }, [t]);
 
   useEffect(() => {
-    localStorage.setItem(SUPPLIERS_STORAGE_KEY, JSON.stringify(suppliers));
-  }, [suppliers]);
+    const fetchSuppliers = async () => {
+      try {
+        setLoadingSuppliers(true);
+        const response = await fetch(SUPPLIERS_API_URL);
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.data)) {
+          throw new Error(data.message || t("Error loading suppliers"));
+        }
+        setSuppliers(data.data.map(mapApiSupplier));
+      } catch {
+        setFeedback({
+          type: "danger",
+          message: t("Error loading suppliers"),
+        });
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    };
+
+    fetchSuppliers();
+  }, [t]);
 
   const filteredSuppliers = suppliers.filter((supplier) => {
     const term = searchTerm.toLowerCase().trim();
@@ -279,9 +276,10 @@ const SuppliersPage = () => {
       id: "suppliers-feedback",
       type: feedback.type,
       message: feedback.message,
-      autoDismissMs: feedback.type === "success" || feedback.type === "info"
-        ? 5000
-        : undefined,
+      autoDismissMs:
+        feedback.type === "success" || feedback.type === "info"
+          ? 5000
+          : undefined,
     });
   }
 
@@ -314,10 +312,7 @@ const SuppliersPage = () => {
     resetFormState();
   };
 
-  const handleFormValueChange = (
-    field: SupplierFormField,
-    value: string
-  ) => {
+  const handleFormValueChange = (field: SupplierFormField, value: string) => {
     setFormValues((prev) => ({
       ...prev,
       [field]: field === "supplierNo" ? normalizeRuc(value) : value,
@@ -349,11 +344,14 @@ const SuppliersPage = () => {
     setIsFetchingRuc(true);
 
     try {
-      const response = await fetch(buildFactilizaUrl(`ruc/info/${normalizedRuc}`), {
-        headers: {
-          Authorization: `Bearer ${factilizaToken}`,
-        },
-      });
+      const response = await fetch(
+        buildFactilizaUrl(`ruc/info/${normalizedRuc}`),
+        {
+          headers: {
+            Authorization: `Bearer ${factilizaToken}`,
+          },
+        }
+      );
       const result = await response.json();
       const supplierData = result?.data;
 
@@ -453,7 +451,7 @@ const SuppliersPage = () => {
     return nextErrors;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextErrors = validateForm();
 
@@ -462,73 +460,79 @@ const SuppliersPage = () => {
       return;
     }
 
-    const now = new Date().toISOString();
-
     if (editingSupplier) {
+      const now = new Date().toISOString();
       setSuppliers((prev) =>
         prev.map((supplier) =>
           supplier.supplierID === editingSupplier.supplierID
             ? {
                 ...supplier,
-                ...{
-                  supplierNo: normalizeRuc(formValues.supplierNo),
-                  supplierName: formValues.supplierName.trim(),
-                  address: formValues.address.trim(),
-                  phone: formValues.phone.trim(),
-                  email: formValues.email.trim(),
-                  bank1: parseOptionalNumber(formValues.bank1),
-                  accountNo1: formValues.accountNo1.trim(),
-                  bank2: parseOptionalNumber(formValues.bank2),
-                  accountNo2: formValues.accountNo2.trim(),
-                  updatedBy: sessionUser.id,
-                  updatedAt: now,
-                },
+                supplierNo: normalizeRuc(formValues.supplierNo),
+                supplierName: formValues.supplierName.trim(),
+                address: formValues.address.trim(),
+                phone: formValues.phone.trim(),
+                email: formValues.email.trim(),
+                bank1: formValues.bank1.trim()
+                  ? {
+                      id: parseOptionalNumber(formValues.bank1) as number,
+                      descripcion: formValues.bank1.trim(),
+                    }
+                  : null,
+                accountNo1: formValues.accountNo1.trim(),
+                bank2: formValues.bank2.trim()
+                  ? {
+                      id: parseOptionalNumber(formValues.bank2) as number,
+                      descripcion: formValues.bank2.trim(),
+                    }
+                  : null,
+                accountNo2: formValues.accountNo2.trim(),
+                updatedBy: sessionUser.id,
+                updatedAt: now,
               }
             : supplier
         )
       );
-
       setFeedback({
         type: "success",
-        message: t("Local supplier updated successfully."),
+        message: t("Supplier updated successfully."),
       });
-    } else {
-      const nextSupplierId =
-        suppliers.reduce(
-          (maxSupplierId, supplier) =>
-            Math.max(maxSupplierId, supplier.supplierID),
-          0
-        ) + 1;
+      handleCloseModal();
+      return;
+    }
 
-      const newSupplier: Supplier = {
-        supplierID: nextSupplierId,
-        supplierNo: normalizeRuc(formValues.supplierNo),
-        supplierName: formValues.supplierName.trim(),
-        address: formValues.address.trim(),
-        phone: formValues.phone.trim(),
-        email: formValues.email.trim(),
-        bank1: parseOptionalNumber(formValues.bank1),
-        accountNo1: formValues.accountNo1.trim(),
-        bank2: parseOptionalNumber(formValues.bank2),
-        accountNo2: formValues.accountNo2.trim(),
-        createdBy: sessionUser.id,
-        createdAt: now,
-        updatedBy: sessionUser.id,
-        updatedAt: now,
-      };
+    try {
+      setSubmitting(true);
+      const payload = buildCreatePayload(formValues, sessionUser.id);
+      const response = await fetch(`${SUPPLIERS_API_URL}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
 
+      if (!response.ok) {
+        throw new Error(data?.message || t("Error registering supplier"));
+      }
+
+      const newSupplier = mapApiSupplier(data.data ?? data);
       setSuppliers((prev) => [newSupplier, ...prev]);
       setFeedback({
         type: "success",
-        message: t("Local supplier registered successfully."),
+        message: data?.message || t("Supplier registered successfully."),
       });
+      handleCloseModal();
+      setCurrentPage(1);
+    } catch (err: any) {
+      setFeedback({
+        type: "danger",
+        message: err.message || t("Error registering supplier"),
+      });
+    } finally {
+      setSubmitting(false);
     }
-
-    handleCloseModal();
-    setCurrentPage(1);
   };
 
-  const renderBankCell = (bank: number | null, accountNo: string) => {
+  const renderBankCell = (bank: BankInfo | null, accountNo: string) => {
     if (!bank && !accountNo) {
       return <span className="text-muted">-</span>;
     }
@@ -536,7 +540,7 @@ const SuppliersPage = () => {
     return (
       <div>
         <span className="badge bg-light text-secondary border mb-2">
-          {t("Bank")}: {bank ?? "-"}
+          {bank ? bank.descripcion : "-"}
         </span>
         <div className="text-muted small">{accountNo || "-"}</div>
       </div>
@@ -599,114 +603,130 @@ const SuppliersPage = () => {
               </div>
             </div>
 
-            <div className="table-responsive">
-              <Table className="table align-middle table-nowrap mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: "90px" }}>ID</th>
-                    <th style={{ width: "140px" }}>{t("RUC")}</th>
-                    <th>{t("Supplier")}</th>
-                    <th style={{ width: "220px" }}>{t("Contact")}</th>
-                    <th style={{ width: "220px" }}>{t("Bank 1")}</th>
-                    <th style={{ width: "220px" }}>{t("Bank 2")}</th>
-                    <th style={{ width: "190px" }}>{t("Created")}</th>
-                    <th style={{ width: "190px" }}>{t("Updated")}</th>
-                    <th style={{ width: "120px" }} className="text-center">
-                      {t("Actions")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedSuppliers.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-4">
-                        {t("No suppliers were found.")}
-                      </td>
-                    </tr>
-                  ) : (
-                    paginatedSuppliers.map((supplier) => (
-                      <tr key={supplier.supplierID}>
-                        <td>#{supplier.supplierID}</td>
-                        <td className="fw-semibold">{supplier.supplierNo}</td>
-                        <td>
-                          <div className="fw-semibold">{supplier.supplierName}</div>
-                          <div className="text-muted small">
-                            {supplier.address || "-"}
-                          </div>
-                        </td>
-                        <td>
-                          <div>{supplier.phone || "-"}</div>
-                          <div className="text-muted small">
-                            {supplier.email || "-"}
-                          </div>
-                        </td>
-                        <td>{renderBankCell(supplier.bank1, supplier.accountNo1)}</td>
-                        <td>{renderBankCell(supplier.bank2, supplier.accountNo2)}</td>
-                        <td>
-                          {renderAuditCell(
-                            supplier.createdAt,
-                            supplier.createdBy,
-                            "Created by"
-                          )}
-                        </td>
-                        <td>
-                          {renderAuditCell(
-                            supplier.updatedAt,
-                            supplier.updatedBy,
-                            "Updated by"
-                          )}
-                        </td>
-                        <td className="text-center">
-                          <Button
-                            color="warning"
-                            outline
-                            size="sm"
-                            onClick={() => handleOpenEditModal(supplier)}
-                          >
-                            <i className="ri-edit-box-line align-bottom me-1" />
-                            {t("Edit")}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="d-flex justify-content-center mt-4">
-                <Pagination>
-                  <PaginationItem disabled={currentPage === 1}>
-                    <PaginationLink
-                      previous
-                      onClick={() =>
-                        setCurrentPage((page) => Math.max(page - 1, 1))
-                      }
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, index) => (
-                    <PaginationItem
-                      key={index}
-                      active={currentPage === index + 1}
-                    >
-                      <PaginationLink onClick={() => setCurrentPage(index + 1)}>
-                        {index + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem disabled={currentPage === totalPages}>
-                    <PaginationLink
-                      next
-                      onClick={() =>
-                        setCurrentPage((page) =>
-                          Math.min(page + 1, totalPages)
-                        )
-                      }
-                    />
-                  </PaginationItem>
-                </Pagination>
+            {loadingSuppliers ? (
+              <div className="text-center py-5">
+                <Spinner color="primary" />
               </div>
+            ) : (
+              <>
+                <div className="table-responsive">
+                  <Table className="table align-middle table-nowrap mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th style={{ width: "90px" }}>ID</th>
+                        <th style={{ width: "140px" }}>{t("RUC")}</th>
+                        <th>{t("Supplier")}</th>
+                        <th style={{ width: "220px" }}>{t("Contact")}</th>
+                        <th style={{ width: "220px" }}>{t("Bank 1")}</th>
+                        <th style={{ width: "220px" }}>{t("Bank 2")}</th>
+                        <th style={{ width: "190px" }}>{t("Created")}</th>
+                        <th style={{ width: "190px" }}>{t("Updated")}</th>
+                        <th style={{ width: "120px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedSuppliers.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="text-center py-4">
+                            {t("No suppliers were found.")}
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedSuppliers.map((supplier) => (
+                          <tr key={supplier.supplierID}>
+                            <td>#{supplier.supplierID}</td>
+                            <td className="fw-semibold">{supplier.supplierNo}</td>
+                            <td>
+                              <div className="fw-semibold">
+                                {supplier.supplierName}
+                              </div>
+                              <div className="text-muted small">
+                                {supplier.address || "-"}
+                              </div>
+                            </td>
+                            <td>
+                              <div>{supplier.phone || "-"}</div>
+                              <div className="text-muted small">
+                                {supplier.email || "-"}
+                              </div>
+                            </td>
+                            <td>
+                              {renderBankCell(supplier.bank1, supplier.accountNo1)}
+                            </td>
+                            <td>
+                              {renderBankCell(supplier.bank2, supplier.accountNo2)}
+                            </td>
+                            <td>
+                              {renderAuditCell(
+                                supplier.createdAt,
+                                supplier.createdBy,
+                                "Created by"
+                              )}
+                            </td>
+                            <td>
+                              {renderAuditCell(
+                                supplier.updatedAt,
+                                supplier.updatedBy,
+                                "Updated by"
+                              )}
+                            </td>
+                            <td className="text-center">
+                              <Button
+                                color="warning"
+                                outline
+                                size="sm"
+                                onClick={() => handleOpenEditModal(supplier)}
+                              >
+                                <i className="ri-edit-box-line align-bottom me-1" />
+                                {t("Edit")}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="d-flex justify-content-center mt-4">
+                    <Pagination>
+                      <PaginationItem disabled={currentPage === 1}>
+                        <PaginationLink
+                          previous
+                          onClick={() =>
+                            setCurrentPage((page) => Math.max(page - 1, 1))
+                          }
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, index) => (
+                        <PaginationItem
+                          key={index}
+                          active={currentPage === index + 1}
+                        >
+                          <PaginationLink
+                            onClick={() => setCurrentPage(index + 1)}
+                          >
+                            {index + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem disabled={currentPage === totalPages}>
+                        <PaginationLink
+                          next
+                          onClick={() =>
+                            setCurrentPage((page) =>
+                              Math.min(page + 1, totalPages)
+                            )
+                          }
+                        />
+                      </PaginationItem>
+                    </Pagination>
+                  </div>
+                )}
+              </>
             )}
           </CardBody>
         </Card>
@@ -759,7 +779,9 @@ const SuppliersPage = () => {
                       </Button>
                     </InputGroup>
                     {formErrors.supplierNo && (
-                      <FormFeedback>{formErrors.supplierNo}</FormFeedback>
+                      <FormFeedback className="d-block">
+                        {formErrors.supplierNo}
+                      </FormFeedback>
                     )}
                     <div className="form-text">
                       {t(
@@ -898,8 +920,15 @@ const SuppliersPage = () => {
               <Button color="light" type="button" onClick={handleCloseModal}>
                 {t("Cancel")}
               </Button>
-              <Button color="primary" type="submit">
-                {t("Save")}
+              <Button color="primary" type="submit" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Spinner size="sm" className="me-1" />
+                    {t("Saving...")}
+                  </>
+                ) : (
+                  t("Save")
+                )}
               </Button>
             </ModalFooter>
           </Form>
