@@ -271,11 +271,11 @@ const getPurchaseStateKind = (
   }
 
   switch (purchaseState) {
-    case 1:
+    case 12:
       return "approved" as const;
-    case 2:
+    case 13:
       return "rejected" as const;
-    case 0:
+    case 11:
       return "pending" as const;
     default:
       return "other" as const;
@@ -485,9 +485,9 @@ const PurchaseOrderDetails = () => {
     purchaseStateOptions.length > 0
       ? purchaseStateOptions
       : [
-          { id: 1, descripcion: t("Approved") },
-          { id: 0, descripcion: t("Pending") },
-          { id: 2, descripcion: t("Rejected") },
+          { id: 11, descripcion: t("Pending") },
+          { id: 12, descripcion: t("Approved") },
+          { id: 13, descripcion: t("Rejected") },
         ]
   ).map((option) => {
     const stateMeta = getPurchaseStateMeta(option.id, t, option.descripcion);
@@ -501,6 +501,9 @@ const PurchaseOrderDetails = () => {
       description: getPurchaseStateDescription(option.id, t, option.descripcion),
     };
   });
+  const visibleModalStateOptions = modalStateOptions.filter(
+    (option) => option.kind !== "pending"
+  );
   const selectedStateMeta =
     selectedState !== null
       ? getPurchaseStateMeta(
@@ -512,10 +515,10 @@ const PurchaseOrderDetails = () => {
       : null;
 
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
-    const currentStateOption = modalStateOptions.find(
+    const currentStateOption = visibleModalStateOptions.find(
       (option) => option.value === purchaseOrder.purchaseState
     );
-    setSelectedState(currentStateOption?.value ?? purchaseOrder.purchaseState);
+    setSelectedState(currentStateOption?.value ?? null);
     setActionError(null);
     setOrderModal(purchaseOrder);
   };
@@ -888,6 +891,9 @@ const PurchaseOrderDetails = () => {
                           const storeLabel =
                             purchaseOrder.storeLabel ||
                             getLookupLabel(storeLookup, purchaseOrder.store);
+                          const isActionBlocked =
+                            purchaseState.kind === "approved" ||
+                            purchaseState.kind === "rejected";
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
@@ -941,7 +947,8 @@ const PurchaseOrderDetails = () => {
                                   outline
                                   disabled={
                                     generatingOrderId ===
-                                    purchaseOrder.purchaseOrderID
+                                      purchaseOrder.purchaseOrderID ||
+                                    isActionBlocked
                                   }
                                   onClick={() => handleOpenOrderModal(purchaseOrder)}
                                 >
@@ -1022,7 +1029,7 @@ const PurchaseOrderDetails = () => {
           </p>
 
           <div className="d-flex flex-column gap-2">
-            {modalStateOptions.map((option) => {
+            {visibleModalStateOptions.map((option) => {
               const isSelected = selectedState === option.value;
               return (
                 <button

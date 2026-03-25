@@ -381,7 +381,7 @@ const createInitialValues = (document: Document | null): OrderCFormValues => {
     currency: mapSunatCurrencyToOrderCurrency(document?.currency),
     guideNo: "",
     store: "",
-    purchaseState: "1",
+    purchaseState: "11",
     createdBy: sessionUser.id,
     createdByName: sessionUser.name,
   };
