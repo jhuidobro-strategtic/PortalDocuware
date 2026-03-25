@@ -87,7 +87,7 @@ interface SupplierOptionItem {
   supplierName: string;
 }
 
-type SelectOption = { value: string; label: string };
+type SelectOption = { value: string; label: string; flagUrl?: string };
 
 const CATALOG_ENDPOINTS: Record<string, string> = {
   paymentCondition: "PAYMENT_CONDITION",
@@ -120,6 +120,55 @@ const fetchSuppliers = async (): Promise<SupplierOptionItem[]> => {
     supplierName: item.suppliername ?? "",
   }));
 };
+
+const getCurrencyMeta = (currencyValue: unknown, currencyLabel?: string) => {
+  const normalizedValue = String(currencyValue ?? "").trim().toUpperCase();
+
+  switch (normalizedValue) {
+    case "1":
+    case "3":
+    case "PEN":
+    case "SOL":
+    case "SOLES":
+    case "SOLES(S/.)":
+      return {
+        normalizedValue: "3",
+        shortLabel: "PEN",
+        label: currencyLabel || "SOLES(S/.)",
+        alt: "Peru",
+        imageUrl: "https://flagcdn.com/w40/pe.png",
+      };
+    case "2":
+    case "4":
+    case "USD":
+    case "DOLAR":
+    case "DÓLAR":
+    case "DOLARES":
+    case "DÓLARES":
+    case "USD($)":
+      return {
+        normalizedValue: "4",
+        shortLabel: "USD",
+        label: currencyLabel || "USD($)",
+        alt: "USA",
+        imageUrl: "https://flagcdn.com/w40/us.png",
+      };
+    default:
+      return {
+        normalizedValue,
+        shortLabel: normalizedValue,
+        label: currencyLabel || normalizedValue,
+        alt: "Currency",
+        imageUrl: null,
+      };
+  }
+};
+
+const withCurrencyFlags = (options: SelectOption[]) =>
+  options.map((option) => ({
+    ...option,
+    flagUrl: getCurrencyMeta(option.value, option.label).imageUrl || undefined,
+  }));
 
 interface SunatInvoiceItem {
   descripcion?: string;
@@ -264,18 +313,8 @@ const createInitialSunatSearchValues = (
 });
 
 const mapSunatCurrencyToOrderCurrency = (currencyCode: unknown) => {
-  switch (String(currencyCode ?? "").trim().toUpperCase()) {
-    case "1":
-    case "PEN":
-    case "SOL":
-    case "SOLES":
-      return "1";
-    case "2":
-    case "USD":
-      return "2";
-    default:
-      return "";
-  }
+  const { normalizedValue, imageUrl } = getCurrencyMeta(currencyCode);
+  return imageUrl ? normalizedValue : "";
 };
 
 const formatDecimalValue = (value: unknown, fallback = "0.00") => {
@@ -323,14 +362,7 @@ const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
 };
 
 const getOrderCurrencyLabel = (currencyValue: string) => {
-  switch (currencyValue) {
-    case "1":
-      return "PEN";
-    case "2":
-      return "USD";
-    default:
-      return currencyValue;
-  }
+  return getCurrencyMeta(currencyValue).label;
 };
 
 const normalizeSupplierNumber = (value: string) => value.replace(/\D/g, "");
@@ -442,13 +474,20 @@ const DocumentOrderC = () => {
 
   useEffect(() => {
     const loadCatalogs = async () => {
-      const entries = await Promise.all(
+      const entries: Array<[string, SelectOption[]]> = await Promise.all(
         Object.entries(CATALOG_ENDPOINTS).map(async ([field, tipo]) => [
           field,
           await fetchCatalog(tipo),
         ])
       );
-      setCatalogOptions(Object.fromEntries(entries));
+      setCatalogOptions(
+        Object.fromEntries(
+          entries.map(([field, options]): [string, SelectOption[]] => [
+            field,
+            field === "currency" ? withCurrencyFlags(options) : options,
+          ])
+        ) as Record<string, SelectOption[]>
+      );
     };
     loadCatalogs();
   }, []);
@@ -477,6 +516,13 @@ const DocumentOrderC = () => {
         .filter(Boolean)
         .join(" - ") || String(supplier.supplierID),
   }));
+  const selectedCurrencyMeta = getCurrencyMeta(
+    values.currency,
+    catalogOptions.currency.find(
+      (option) =>
+        option.value === getCurrencyMeta(values.currency).normalizedValue
+    )?.label
+  );
 
   if (prefillingFromSunat) {
     floatingAlerts.push({
@@ -891,10 +937,25 @@ const DocumentOrderC = () => {
                     })}
                   </span>
                   <span className="badge bg-light text-secondary border">
-                    {t("Currency: {{currency}}", {
-                      currency:
-                        getOrderCurrencyLabel(values.currency) || document.currency,
-                    })}
+                    <span className="d-inline-flex align-items-center gap-2">
+                      {selectedCurrencyMeta.imageUrl && (
+                        <img
+                          src={selectedCurrencyMeta.imageUrl}
+                          alt={selectedCurrencyMeta.alt}
+                          width={20}
+                          height={15}
+                          className="rounded-1 flex-shrink-0"
+                        />
+                      )}
+                      <span>
+                        {t("Currency: {{currency}}", {
+                          currency:
+                            selectedCurrencyMeta.label ||
+                            getOrderCurrencyLabel(values.currency) ||
+                            document.currency,
+                        })}
+                      </span>
+                    </span>
                   </span>
                 </div>
               </div>
@@ -1006,6 +1067,7 @@ const DocumentOrderC = () => {
                   {orderCFields.map((field) => {
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
                     const isSupplierSelect = field.name === "supplierID";
+                    const isCurrencySelect = field.name === "currency";
                     const selectOptions = isSupplierSelect
                       ? supplierSelectOptions
                       : catalogOptions[field.name] ?? [];
@@ -1020,7 +1082,11 @@ const DocumentOrderC = () => {
                               options={selectOptions}
                               value={
                                 selectOptions.find(
-                                  (opt) => opt.value === values[field.name]
+                                  (opt) =>
+                                    opt.value ===
+                                    (isCurrencySelect
+                                      ? getCurrencyMeta(values[field.name]).normalizedValue
+                                      : values[field.name])
                                 ) ?? null
                               }
                               onChange={(selected: SelectOption | null) =>
@@ -1034,6 +1100,24 @@ const DocumentOrderC = () => {
                               placeholder={t(field.placeholderKey)}
                               isClearable
                               classNamePrefix="select2-selection"
+                              formatOptionLabel={
+                                isCurrencySelect
+                                  ? (option: SelectOption) => (
+                                      <span className="d-inline-flex align-items-center gap-2">
+                                        {option.flagUrl && (
+                                          <img
+                                            src={option.flagUrl}
+                                            alt={option.label}
+                                            width={20}
+                                            height={15}
+                                            className="rounded-1 flex-shrink-0"
+                                          />
+                                        )}
+                                        <span>{option.label}</span>
+                                      </span>
+                                    )
+                                  : undefined
+                              }
                             />
                           ) : (
                             <Input

@@ -100,12 +100,14 @@ const getCurrencyMeta = (
 ) => {
   switch (currency) {
     case 1:
+    case 3:
       return {
         label: currencyLabel || "PEN",
         alt: "Peru",
         imageUrl: "https://flagcdn.com/w40/pe.png",
       };
     case 2:
+    case 4:
       return {
         label: currencyLabel || "USD",
         alt: "USA",
