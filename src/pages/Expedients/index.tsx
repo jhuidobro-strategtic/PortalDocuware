@@ -218,6 +218,12 @@ const formatAmount = (
     maximumFractionDigits: 2,
   });
 
+const revokeObjectUrl = (value: string) => {
+  if (value.startsWith("blob:")) {
+    URL.revokeObjectURL(value);
+  }
+};
+
 const Expedients = () => {
   const { t, i18n } = useTranslation();
   const [expedients, setExpedients] = useState<Expedient[]>([]);
@@ -226,7 +232,25 @@ const Expedients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedExpedient, setSelectedExpedient] = useState<Expedient | null>(null);
+  const [selectedPreviewDocument, setSelectedPreviewDocument] =
+    useState<ExpedientDocument | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const numberLocale = getNumberLocale(i18n.language);
+
+  const handleCloseDrawer = () => {
+    setPreviewError(null);
+    setPreviewLoading(false);
+    setPreviewBlobUrl((currentUrl) => {
+      if (currentUrl) {
+        revokeObjectUrl(currentUrl);
+      }
+      return "";
+    });
+    setSelectedPreviewDocument(null);
+    setSelectedExpedient(null);
+  };
 
   useEffect(() => {
     document.title = `${t("Expedient List")} | Docuware`;
@@ -302,7 +326,7 @@ const Expedients = () => {
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedExpedient(null);
+        handleCloseDrawer();
       }
     };
 
@@ -315,6 +339,86 @@ const Expedients = () => {
       window.removeEventListener("keydown", handleEscape);
     };
   }, [selectedExpedient]);
+
+  useEffect(() => {
+    setPreviewError(null);
+    setSelectedPreviewDocument(null);
+  }, [selectedExpedient?.expedienteid]);
+
+  useEffect(() => {
+    if (!selectedPreviewDocument) {
+      setPreviewLoading(false);
+      setPreviewError(null);
+      setPreviewBlobUrl((currentUrl) => {
+        if (currentUrl) {
+          revokeObjectUrl(currentUrl);
+        }
+        return "";
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    const previewUrl = getExpedientDocumentUrl(selectedPreviewDocument.filepath);
+
+    if (!previewUrl) {
+      setPreviewError(t("Unable to load the selected PDF preview."));
+      setPreviewLoading(false);
+      return;
+    }
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    const loadPreview = async () => {
+      try {
+        const response = await fetch(previewUrl, {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(t("Unable to load the selected PDF preview."));
+        }
+
+        const previewBlob = await response.blob();
+        const objectUrl = URL.createObjectURL(previewBlob);
+
+        setPreviewBlobUrl((currentUrl) => {
+          if (currentUrl) {
+            revokeObjectUrl(currentUrl);
+          }
+          return objectUrl;
+        });
+      } catch (previewFetchError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const message =
+          previewFetchError instanceof Error
+            ? previewFetchError.message
+            : t("Unable to load the selected PDF preview.");
+        setPreviewError(message);
+        setPreviewBlobUrl((currentUrl) => {
+          if (currentUrl) {
+            revokeObjectUrl(currentUrl);
+          }
+          return "";
+        });
+      } finally {
+        if (!controller.signal.aborted) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      controller.abort();
+    };
+  }, [selectedPreviewDocument, t]);
 
   return (
     <div className="page-content">
@@ -624,7 +728,7 @@ const Expedients = () => {
         className={`expedient-drawer-backdrop ${
           selectedExpedient ? "is-visible" : ""
         }`}
-        onClick={() => setSelectedExpedient(null)}
+        onClick={handleCloseDrawer}
       />
 
       <aside
@@ -654,7 +758,7 @@ const Expedients = () => {
             <button
               type="button"
               className="expedient-drawer-close"
-              onClick={() => setSelectedExpedient(null)}
+              onClick={handleCloseDrawer}
               aria-label={t("Close")}
             >
               <i className="ri-close-line" />
@@ -666,43 +770,127 @@ const Expedients = () => {
               <div className="expedient-drawer-list">
                 {selectedExpedient.expediente_documentos.map((file, index) => {
                   const fileUrl = getExpedientDocumentUrl(file.filepath);
+                  const isPreviewActive =
+                    selectedPreviewDocument?.expedientedocid === file.expedientedocid;
 
                   return (
-                    <a
-                      key={file.expedientedocid}
-                      href={fileUrl || undefined}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="expedient-document-card"
-                      style={{ animationDelay: `${index * 70}ms` }}
-                    >
-                      <div className="expedient-document-card-icon">
-                        <i className="ri-file-pdf-line" />
+                    <React.Fragment key={file.expedientedocid}>
+                      <div
+                        className={`expedient-document-card ${
+                          isPreviewActive ? "is-active" : ""
+                        }`}
+                        style={{ animationDelay: `${index * 70}ms` }}
+                      >
+                        <div className="expedient-document-card-icon">
+                          <i className="ri-file-pdf-line" />
+                        </div>
+
+                        <div className="expedient-document-card-content">
+                          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <h6 className="mb-0 text-body">{file.filename}</h6>
+                            <span className="badge rounded-pill bg-light text-body border">
+                              {t("Type")} #{file.tipodocumentoid}
+                            </span>
+                          </div>
+
+                          <div className="text-muted small mb-2">
+                            {moment(file.createat).format("DD/MM/YYYY HH:mm")}
+                          </div>
+
+                          <div className="expedient-document-card-footer">
+                            <span className="expedient-document-card-path">
+                              {file.filepath}
+                            </span>
+                            <div className="expedient-document-card-actions">
+                              <button
+                                type="button"
+                                className={`expedient-document-icon-button ${
+                                  isPreviewActive ? "is-active" : ""
+                                }`}
+                                onClick={() =>
+                                  setSelectedPreviewDocument((currentDocument) =>
+                                    currentDocument?.expedientedocid ===
+                                    file.expedientedocid
+                                      ? null
+                                      : file
+                                  )
+                                }
+                                aria-label={t("Preview PDF")}
+                                title={t("Preview PDF")}
+                              >
+                                <i className="ri-eye-line" />
+                              </button>
+                              <a
+                                href={fileUrl || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="expedient-document-card-link"
+                              >
+                                <i className="ri-external-link-line" />
+                                {t("Open PDF")}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="expedient-document-card-content">
-                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                          <h6 className="mb-0 text-body">{file.filename}</h6>
-                          <span className="badge rounded-pill bg-light text-body border">
-                            {t("Type")} #{file.tipodocumentoid}
-                          </span>
-                        </div>
+                      {isPreviewActive && (
+                        <div className="expedient-inline-preview">
+                          <div className="expedient-inline-preview-header">
+                            <div>
+                              <h6 className="mb-1">{t("PDF Preview")}</h6>
+                              <p className="text-muted mb-0">{file.filename}</p>
+                            </div>
 
-                        <div className="text-muted small mb-2">
-                          {moment(file.createat).format("DD/MM/YYYY HH:mm")}
-                        </div>
+                            <button
+                              type="button"
+                              className="expedient-preview-close"
+                              onClick={() => setSelectedPreviewDocument(null)}
+                              aria-label={t("Close preview")}
+                            >
+                              <i className="ri-close-line" />
+                            </button>
+                          </div>
 
-                        <div className="expedient-document-card-footer">
-                          <span className="expedient-document-card-path">
-                            {file.filepath}
-                          </span>
-                          <span className="expedient-document-card-link">
-                            <i className="ri-external-link-line" />
-                            {t("Open PDF")}
-                          </span>
+                          <div className="expedient-preview-surface">
+                            {previewLoading ? (
+                              <div className="expedient-preview-loading">
+                                <Spinner color="primary" />
+                                <p className="mb-0">{t("Loading PDF preview...")}</p>
+                              </div>
+                            ) : previewBlobUrl ? (
+                              <iframe
+                                key={`${file.expedientedocid}-${previewBlobUrl}`}
+                                src={previewBlobUrl}
+                                title={file.filename}
+                                className="expedient-preview-iframe"
+                              />
+                            ) : previewError ? (
+                              <div className="expedient-preview-empty">
+                                <i className="ri-file-warning-line" />
+                                <p className="mb-2">{previewError}</p>
+                                <a
+                                  href={fileUrl || undefined}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-sm btn-primary"
+                                >
+                                  <i className="ri-external-link-line me-1" />
+                                  {t("Open PDF")}
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="expedient-preview-empty">
+                                <i className="ri-eye-line" />
+                                <p className="mb-0">
+                                  {t("Use the eye icon to preview the PDF here.")}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </a>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>

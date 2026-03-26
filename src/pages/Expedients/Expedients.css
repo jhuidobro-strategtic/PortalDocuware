@@ -101,6 +101,100 @@
   padding: 1.15rem 1.35rem 1.35rem;
 }
 
+.expedient-inline-preview {
+  margin: -0.25rem 0 0.45rem;
+  overflow: hidden;
+  border: 1px solid #e3e9f4;
+  border-radius: 1.2rem;
+  background:
+    radial-gradient(circle at top right, rgba(64, 81, 137, 0.08), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.1);
+  animation: expedientInlinePreviewReveal 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.expedient-inline-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid #edf2f8;
+}
+
+.expedient-preview-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9e1ee;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475467;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.expedient-preview-close:hover {
+  transform: rotate(90deg);
+  border-color: #b9c7de;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.expedient-preview-surface {
+  padding: 0.9rem;
+  min-height: 230px;
+}
+
+.expedient-preview-loading {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  border: 1px dashed #d4dce8;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: #667085;
+  text-align: center;
+  padding: 1.5rem;
+  animation: expedientPreviewReveal 0.35s ease;
+}
+
+.expedient-preview-iframe {
+  width: 100%;
+  height: 360px;
+  border: none;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e6ecf5;
+  animation: expedientPreviewReveal 0.45s ease;
+}
+
+.expedient-preview-empty {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border: 1px dashed #d4dce8;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  color: #667085;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.expedient-preview-empty i {
+  font-size: 1.75rem;
+  color: #405189;
+}
+
 .expedient-drawer-list {
   display: flex;
   flex-direction: column;
@@ -131,6 +225,11 @@
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.1);
 }
 
+.expedient-document-card.is-active {
+  border-color: #93a4c6;
+  box-shadow: 0 18px 34px rgba(64, 81, 137, 0.12);
+}
+
 .expedient-document-card-icon {
   display: inline-flex;
   align-items: center;
@@ -154,6 +253,43 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.expedient-document-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.expedient-document-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d8e0ed;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #405189;
+  font-size: 1rem;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.expedient-document-icon-button:hover {
+  transform: translateY(-1px);
+  border-color: #aebedc;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.expedient-document-icon-button.is-active {
+  background: #405189;
+  border-color: #405189;
+  color: #ffffff;
+  box-shadow: 0 12px 26px rgba(64, 81, 137, 0.22);
 }
 
 .expedient-document-card-path {
@@ -205,6 +341,30 @@
   }
 }
 
+@keyframes expedientPreviewReveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes expedientInlinePreviewReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 767.98px) {
   .expedient-drawer {
     width: 100vw;
@@ -218,5 +378,14 @@
   .expedient-document-card-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .expedient-document-card-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .expedient-preview-iframe {
+    height: 280px;
   }
 }
