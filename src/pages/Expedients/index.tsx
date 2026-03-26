@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import {
   Badge,
+  Button,
   Card,
   CardBody,
   Container,
@@ -17,6 +18,8 @@ import {
 import { useTranslation } from "react-i18next";
 import BreadCrumb from "../../Components/Common/BreadCrumb";
 import { API_BASE_URL, buildApiUrl } from "../../helpers/api-url";
+import { getNumberLocale } from "../../common/locale";
+import "./Expedients.css";
 
 interface ExpedientDocumentType {
   tipoid: number;
@@ -170,7 +173,7 @@ const getExpedientDocumentUrl = (filePath: string) => {
 const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =>
   isActive
     ? {
-        label: t("Active"),
+        label: t("Active status"),
         className:
           "badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-checkbox-circle-line",
@@ -184,14 +187,6 @@ const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =
 
 const getInvoiceCode = (invoice?: ExpedientInvoice | null) =>
   [invoice?.documentserial, invoice?.documentnumber].filter(Boolean).join("-");
-
-const getPurchaseOrderStateLabel = (purchaseOrder?: ExpedientPurchaseOrder | null) => {
-  if (!purchaseOrder || typeof purchaseOrder.purchaseState === "number") {
-    return "";
-  }
-
-  return String(purchaseOrder.purchaseState?.descripcion ?? "").trim();
-};
 
 const getInvoiceTypeLabel = (invoice?: ExpedientInvoice | null) =>
   String(invoice?.documenttype?.tipo ?? "").trim();
@@ -214,13 +209,24 @@ const getPurchaseOrderSupplierLabel = (
   );
 };
 
+const formatAmount = (
+  value: string | number | null | undefined,
+  locale: string
+) =>
+  Number(value || 0).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 const Expedients = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expedients, setExpedients] = useState<Expedient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedExpedient, setSelectedExpedient] = useState<Expedient | null>(null);
+  const numberLocale = getNumberLocale(i18n.language);
 
   useEffect(() => {
     document.title = `${t("Expedient List")} | Docuware`;
@@ -289,6 +295,27 @@ const Expedients = () => {
     }
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    if (!selectedExpedient) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedExpedient(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [selectedExpedient]);
+
   return (
     <div className="page-content">
       <Container fluid>
@@ -338,25 +365,52 @@ const Expedients = () => {
             {!loading && !error && (
               <>
                 <div className="table-responsive">
-                  <Table className="table align-middle mb-0">
+                  <Table
+                    className="table align-middle mb-0"
+                    style={{ minWidth: "1760px" }}
+                  >
                     <thead className="table-light">
                       <tr>
-                        <th>ID</th>
-                        <th>{t("Invoice ID")}</th>
-                        <th>{t("Purchase Order ID")}</th>
-                        <th>{t("Status")}</th>
+                        <th className="text-center" style={{ minWidth: "90px" }}>
+                          ID
+                        </th>
+                        <th className="text-center" style={{ minWidth: "150px" }}>
+                          {t("Invoice ID")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "150px" }}>
+                          {t("Document Type")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "260px" }}>
+                          {t("Supplier")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "130px" }}>
+                          {t("Issue Date")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "130px" }}>
+                          {t("Total")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "170px" }}>
+                          {t("Order Number")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "150px" }}>
+                          {t("Status")}
+                        </th>
                         <th className="text-center">{t("Files")}</th>
-                        <th style={{ minWidth: "340px" }}>
+                        <th className="text-center" style={{ minWidth: "340px" }}>
                           {t("Registered Documents")}
                         </th>
-                        <th>{t("Created")}</th>
-                        <th>{t("Updated")}</th>
+                        <th className="text-center" style={{ minWidth: "160px" }}>
+                          {t("Created")}
+                        </th>
+                        <th className="text-center" style={{ minWidth: "160px" }}>
+                          {t("Updated")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedExpedients.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="text-center py-4">
+                          <td colSpan={12} className="text-center py-4">
                             {t("No registered expedients were found.")}
                           </td>
                         </tr>
@@ -366,27 +420,73 @@ const Expedients = () => {
                             expedient.estado,
                             t
                           );
+                          const invoiceCode = getInvoiceCode(expedient.factura);
+                          const invoiceType = getInvoiceTypeLabel(expedient.factura);
+                          const purchaseOrderSupplier = getPurchaseOrderSupplierLabel(
+                            expedient.ordencompra
+                          );
 
                           return (
                             <tr key={expedient.expedienteid}>
-                              <td className="fw-semibold">
+                              <td className="fw-semibold text-center">
                                 #{expedient.expedienteid}
                               </td>
                               <td style={{ whiteSpace: "normal" }}>
                                 <div className="fw-semibold">
-                                  #{expedient.facturaid ?? expedient.factura?.documentid ?? "-"}
+                                  #
+                                  {expedient.facturaid ??
+                                    expedient.factura?.documentid ??
+                                    "-"}
                                 </div>
-                                {expedient.factura && (
+                                <div className="text-muted small">
+                                  {invoiceCode || "-"}
+                                </div>
+                              </td>
+                              <td>
+                                {invoiceType ? (
+                                  <span className="badge rounded-pill bg-light text-body border px-3 py-2">
+                                    {invoiceType}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td style={{ whiteSpace: "normal" }}>
+                                <div className="fw-semibold">
+                                  {expedient.factura?.suppliername ||
+                                    purchaseOrderSupplier ||
+                                    "-"}
+                                </div>
+                                <div className="text-muted small">
+                                  {expedient.factura?.suppliernumber || "-"}
+                                </div>
+                              </td>
+                              <td>
+                                {expedient.factura?.documentdate ? (
+                                  <div className="fw-semibold">
+                                    {moment(expedient.factura.documentdate).format(
+                                      "DD/MM/YYYY"
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td className="text-end">
+                                {expedient.factura ? (
                                   <>
-                                    <div className="text-muted small">
-                                      {[getInvoiceTypeLabel(expedient.factura), getInvoiceCode(expedient.factura)]
-                                        .filter(Boolean)
-                                        .join(" - ") || "-"}
+                                    <div className="fw-semibold">
+                                      {formatAmount(
+                                        expedient.factura.totalamount,
+                                        numberLocale
+                                      )}
                                     </div>
                                     <div className="text-muted small">
-                                      {expedient.factura.suppliername || expedient.factura.suppliernumber || "-"}
+                                      {expedient.factura.currency || "-"}
                                     </div>
                                   </>
+                                ) : (
+                                  <span className="text-muted">-</span>
                                 )}
                               </td>
                               <td style={{ whiteSpace: "normal" }}>
@@ -402,14 +502,7 @@ const Expedients = () => {
                                       {expedient.ordencompra.documentAssociatedNo || "-"}
                                     </div>
                                     <div className="text-muted small">
-                                      {getPurchaseOrderSupplierLabel(
-                                        expedient.ordencompra
-                                      ) || "-"}
-                                    </div>
-                                    <div className="text-muted small">
-                                      {getPurchaseOrderStateLabel(
-                                        expedient.ordencompra
-                                      ) || "-"}
+                                      {expedient.ordencompra.guideNo || "-"}
                                     </div>
                                   </>
                                 )}
@@ -430,30 +523,25 @@ const Expedients = () => {
                               </td>
                               <td style={{ whiteSpace: "normal" }}>
                                 {expedient.expediente_documentos?.length ? (
-                                  <div className="d-flex flex-column gap-2">
-                                    {expedient.expediente_documentos.map((file) => {
-                                      const fileUrl = getExpedientDocumentUrl(
-                                        file.filepath
-                                      );
-
-                                      return (
-                                        <a
-                                          key={file.expedientedocid}
-                                          href={fileUrl || undefined}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="d-inline-flex align-items-start gap-2 text-decoration-none"
-                                        >
-                                          <i className="ri-file-pdf-line text-danger fs-5" />
-                                          <span>
-                                            <span className="d-block fw-semibold text-body">
-                                              {file.filename}
-                                            </span>
-                                          </span>
-                                        </a>
-                                      );
-                                    })}
-                                  </div>
+                                  <Button
+                                    color="light"
+                                    className="expedient-documents-button"
+                                    onClick={() => setSelectedExpedient(expedient)}
+                                  >
+                                    <span className="expedient-documents-button-icon">
+                                      <i className="ri-file-list-3-line" />
+                                    </span>
+                                    <span className="text-start">
+                                      <span className="d-block fw-semibold text-body">
+                                        {t("View documents")}
+                                      </span>
+                                      <span className="d-block text-muted small">
+                                        {t("{{count}} registered files", {
+                                          count: expedient.expediente_documentos.length,
+                                        })}
+                                      </span>
+                                    </span>
+                                  </Button>
                                 ) : (
                                   <span className="text-muted">
                                     {t("No files attached")}
@@ -537,6 +625,105 @@ const Expedients = () => {
           </CardBody>
         </Card>
       </Container>
+
+      <div
+        className={`expedient-drawer-backdrop ${
+          selectedExpedient ? "is-visible" : ""
+        }`}
+        onClick={() => setSelectedExpedient(null)}
+      />
+
+      <aside
+        className={`expedient-drawer ${selectedExpedient ? "is-open" : ""}`}
+        aria-hidden={!selectedExpedient}
+      >
+        <div className="expedient-drawer-shell">
+          <div className="expedient-drawer-header">
+            <div>
+              <span className="expedient-drawer-kicker">
+                {t("Registered Documents")}
+              </span>
+              <h4 className="mb-1">
+                {t("Expedient #{{id}}", {
+                  id: selectedExpedient?.expedienteid ?? "-",
+                })}
+              </h4>
+              <p className="text-muted mb-0">
+                {selectedExpedient
+                  ? t("{{count}} files linked to this expedient.", {
+                      count: selectedExpedient.expediente_documentos.length,
+                    })
+                  : ""}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="expedient-drawer-close"
+              onClick={() => setSelectedExpedient(null)}
+              aria-label={t("Close")}
+            >
+              <i className="ri-close-line" />
+            </button>
+          </div>
+
+          <div className="expedient-drawer-body">
+            {selectedExpedient?.expediente_documentos?.length ? (
+              <div className="expedient-drawer-list">
+                {selectedExpedient.expediente_documentos.map((file, index) => {
+                  const fileUrl = getExpedientDocumentUrl(file.filepath);
+
+                  return (
+                    <a
+                      key={file.expedientedocid}
+                      href={fileUrl || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="expedient-document-card"
+                      style={{ animationDelay: `${index * 70}ms` }}
+                    >
+                      <div className="expedient-document-card-icon">
+                        <i className="ri-file-pdf-line" />
+                      </div>
+
+                      <div className="expedient-document-card-content">
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                          <h6 className="mb-0 text-body">{file.filename}</h6>
+                          <span className="badge rounded-pill bg-light text-body border">
+                            {t("Type")} #{file.tipodocumentoid}
+                          </span>
+                        </div>
+
+                        <div className="text-muted small mb-2">
+                          {moment(file.createat).format("DD/MM/YYYY HH:mm")}
+                        </div>
+
+                        <div className="expedient-document-card-footer">
+                          <span className="expedient-document-card-path">
+                            {file.filepath}
+                          </span>
+                          <span className="expedient-document-card-link">
+                            <i className="ri-external-link-line" />
+                            {t("Open PDF")}
+                          </span>
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="expedient-drawer-empty">
+                <i className="ri-file-warning-line" />
+                <h6 className="mb-1">{t("No files attached")}</h6>
+                <p className="text-muted mb-0">
+                  {t("No registered documents are available for this expedient.")}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
     </div>
   );
 };
