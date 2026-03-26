@@ -26,9 +26,13 @@ const openDatabase = (): Promise<IDBDatabase> =>
       reject(request.error || new Error("Unable to open local PDF storage."));
   });
 
-const runTransaction = async <T>(
+const runIndexedDbTransaction = async <T>(
   mode: IDBTransactionMode,
-  handler: (store: IDBObjectStore, resolve: (value: T) => void, reject: (reason?: unknown) => void) => void
+  handler: (
+    store: IDBObjectStore,
+    resolve: (value: T) => void,
+    reject: (reason?: unknown) => void
+  ) => void
 ): Promise<T> => {
   const database = await openDatabase();
 
@@ -53,7 +57,7 @@ const runTransaction = async <T>(
 export const savePurchaseOrderPdf = async (
   pdfRecord: StoredPurchaseOrderPdf
 ): Promise<void> => {
-  await runTransaction<void>("readwrite", (store, resolve, reject) => {
+  await runIndexedDbTransaction<void>("readwrite", (store, resolve, reject) => {
     const request = store.put(pdfRecord);
 
     request.onsuccess = () => resolve();
@@ -65,16 +69,20 @@ export const savePurchaseOrderPdf = async (
 export const getPurchaseOrderPdf = async (
   purchaseOrderID: number
 ): Promise<StoredPurchaseOrderPdf | null> =>
-  runTransaction<StoredPurchaseOrderPdf | null>("readonly", (store, resolve, reject) => {
-    const request = store.get(purchaseOrderID);
+  runIndexedDbTransaction<StoredPurchaseOrderPdf | null>(
+    "readonly",
+    (store, resolve, reject) => {
+      const request = store.get(purchaseOrderID);
 
-    request.onsuccess = () => resolve((request.result as StoredPurchaseOrderPdf) || null);
-    request.onerror = () =>
-      reject(request.error || new Error("Unable to get the stored PDF."));
-  });
+      request.onsuccess = () =>
+        resolve((request.result as StoredPurchaseOrderPdf) || null);
+      request.onerror = () =>
+        reject(request.error || new Error("Unable to get the stored PDF."));
+    }
+  );
 
 export const listStoredPurchaseOrderPdfIds = async (): Promise<number[]> =>
-  runTransaction<number[]>("readonly", (store, resolve, reject) => {
+  runIndexedDbTransaction<number[]>("readonly", (store, resolve, reject) => {
     const request = store.getAllKeys();
 
     request.onsuccess = () =>

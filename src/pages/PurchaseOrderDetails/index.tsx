@@ -925,7 +925,12 @@ const PurchaseOrderDetails = () => {
                         <th>{t("Date")}</th>
                         <th className="text-center">{t("Items")}</th>
                         <th className="text-end">{t("Order Total")}</th>
-                        <th className="text-center">{t("Actions")}</th>
+                        <th
+                          className="text-center"
+                          style={{ minWidth: "245px", whiteSpace: "nowrap" }}
+                        >
+                          {t("Actions")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1013,12 +1018,16 @@ const PurchaseOrderDetails = () => {
                                   getOrderTotal(purchaseOrder.details)
                                 )}
                               </td>
-                              <td className="text-center">
-                                <div className="d-inline-flex align-items-center gap-2 flex-wrap justify-content-center">
+                              <td
+                                className="text-center"
+                                style={{ whiteSpace: "nowrap" }}
+                              >
+                                <div className="d-inline-flex align-items-center gap-2 flex-nowrap justify-content-center">
                                   <Button
                                     color="info"
                                     size="sm"
                                     outline
+                                    className="text-nowrap"
                                     disabled={!hasStoredPdf}
                                     onClick={() =>
                                       handlePreviewOrderPdf(
@@ -1033,6 +1042,7 @@ const PurchaseOrderDetails = () => {
                                     color="primary"
                                     size="sm"
                                     outline
+                                    className="text-nowrap"
                                     disabled={
                                       generatingOrderId ===
                                         purchaseOrder.purchaseOrderID ||
