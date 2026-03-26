@@ -431,7 +431,7 @@ const Expedients = () => {
                               <td className="fw-semibold text-center">
                                 #{expedient.expedienteid}
                               </td>
-                              <td style={{ whiteSpace: "normal" }}>
+                              <td style={{ whiteSpace: "normal" }} className="text-center">
                                 <div className="fw-semibold">
                                   #
                                   {expedient.facturaid ??
@@ -442,7 +442,7 @@ const Expedients = () => {
                                   {invoiceCode || "-"}
                                 </div>
                               </td>
-                              <td>
+                              <td className="text-center">
                                 {invoiceType ? (
                                   <span className="badge rounded-pill bg-light text-body border px-3 py-2">
                                     {invoiceType}
@@ -461,7 +461,7 @@ const Expedients = () => {
                                   {expedient.factura?.suppliernumber || "-"}
                                 </div>
                               </td>
-                              <td>
+                              <td className="text-center">
                                 {expedient.factura?.documentdate ? (
                                   <div className="fw-semibold">
                                     {moment(expedient.factura.documentdate).format(
@@ -489,7 +489,7 @@ const Expedients = () => {
                                   <span className="text-muted">-</span>
                                 )}
                               </td>
-                              <td style={{ whiteSpace: "normal" }}>
+                              <td style={{ whiteSpace: "normal" }} className="text-center">
                                 <div className="fw-semibold">
                                   {expedient.ordencompra?.orderNo ||
                                     (expedient.ordencompraid
@@ -507,7 +507,7 @@ const Expedients = () => {
                                   </>
                                 )}
                               </td>
-                              <td>
+                              <td className="text-center">
                                 <span className={statusMeta.className}>
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
@@ -521,26 +521,20 @@ const Expedients = () => {
                                   {expedient.expediente_documentos?.length || 0}
                                 </Badge>
                               </td>
-                              <td style={{ whiteSpace: "normal" }}>
+                              <td
+                                className="text-center"
+                                style={{ whiteSpace: "normal" }}
+                              >
                                 {expedient.expediente_documentos?.length ? (
                                   <Button
-                                    color="light"
-                                    className="expedient-documents-button"
+                                    color="primary"
+                                    outline
+                                    size="sm"
+                                    className="text-nowrap"
                                     onClick={() => setSelectedExpedient(expedient)}
                                   >
-                                    <span className="expedient-documents-button-icon">
-                                      <i className="ri-file-list-3-line" />
-                                    </span>
-                                    <span className="text-start">
-                                      <span className="d-block fw-semibold text-body">
-                                        {t("View documents")}
-                                      </span>
-                                      <span className="d-block text-muted small">
-                                        {t("{{count}} registered files", {
-                                          count: expedient.expediente_documentos.length,
-                                        })}
-                                      </span>
-                                    </span>
+                                    <i className="ri-file-list-3-line me-1" />
+                                    {t("View documents")}
                                   </Button>
                                 ) : (
                                   <span className="text-muted">
@@ -554,11 +548,11 @@ const Expedients = () => {
                                     "DD/MM/YYYY HH:mm"
                                   )}
                                 </div>
-                                <div className="text-muted small">
+                                {/* <div className="text-muted small">
                                   {expedient.createdby
                                     ? `${t("Created by")} #${expedient.createdby}`
                                     : "-"}
-                                </div>
+                                </div> */}
                               </td>
                               <td>
                                 {expedient.updatedat ? (
@@ -568,11 +562,11 @@ const Expedients = () => {
                                         "DD/MM/YYYY HH:mm"
                                       )}
                                     </div>
-                                    <div className="text-muted small">
+                                    {/* <div className="text-muted small">
                                       {expedient.updatedby
                                         ? `${t("Updated by")} #${expedient.updatedby}`
                                         : "-"}
-                                    </div>
+                                    </div> */}
                                   </>
                                 ) : (
                                   <span className="text-muted">-</span>
