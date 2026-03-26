@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
+import { saveAs } from "file-saver";
 import {
   Button,
   Card,
@@ -28,6 +29,12 @@ import { buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import { Document } from "../Documents/types";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
+import PurchaseOrderPdfPreviewModal from "./PurchaseOrderPdfPreviewModal";
+import {
+  getPurchaseOrderPdf,
+  listStoredPurchaseOrderPdfIds,
+  savePurchaseOrderPdf,
+} from "./purchaseOrderPdfStorage";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
@@ -404,6 +411,13 @@ const PurchaseOrderDetails = () => {
   const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
   const [selectedState, setSelectedState] = useState<number | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
+  const [storedPdfOrderIds, setStoredPdfOrderIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [pdfPreview, setPdfPreview] = useState<{
+    fileName: string;
+    previewUrl: string;
+  } | null>(null);
 
   const sessionUser = getCurrentSessionUser();
   const numberLocale = getNumberLocale(i18n.language);
@@ -528,6 +542,37 @@ const PurchaseOrderDetails = () => {
     setOrderModal(null);
   };
 
+  const handleClosePdfPreview = () => {
+    setPdfPreview((currentPreview) => {
+      if (currentPreview?.previewUrl) {
+        URL.revokeObjectURL(currentPreview.previewUrl);
+      }
+
+      return null;
+    });
+  };
+
+  const handlePreviewOrderPdf = async (purchaseOrderID: number) => {
+    const storedPdf = await getPurchaseOrderPdf(purchaseOrderID).catch(() => null);
+
+    if (!storedPdf) {
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(storedPdf.blob);
+
+    setPdfPreview((currentPreview) => {
+      if (currentPreview?.previewUrl) {
+        URL.revokeObjectURL(currentPreview.previewUrl);
+      }
+
+      return {
+        fileName: storedPdf.fileName,
+        previewUrl: nextPreviewUrl,
+      };
+    });
+  };
+
   const handleRemoveFloatingAlert = (alertId: string | number) => {
     if (alertId === "purchase-orders-error") {
       setError(null);
@@ -576,12 +621,12 @@ const PurchaseOrderDetails = () => {
 
       const updatedOrder = {
         ...orderModal,
-          purchaseState: selectedState,
-          purchaseStateLabel:
-            purchaseStateLookup[selectedState] ||
-            modalStateOptions.find((option) => option.value === selectedState)?.label,
-          updatedBy: sessionUser.id,
-        };
+        purchaseState: selectedState,
+        purchaseStateLabel:
+          purchaseStateLookup[selectedState] ||
+          modalStateOptions.find((option) => option.value === selectedState)?.label,
+        updatedBy: sessionUser.id,
+      };
 
       setPurchaseOrders((currentOrders) =>
         currentOrders.map((purchaseOrder) =>
@@ -607,7 +652,7 @@ const PurchaseOrderDetails = () => {
         setGeneratingOrderId(orderModal.purchaseOrderID);
         setOrderModal(null);
 
-        await generatePurchaseOrderPdf({
+        const generatedPdf = await generatePurchaseOrderPdf({
           purchaseOrder: updatedOrder,
           relatedDocument:
             documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null,
@@ -629,6 +674,19 @@ const PurchaseOrderDetails = () => {
           executedByName:
             orderModal.createdBy === sessionUser.id ? sessionUser.name : "",
           numberLocale,
+        });
+
+        await savePurchaseOrderPdf({
+          purchaseOrderID: updatedOrder.purchaseOrderID,
+          fileName: generatedPdf.fileName,
+          blob: generatedPdf.blob,
+          createdAt: new Date().toISOString(),
+        });
+        saveAs(generatedPdf.blob, generatedPdf.fileName);
+        setStoredPdfOrderIds((currentIds) => {
+          const nextIds = new Set(currentIds);
+          nextIds.add(updatedOrder.purchaseOrderID);
+          return nextIds;
         });
       } else {
         setOrderModal(null);
@@ -665,6 +723,7 @@ const PurchaseOrderDetails = () => {
           currencyResponse,
           storeResponse,
           purchaseStateResponse,
+          storedPdfIds,
         ] = await Promise.all([
           fetch(buildApiUrl("purchase-orders/")),
           fetch(buildApiUrl("documents")),
@@ -673,6 +732,7 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER")),
+          listStoredPurchaseOrderPdfIds().catch(() => []),
         ]);
         const purchaseOrdersData = await purchaseOrdersResponse
           .json()
@@ -691,6 +751,7 @@ const PurchaseOrderDetails = () => {
         setPurchaseOrders(
           (purchaseOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
         );
+        setStoredPdfOrderIds(new Set(storedPdfIds));
 
         const documentsData = await documentsResponse.json().catch(() => null);
         const suppliersData = await suppliersResponse.json().catch(() => null);
@@ -791,6 +852,15 @@ const PurchaseOrderDetails = () => {
 
     fetchPurchaseOrders();
   }, [t]);
+
+  useEffect(
+    () => () => {
+      if (pdfPreview?.previewUrl) {
+        URL.revokeObjectURL(pdfPreview.previewUrl);
+      }
+    },
+    [pdfPreview]
+  );
 
   return (
     <React.Fragment>
@@ -894,6 +964,9 @@ const PurchaseOrderDetails = () => {
                           const isActionBlocked =
                             purchaseState.kind === "approved" ||
                             purchaseState.kind === "rejected";
+                          const hasStoredPdf = storedPdfOrderIds.has(
+                            purchaseOrder.purchaseOrderID
+                          );
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
@@ -941,30 +1014,48 @@ const PurchaseOrderDetails = () => {
                                 )}
                               </td>
                               <td className="text-center">
-                                <Button
-                                  color="primary"
-                                  size="sm"
-                                  outline
-                                  disabled={
-                                    generatingOrderId ===
-                                      purchaseOrder.purchaseOrderID ||
-                                    isActionBlocked
-                                  }
-                                  onClick={() => handleOpenOrderModal(purchaseOrder)}
-                                >
-                                  {generatingOrderId ===
-                                  purchaseOrder.purchaseOrderID ? (
-                                    <>
-                                      <Spinner size="sm" className="me-2" />
-                                      {t("Generating...")}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <i className="ri-file-text-line me-1" />
-                                      {t("Generate Order C.")}
-                                    </>
-                                  )}
-                                </Button>
+                                <div className="d-inline-flex align-items-center gap-2 flex-wrap justify-content-center">
+                                  <Button
+                                    color="info"
+                                    size="sm"
+                                    outline
+                                    disabled={!hasStoredPdf}
+                                    onClick={() =>
+                                      handlePreviewOrderPdf(
+                                        purchaseOrder.purchaseOrderID
+                                      )
+                                    }
+                                  >
+                                    <i className="ri-eye-line me-1" />
+                                    {t("View")}
+                                  </Button>
+                                  <Button
+                                    color="primary"
+                                    size="sm"
+                                    outline
+                                    disabled={
+                                      generatingOrderId ===
+                                        purchaseOrder.purchaseOrderID ||
+                                      isActionBlocked
+                                    }
+                                    onClick={() =>
+                                      handleOpenOrderModal(purchaseOrder)
+                                    }
+                                  >
+                                    {generatingOrderId ===
+                                    purchaseOrder.purchaseOrderID ? (
+                                      <>
+                                        <Spinner size="sm" className="me-2" />
+                                        {t("Generating...")}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="ri-file-text-line me-1" />
+                                        {t("Generate Order C.")}
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1013,6 +1104,12 @@ const PurchaseOrderDetails = () => {
           </Card>
         </Container>
       </div>
+      <PurchaseOrderPdfPreviewModal
+        isOpen={!!pdfPreview}
+        fileName={pdfPreview?.fileName || ""}
+        previewUrl={pdfPreview?.previewUrl || ""}
+        onClose={handleClosePdfPreview}
+      />
       <Modal isOpen={!!orderModal} toggle={handleCloseOrderModal} centered size="sm">
         <ModalHeader toggle={handleCloseOrderModal} className="border-bottom-0 pb-0">
           <span className="fs-6 fw-semibold">{t("Generate Order C.")}</span>

@@ -59,6 +59,11 @@ interface GeneratePurchaseOrderPdfParams {
   numberLocale: string;
 }
 
+export interface GeneratedPurchaseOrderPdf {
+  blob: Blob;
+  fileName: string;
+}
+
 let logoDataUrlPromise: Promise<string> | null = null;
 
 const loadLogoDataUrl = async () => {
@@ -192,6 +197,14 @@ const drawFieldGroup = (
   });
 };
 
+const buildPurchaseOrderPdfFileName = (
+  purchaseOrder: Pick<PurchaseOrderPdfOrder, "orderNo" | "purchaseOrderID">
+) =>
+  `Orden_C_${safeValue(
+    purchaseOrder.orderNo,
+    String(purchaseOrder.purchaseOrderID)
+  ).replace(/[\\/:*?"<>|]/g, "_")}.pdf`;
+
 export const generatePurchaseOrderPdf = async ({
   purchaseOrder,
   relatedDocument,
@@ -202,7 +215,7 @@ export const generatePurchaseOrderPdf = async ({
   storeLabel,
   executedByName,
   numberLocale,
-}: GeneratePurchaseOrderPdfParams) => {
+}: GeneratePurchaseOrderPdfParams): Promise<GeneratedPurchaseOrderPdf> => {
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
@@ -468,10 +481,8 @@ export const generatePurchaseOrderPdf = async ({
     doc.setFont("helvetica", "bold");
   });
 
-  doc.save(
-    `Orden_C_${safeValue(
-      purchaseOrder.orderNo,
-      String(purchaseOrder.purchaseOrderID)
-    ).replace(/[\\/:*?"<>|]/g, "_")}.pdf`
-  );
+  return {
+    blob: doc.output("blob"),
+    fileName: buildPurchaseOrderPdfFileName(purchaseOrder),
+  };
 };

@@ -660,15 +660,9 @@ const DocumentOrderC = () => {
       return;
     }
 
-    const selectedSupplier = supplierOptions.find(
-      (supplier) => String(supplier.supplierID) === selected.value
-    );
-
     setValues((prev) => ({
       ...prev,
       supplierID: selected.value,
-      suppliernumber: selectedSupplier?.supplierNo || prev.suppliernumber,
-      suppliername: selectedSupplier?.supplierName || prev.suppliername,
     }));
   };
 
