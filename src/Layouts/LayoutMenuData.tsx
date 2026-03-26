@@ -49,6 +49,18 @@ const Navdata = (t: (key: string) => string) => [
             },
         ],
     },
+    {
+        id: "expedients",
+        label: t("Expedients"),
+        icon: "ri-folder-2-line",
+        subItems: [
+            {
+                id: "expedient-list",
+                label: t("Expedient List"),
+                link: "/expedientes",
+            },
+        ],
+    },
 ];
 
 export default Navdata;
