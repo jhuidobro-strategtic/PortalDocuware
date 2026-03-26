@@ -19,6 +19,43 @@ import {
   getPreviewUrl,
 } from "./document-utils";
 
+type PurchaseOrderStateValue =
+  | number
+  | {
+      id?: number;
+      descripcion?: string;
+    };
+
+type PurchaseOrderReference = {
+  documentAssociatedNo?: string;
+  purchaseState?: PurchaseOrderStateValue;
+};
+
+const APPROVED_PURCHASE_STATE_ID = 12;
+
+const normalizeAssociatedNo = (value: string) => value.trim().toUpperCase();
+
+const getDocumentAssociatedNo = (document: Document) =>
+  normalizeAssociatedNo(
+    [document.documentserial, document.documentnumber].filter(Boolean).join("-")
+  );
+
+const isApprovedPurchaseState = (purchaseState: PurchaseOrderStateValue) => {
+  if (typeof purchaseState === "number") {
+    return purchaseState === APPROVED_PURCHASE_STATE_ID;
+  }
+
+  const stateId = Number(purchaseState?.id ?? 0);
+  const stateDescription = String(purchaseState?.descripcion ?? "")
+    .trim()
+    .toUpperCase();
+
+  return (
+    stateId === APPROVED_PURCHASE_STATE_ID ||
+    stateDescription.includes("APROBADO")
+  );
+};
+
 const DocumentList: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,6 +74,9 @@ const DocumentList: React.FC = () => {
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [approvedOrderDocumentNos, setApprovedOrderDocumentNos] = useState<
+    Set<string>
+  >(new Set());
 
   const itemsPerPage = 20;
   const startDate = dateRange[0];
@@ -102,13 +142,21 @@ const DocumentList: React.FC = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [documentsResponse, documentTypesResponse] = await Promise.all([
+        const [
+          documentsResponse,
+          documentTypesResponse,
+          purchaseOrdersResponse,
+        ] = await Promise.all([
           fetch(buildApiUrl("documents")),
           fetch(buildApiUrl("tipo-documento")),
+          fetch(buildApiUrl("purchase-orders/")),
         ]);
 
         const documentsPayload = await documentsResponse.json();
         const documentTypesPayload = await documentTypesResponse.json();
+        const purchaseOrdersPayload = await purchaseOrdersResponse
+          .json()
+          .catch(() => null);
 
         if (documentsPayload.success) {
           setDocuments(documentsPayload.data);
@@ -118,6 +166,29 @@ const DocumentList: React.FC = () => {
 
         if (documentTypesPayload.success) {
           setTiposDocumento(documentTypesPayload.data);
+        }
+
+        if (
+          purchaseOrdersResponse.ok &&
+          purchaseOrdersPayload?.success &&
+          Array.isArray(purchaseOrdersPayload?.data)
+        ) {
+          const approvedOrders = new Set(
+            (purchaseOrdersPayload.data as PurchaseOrderReference[])
+              .filter((purchaseOrder) =>
+                isApprovedPurchaseState(purchaseOrder.purchaseState ?? 0)
+              )
+              .map((purchaseOrder) =>
+                normalizeAssociatedNo(
+                  String(purchaseOrder.documentAssociatedNo ?? "")
+                )
+              )
+              .filter(Boolean)
+          );
+
+          setApprovedOrderDocumentNos(approvedOrders);
+        } else {
+          setApprovedOrderDocumentNos(new Set());
         }
       } catch (fetchError: unknown) {
         const message =
@@ -442,6 +513,8 @@ const DocumentList: React.FC = () => {
                 columnWidths={columnWidths}
                 onResizeColumn={handleResize}
                 documents={paginatedDocuments}
+                approvedOrderDocumentNos={approvedOrderDocumentNos}
+                getDocumentAssociatedNo={getDocumentAssociatedNo}
                 getTipoDocumentoNombre={getTipoDocumentoNombre}
                 onView={handleViewDocument}
                 onOrderC={handleOpenOrderC}

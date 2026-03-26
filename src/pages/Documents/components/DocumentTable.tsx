@@ -20,6 +20,8 @@ interface DocumentTableProps {
   columnWidths: ColumnWidths;
   onResizeColumn: (column: keyof ColumnWidths, width: number) => void;
   documents: Document[];
+  approvedOrderDocumentNos: Set<string>;
+  getDocumentAssociatedNo: (doc: Document) => string;
   getTipoDocumentoNombre: (docType: Document["documenttype"]) => string;
   onView: (doc: Document) => void;
   onOrderC: (doc: Document) => void;
@@ -41,6 +43,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   columnWidths,
   onResizeColumn,
   documents,
+  approvedOrderDocumentNos,
+  getDocumentAssociatedNo,
   getTipoDocumentoNombre,
   onView,
   onOrderC,
@@ -161,6 +165,9 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               </tr>
             )}
             {documents.map((doc) => {
+              const hasApprovedPurchaseOrder = approvedOrderDocumentNos.has(
+                getDocumentAssociatedNo(doc)
+              );
               const style = {
                 ...highlightStyle(doc),
                 width: undefined,
@@ -309,6 +316,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                         size="sm"
                         color="primary"
                         outline
+                        disabled={hasApprovedPurchaseOrder}
                         onClick={() => onOrderC(doc)}
                       >
                         <i className="ri-file-list-3-line align-bottom" /> {t("Order C.")}
