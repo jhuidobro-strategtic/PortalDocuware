@@ -175,25 +175,55 @@ const drawPageBorder = (doc: jsPDF) => {
   doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
 };
 // 
+interface FieldGroupRow {
+  label: string;
+  value: string;
+  minLines?: number;
+  valueMaxWidth?: number;
+}
+
+const getFieldGroupHeight = (
+  doc: jsPDF,
+  lineHeight: number,
+  rows: FieldGroupRow[],
+  defaultValueMaxWidth: number
+) =>
+  rows.reduce((totalHeight, row) => {
+    const wrappedValue = doc.splitTextToSize(
+      row.value,
+      row.valueMaxWidth ?? defaultValueMaxWidth
+    );
+    const usedLines = Math.max(wrappedValue.length || 1, row.minLines ?? 1);
+
+    return totalHeight + usedLines * lineHeight;
+  }, 0);
+
 const drawFieldGroup = (
   doc: jsPDF,
   x: number,
   y: number,
   lineHeight: number,
-  rows: Array<[string, string]>,
+  rows: FieldGroupRow[],
   valueMaxWidth = 86,
   colonOffset = 32
 ) => {
-  rows.forEach(([label, value], index) => {
-    const currentY = y + index * lineHeight;
-    const wrappedValue = doc.splitTextToSize(value, valueMaxWidth);
+  let currentY = y;
+
+  rows.forEach((row) => {
+    const wrappedValue = doc.splitTextToSize(
+      row.value,
+      row.valueMaxWidth ?? valueMaxWidth
+    );
+    const usedLines = Math.max(wrappedValue.length || 1, row.minLines ?? 1);
 
     doc.setFont("helvetica", "bold");
-    doc.text(label, x, currentY);
+    doc.text(row.label, x, currentY);
     doc.text(":", x + colonOffset, currentY);
 
     doc.setFont("helvetica", "normal");
     doc.text(wrappedValue, x + colonOffset + 3, currentY);
+
+    currentY += usedLines * lineHeight;
   });
 };
 
@@ -277,55 +307,115 @@ export const generatePurchaseOrderPdf = async ({
     align: "center",
   });
 
-  const infoTop = 27;
-  const infoHeight = 40;
+  const infoTop = 24;
+  const infoContentTop = infoTop + 4;
+  const fieldGroupLineHeight = 4.4;
+  const leftFieldRows: FieldGroupRow[] = [
+    {
+      label: "RUC",
+      value: safeValue(supplier?.supplierno, relatedDocument?.suppliernumber),
+    },
+    {
+      label: "RAZON SOCIAL",
+      value: safeValue(supplier?.suppliername, relatedDocument?.suppliername),
+    },
+    {
+      label: "DIRECCION",
+      value: safeValue(supplier?.address),
+      minLines: 2,
+      valueMaxWidth: 108,
+    },
+    {
+      label: "TELEFONO",
+      value: safeValue(supplier?.phone),
+    },
+    {
+      label: "EMAIL",
+      value: safeValue(supplier?.email),
+    },
+    {
+      label: "CTA. BANCO 1",
+      value: getBankAccountLabel(supplier?.bank1, supplier?.accountno1),
+    },
+    {
+      label: "CTA. BANCO 2",
+      value: getBankAccountLabel(supplier?.bank2, supplier?.accountno2),
+    },
+    {
+      label: "REQUERIDO POR",
+      value: safeValue(relatedDocument?.driver, executedByName),
+    },
+  ];
+  const rightFieldRows: FieldGroupRow[] = [
+    {
+      label: "NRO DOC",
+      value: safeValue(purchaseOrder.documentAssociatedNo),
+    },
+    {
+      label: "DOC. ASOCIADO",
+      value: getDocumentTypeLabel(
+        purchaseOrder.documentAssociatedType,
+        relatedDocument,
+        documentAssociatedTypeLabel
+      ),
+    },
+    {
+      label: "CONDICION DE PAGO",
+      value: getPaymentConditionLabel(
+        purchaseOrder.paymentCondition,
+        paymentConditionLabel
+      ),
+    },
+    {
+      label: "UNIDAD MONETARIA",
+      value: getCurrencyLabel(purchaseOrder.currency, currencyLabel),
+    },
+    {
+      label: "GUIA REMISION",
+      value: safeValue(purchaseOrder.guideNo),
+    },
+    {
+      label: "COTIZACION / PROF.",
+      value: "-",
+    },
+    {
+      label: "ALMACEN",
+      value: safeValue(storeLabel),
+    },
+    {
+      label: "EJECUTADO POR",
+      value: safeValue(executedByName),
+    },
+  ];
+  const infoHeight =
+    Math.max(
+      getFieldGroupHeight(doc, fieldGroupLineHeight, leftFieldRows, 140),
+      getFieldGroupHeight(doc, fieldGroupLineHeight, rightFieldRows, 57)
+    ) + 5;
 
   doc.rect(5, infoTop, pageWidth - 10, infoHeight);
 
   drawFieldGroup(
     doc,
     8,
-    32,
-    4.4,
-    [
-      ["RUC", safeValue(supplier?.supplierno, relatedDocument?.suppliernumber)],
-      [
-        "RAZON SOCIAL",
-        safeValue(supplier?.suppliername, relatedDocument?.suppliername),
-      ],
-      ["DIRECCION", safeValue(supplier?.address)],
-      ["TELEFONO", safeValue(supplier?.phone)],
-      ["EMAIL", safeValue(supplier?.email)],
-      ["CTA. BANCO 1", getBankAccountLabel(supplier?.bank1, supplier?.accountno1)],
-      ["CTA. BANCO 2", getBankAccountLabel(supplier?.bank2, supplier?.accountno2)],
-      ["REQUERIDO POR", safeValue(relatedDocument?.driver, executedByName)],
-    ],
+    infoContentTop,
+    fieldGroupLineHeight,
+    leftFieldRows,
     140
   );
 
-  drawFieldGroup(doc, 193, 32, 4.4, [
-    ["NRO DOC", safeValue(purchaseOrder.documentAssociatedNo)],
-    [
-      "DOC. ASOCIADO",
-      getDocumentTypeLabel(
-        purchaseOrder.documentAssociatedType,
-        relatedDocument,
-        documentAssociatedTypeLabel
-      ),
-    ],
-    [
-      "CONDICION DE PAGO",
-      getPaymentConditionLabel(purchaseOrder.paymentCondition, paymentConditionLabel),
-    ],
-    ["UNIDAD MONETARIA", getCurrencyLabel(purchaseOrder.currency, currencyLabel)],
-    ["GUIA REMISION", safeValue(purchaseOrder.guideNo)],
-    ["COTIZACION / PROF.", "-"],
-    ["ALMACEN", safeValue(storeLabel)],
-    ["EJECUTADO POR", safeValue(executedByName)],
-  ], 57, 40);
+  drawFieldGroup(
+    doc,
+    193,
+    infoContentTop,
+    fieldGroupLineHeight,
+    rightFieldRows,
+    57,
+    40
+  );
 
   autoTable(doc, {
-    startY: 68,
+    startY: infoTop + infoHeight + 0.75,
     theme: "grid",
     margin: { left: 5, right: 5 },
     tableWidth: pageWidth - 10,
@@ -407,22 +497,33 @@ export const generatePurchaseOrderPdf = async ({
     ]),
   });
 
+  const pageHeight = doc.internal.pageSize.getHeight();
   const finalTableY =
     (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
       ?.finalY ?? 60;
-  let footerTop = Math.max(finalTableY + 6, 174);
-
-  if (footerTop > 190) {
-    doc.addPage();
-    drawPageBorder(doc);
-    footerTop = 20;
-  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
 
   const summaryWidth = 58;
-  const signatureHeight = 31;
+  const signatureHeight = 34;
+  const preferredFooterTop = 166;
+  const footerGap = 4;
+  const footerBottomMargin = 8;
+  const minimumFooterTop = finalTableY + footerGap;
+  const maxFooterTop = pageHeight - footerBottomMargin - signatureHeight;
+  let footerTop = Math.max(minimumFooterTop, preferredFooterTop);
+
+  if (footerTop > maxFooterTop) {
+    if (minimumFooterTop <= maxFooterTop) {
+      footerTop = maxFooterTop;
+    } else {
+      doc.addPage();
+      drawPageBorder(doc);
+      footerTop = 20;
+    }
+  }
+
   const signatureStartX = 5;
   const summaryStartX = pageWidth - 5 - summaryWidth;
   const signatureSectionWidth = summaryStartX - signatureStartX;
