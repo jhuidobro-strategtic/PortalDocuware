@@ -507,21 +507,16 @@ export const generatePurchaseOrderPdf = async ({
 
   const summaryWidth = 58;
   const signatureHeight = 34;
-  const preferredFooterTop = 166;
-  const footerGap = 4;
+  const footerGap = 3;
   const footerBottomMargin = 8;
   const minimumFooterTop = finalTableY + footerGap;
   const maxFooterTop = pageHeight - footerBottomMargin - signatureHeight;
-  let footerTop = Math.max(minimumFooterTop, preferredFooterTop);
+  let footerTop = maxFooterTop;
 
-  if (footerTop > maxFooterTop) {
-    if (minimumFooterTop <= maxFooterTop) {
-      footerTop = maxFooterTop;
-    } else {
-      doc.addPage();
-      drawPageBorder(doc);
-      footerTop = 20;
-    }
+  if (minimumFooterTop > maxFooterTop) {
+    doc.addPage();
+    drawPageBorder(doc);
+    footerTop = pageHeight - footerBottomMargin - signatureHeight;
   }
 
   const signatureStartX = 5;
