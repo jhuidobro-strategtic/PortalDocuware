@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
-import { saveAs } from "file-saver";
 import {
   Button,
   Card,
@@ -28,6 +27,7 @@ import FloatingAlerts, {
 import { buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import { Document } from "../Documents/types";
+import { getDownloadUrl } from "../Documents/document-utils";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
 import PurchaseOrderPdfPreviewModal from "./PurchaseOrderPdfPreviewModal";
 import {
@@ -121,6 +121,88 @@ interface PurchaseOrderApiItem {
 
 const getDocumentAssociatedNo = (document: Document) =>
   [document.documentserial, document.documentnumber].filter(Boolean).join("-");
+
+const sanitizeFileNamePart = (value: unknown, fallback: string) => {
+  const normalizedValue = String(value ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "_");
+
+  return normalizedValue || fallback;
+};
+
+const createPdfFile = (blob: Blob, fileName: string) =>
+  new File([blob], fileName, {
+    type: blob.type || "application/pdf",
+    lastModified: Date.now(),
+  });
+
+const buildInvoicePdfFileName = (document: Document) =>
+  `${sanitizeFileNamePart(
+    [document.documentserial, document.documentnumber]
+      .filter(Boolean)
+      .join("-") || document.documentid,
+    "Factura"
+  )}.pdf`;
+
+const fetchRelatedInvoicePdfFile = async (
+  document: Document
+): Promise<File | null> => {
+  const primaryUrl = getDownloadUrl(document.documenturl || "");
+  const fallbackUrl = String(document.documenturl || "").trim();
+  const candidateUrls = [primaryUrl, fallbackUrl].filter(Boolean);
+
+  for (const candidateUrl of candidateUrls) {
+    try {
+      const response = await fetch(candidateUrl);
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType && !contentType.toLowerCase().includes("pdf")) {
+        continue;
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        continue;
+      }
+
+      const blobType = (blob.type || contentType).toLowerCase();
+      if (blobType && !blobType.includes("pdf")) {
+        continue;
+      }
+
+      return createPdfFile(blob, buildInvoicePdfFileName(document));
+    } catch {
+      // Try the next candidate URL.
+    }
+  }
+
+  return null;
+};
+
+const buildExpedientDocumentsPayload = (
+  createdBy: number,
+  includeInvoiceFile: boolean
+) =>
+  JSON.stringify(
+    [
+      includeInvoiceFile
+        ? {
+            tipodocumentoid: 1,
+            file_field: "factura_file",
+            createdby: createdBy,
+          }
+        : null,
+      {
+        tipodocumentoid: 2,
+        file_field: "orden_file",
+        createdby: createdBy,
+      },
+    ].filter(Boolean)
+  );
 
 const mapCatalogLookup = (items: CatalogItem[]) =>
   items.reduce((acc: Record<number, string>, item) => {
@@ -649,13 +731,21 @@ const PurchaseOrderDetails = () => {
           purchaseStateLookup[selectedState]
         ) === "approved"
       ) {
+        const relatedDocument =
+          documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null;
+
+        if (!relatedDocument?.documentid) {
+          throw new Error(
+            t("Unable to identify the related invoice for this purchase order.")
+          );
+        }
+
         setGeneratingOrderId(orderModal.purchaseOrderID);
         setOrderModal(null);
 
         const generatedPdf = await generatePurchaseOrderPdf({
           purchaseOrder: updatedOrder,
-          relatedDocument:
-            documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null,
+          relatedDocument,
           supplier: supplierDetailsLookup[orderModal.supplierID] ?? null,
           paymentConditionLabel:
             orderModal.paymentConditionLabel ||
@@ -676,18 +766,58 @@ const PurchaseOrderDetails = () => {
           numberLocale,
         });
 
-        await savePurchaseOrderPdf({
-          purchaseOrderID: updatedOrder.purchaseOrderID,
-          fileName: generatedPdf.fileName,
-          blob: generatedPdf.blob,
-          createdAt: new Date().toISOString(),
+        const orderPdfFile = createPdfFile(
+          generatedPdf.blob,
+          generatedPdf.fileName
+        );
+        const invoicePdfFile = await fetchRelatedInvoicePdfFile(relatedDocument);
+        const expedientePayload = new FormData();
+
+        expedientePayload.append("facturaid", String(relatedDocument.documentid));
+        expedientePayload.append(
+          "ordencompraid",
+          String(updatedOrder.purchaseOrderID)
+        );
+        expedientePayload.append("createdby", String(sessionUser.id));
+        expedientePayload.append("orden_file", orderPdfFile);
+
+        if (invoicePdfFile) {
+          expedientePayload.append("factura_file", invoicePdfFile);
+        }
+
+        expedientePayload.append(
+          "expediente_documentos",
+          buildExpedientDocumentsPayload(sessionUser.id, !!invoicePdfFile)
+        );
+
+        const expedienteResponse = await fetch(buildApiUrl("expedientes/"), {
+          method: "POST",
+          body: expedientePayload,
         });
-        saveAs(generatedPdf.blob, generatedPdf.fileName);
-        setStoredPdfOrderIds((currentIds) => {
-          const nextIds = new Set(currentIds);
-          nextIds.add(updatedOrder.purchaseOrderID);
-          return nextIds;
-        });
+        const expedienteData = await expedienteResponse.json().catch(() => null);
+
+        if (!expedienteResponse.ok || expedienteData?.success === false) {
+          throw new Error(
+            expedienteData?.message ||
+              t("Unable to send the purchase order PDF to expedients.")
+          );
+        }
+
+        try {
+          await savePurchaseOrderPdf({
+            purchaseOrderID: updatedOrder.purchaseOrderID,
+            fileName: generatedPdf.fileName,
+            blob: generatedPdf.blob,
+            createdAt: new Date().toISOString(),
+          });
+          setStoredPdfOrderIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            nextIds.add(updatedOrder.purchaseOrderID);
+            return nextIds;
+          });
+        } catch {
+          // The expedient upload already succeeded; local preview storage is optional.
+        }
       } else {
         setOrderModal(null);
       }
