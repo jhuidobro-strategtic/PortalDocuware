@@ -414,93 +414,9 @@ export const generatePurchaseOrderPdf = async ({
     40
   );
 
-  autoTable(doc, {
-    startY: infoTop + infoHeight + 0.75,
-    theme: "grid",
-    margin: { left: 5, right: 5 },
-    tableWidth: pageWidth - 10,
-    styles: {
-      font: "helvetica",
-      fontSize: 7,
-      textColor: 20,
-      lineColor: 90,
-      lineWidth: 0.15,
-      cellPadding: 1.4,
-      overflow: "linebreak",
-      valign: "middle",
-    },
-    headStyles: {
-      fillColor: [235, 235, 235],
-      textColor: 0,
-      fontStyle: "bold",
-    },
-    bodyStyles: {
-      minCellHeight: 6,
-    },
-    columnStyles: (() => {
-      const tableWidth = pageWidth - 10;
-      const fixedWidths = {
-        0: 10,
-        2: 18,
-        3: 24,
-        4: 24,
-        5: 27,
-        6: 18,
-        7: 18,
-        8: 20,
-        9: 24,
-      } as const;
-      const occupiedWidth = Object.values(fixedWidths).reduce(
-        (sum, width) => sum + width,
-        0
-      );
-      const descriptionWidth = Math.max(tableWidth - occupiedWidth, 84);
-
-      return {
-        0: { cellWidth: fixedWidths[0], halign: "center" },
-        1: { cellWidth: descriptionWidth },
-        2: { cellWidth: fixedWidths[2], halign: "center" },
-        3: { cellWidth: fixedWidths[3], halign: "center" },
-        4: { cellWidth: fixedWidths[4], halign: "center" },
-        5: { cellWidth: fixedWidths[5], halign: "center" },
-        6: { cellWidth: fixedWidths[6], halign: "center" },
-        7: { cellWidth: fixedWidths[7], halign: "right" },
-        8: { cellWidth: fixedWidths[8], halign: "right" },
-        9: { cellWidth: fixedWidths[9], halign: "right" },
-      };
-    })(),
-    head: [
-      [
-        "ITEM",
-        "DESCRIPCION",
-        "CODIGO",
-        "COSTO 1",
-        "COSTO 2",
-        "MARCA",
-        "U.M.",
-        "CANT.",
-        "CU",
-        "COSTO TOTAL",
-      ],
-    ],
-    body: purchaseOrder.details.map((detail, index) => [
-      String(index + 1),
-      safeValue(detail.descriptionItem),
-      "-",
-      "-",
-      "-",
-      "-",
-      "Unidad",
-      formatAmount(detail.quantity, numberLocale),
-      formatAmount(detail.unitPrice, numberLocale),
-      formatAmount(detail.total, numberLocale),
-    ]),
-  });
-
+  const detailTableStartY = infoTop + infoHeight + 0.75;
+  const detailTableContinuationStartY = 8;
   const pageHeight = doc.internal.pageSize.getHeight();
-  const finalTableY =
-    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
-      ?.finalY ?? 60;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
@@ -509,11 +425,208 @@ export const generatePurchaseOrderPdf = async ({
   const signatureHeight = 34;
   const footerGap = 3;
   const footerBottomMargin = 8;
-  const minimumFooterTop = finalTableY + footerGap;
   const maxFooterTop = pageHeight - footerBottomMargin - signatureHeight;
+  const detailTableBody = purchaseOrder.details.map((detail, index) => [
+    String(index + 1),
+    safeValue(detail.descriptionItem),
+    "-",
+    "-",
+    "-",
+    "-",
+    "Unidad",
+    formatAmount(detail.quantity, numberLocale),
+    formatAmount(detail.unitPrice, numberLocale),
+    formatAmount(detail.total, numberLocale),
+  ]);
+
+  const renderDetailTable = (
+    targetDoc: jsPDF,
+    body: string[][],
+    startY: number,
+    trackLastPageRows = false
+  ) => {
+    const rowPageMap = new Map<number, number>();
+
+    autoTable(targetDoc, {
+      startY,
+      theme: "grid",
+      margin: { left: 5, right: 5 },
+      tableWidth: pageWidth - 10,
+      styles: {
+        font: "helvetica",
+        fontSize: 7,
+        textColor: 20,
+        lineColor: 90,
+        lineWidth: 0.15,
+        cellPadding: 1.4,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [235, 235, 235],
+        textColor: 0,
+        fontStyle: "bold",
+      },
+      bodyStyles: {
+        minCellHeight: 6,
+      },
+      columnStyles: (() => {
+        const tableWidth = pageWidth - 10;
+        const fixedWidths = {
+          0: 10,
+          2: 18,
+          3: 24,
+          4: 24,
+          5: 27,
+          6: 18,
+          7: 18,
+          8: 20,
+          9: 24,
+        } as const;
+        const occupiedWidth = Object.values(fixedWidths).reduce(
+          (sum, width) => sum + width,
+          0
+        );
+        const descriptionWidth = Math.max(tableWidth - occupiedWidth, 84);
+
+        return {
+          0: { cellWidth: fixedWidths[0], halign: "center" },
+          1: { cellWidth: descriptionWidth },
+          2: { cellWidth: fixedWidths[2], halign: "center" },
+          3: { cellWidth: fixedWidths[3], halign: "center" },
+          4: { cellWidth: fixedWidths[4], halign: "center" },
+          5: { cellWidth: fixedWidths[5], halign: "center" },
+          6: { cellWidth: fixedWidths[6], halign: "center" },
+          7: { cellWidth: fixedWidths[7], halign: "right" },
+          8: { cellWidth: fixedWidths[8], halign: "right" },
+          9: { cellWidth: fixedWidths[9], halign: "right" },
+        };
+      })(),
+      head: [
+        [
+          "ITEM",
+          "DESCRIPCION",
+          "CODIGO",
+          "COSTO 1",
+          "COSTO 2",
+          "MARCA",
+          "U.M.",
+          "CANT.",
+          "CU",
+          "COSTO TOTAL",
+        ],
+      ],
+      body,
+      didDrawCell: (data) => {
+        if (
+          trackLastPageRows &&
+          data.section === "body" &&
+          data.column.index === 0 &&
+          !rowPageMap.has(data.row.index)
+        ) {
+          const pageNumber = Number(
+            (data as unknown as { pageNumber?: number }).pageNumber ?? 0
+          );
+
+          if (pageNumber > 0) {
+            rowPageMap.set(data.row.index, pageNumber);
+          }
+        }
+      },
+    });
+
+    const finalY =
+      (targetDoc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
+        ?.finalY ?? startY;
+
+    let firstRowIndexOnLastPage: number | null = null;
+
+    if (trackLastPageRows && rowPageMap.size > 0) {
+      const lastPageNumber = Math.max(...Array.from(rowPageMap.values()));
+      const rowsOnLastPage = Array.from(rowPageMap.entries())
+        .filter(([, pageNumber]) => pageNumber === lastPageNumber)
+        .map(([rowIndex]) => rowIndex);
+
+      if (rowsOnLastPage.length > 0) {
+        firstRowIndexOnLastPage = Math.min(...rowsOnLastPage);
+      }
+    }
+
+    return { finalY, firstRowIndexOnLastPage };
+  };
+
+  const measureDetailTable = (body: string[][], startY: number) => {
+    const measurementDoc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    return renderDetailTable(measurementDoc, body, startY, true);
+  };
+
+  const fullTableMeasurement = measureDetailTable(
+    detailTableBody,
+    detailTableStartY
+  );
+  let footerSplitIndex: number | null = null;
+
+  if (
+    fullTableMeasurement.finalY + footerGap > maxFooterTop &&
+    detailTableBody.length > 1 &&
+    fullTableMeasurement.firstRowIndexOnLastPage !== null &&
+    fullTableMeasurement.firstRowIndexOnLastPage > 0
+  ) {
+    for (
+      let splitIndex = fullTableMeasurement.firstRowIndexOnLastPage;
+      splitIndex < detailTableBody.length;
+      splitIndex += 1
+    ) {
+      const footerPageRows = detailTableBody.slice(splitIndex);
+      const footerPageMeasurement = measureDetailTable(
+        footerPageRows,
+        detailTableContinuationStartY
+      );
+
+      if (footerPageMeasurement.finalY + footerGap <= maxFooterTop) {
+        footerSplitIndex = splitIndex;
+        break;
+      }
+    }
+  }
+
+  let finalTableY = detailTableStartY;
+
+  if (footerSplitIndex !== null) {
+    const mainPageRows = detailTableBody.slice(0, footerSplitIndex);
+    const footerPageRows = detailTableBody.slice(footerSplitIndex);
+
+    if (mainPageRows.length > 0) {
+      finalTableY = renderDetailTable(
+        doc,
+        mainPageRows,
+        detailTableStartY
+      ).finalY;
+    }
+
+    doc.addPage();
+    drawPageBorder(doc);
+    finalTableY = renderDetailTable(
+      doc,
+      footerPageRows,
+      detailTableContinuationStartY
+    ).finalY;
+  } else {
+    finalTableY = renderDetailTable(
+      doc,
+      detailTableBody,
+      detailTableStartY
+    ).finalY;
+  }
+
   let footerTop = maxFooterTop;
 
-  if (minimumFooterTop > maxFooterTop) {
+  if (finalTableY + footerGap > maxFooterTop) {
     doc.addPage();
     drawPageBorder(doc);
     footerTop = pageHeight - footerBottomMargin - signatureHeight;
