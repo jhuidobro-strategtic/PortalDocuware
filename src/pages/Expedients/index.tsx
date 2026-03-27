@@ -210,6 +210,22 @@ const getPurchaseOrderSupplierLabel = (
   );
 };
 
+const getRegisteredDocumentTypeLabel = (
+  file: ExpedientDocument,
+  expedient: Expedient,
+  t: (key: string) => string
+) => {
+  if (file.tipodocumentoid === 1) {
+    return expedient.factura?.documenttype?.tipo || t("Invoice");
+  }
+
+  if (file.tipodocumentoid === 2) {
+    return t("Purchase Order");
+  }
+
+  return `${t("Type")} #${file.tipodocumentoid}`;
+};
+
 const formatAmount = (
   value: string | number | null | undefined,
   locale: string
@@ -883,6 +899,11 @@ const Expedients = () => {
                   const fileUrl = getExpedientDocumentUrl(file.filepath);
                   const isPreviewActive =
                     selectedPreviewDocument?.expedientedocid === file.expedientedocid;
+                  const documentTypeLabel = getRegisteredDocumentTypeLabel(
+                    file,
+                    selectedExpedient,
+                    t
+                  );
 
                   return (
                     <React.Fragment key={file.expedientedocid}>
@@ -900,7 +921,7 @@ const Expedients = () => {
                           <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                             <h6 className="mb-0 text-body">{file.filename}</h6>
                             <span className="badge rounded-pill bg-light text-body border">
-                              {t("Type")} #{file.tipodocumentoid}
+                              {documentTypeLabel}
                             </span>
                           </div>
 
