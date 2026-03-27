@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import moment from "moment";
+import { PDFDocument } from "pdf-lib";
 import {
   Badge,
   Button,
@@ -224,6 +225,15 @@ const revokeObjectUrl = (value: string) => {
   }
 };
 
+const triggerPdfDownload = (blobUrl: string, fileName: string) => {
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const Expedients = () => {
   const { t, i18n } = useTranslation();
   const [expedients, setExpedients] = useState<Expedient[]>([]);
@@ -237,11 +247,17 @@ const Expedients = () => {
   const [previewBlobUrl, setPreviewBlobUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkDownloadError, setBulkDownloadError] = useState<string | null>(
+    null
+  );
   const numberLocale = getNumberLocale(i18n.language);
 
   const handleCloseDrawer = () => {
     setPreviewError(null);
     setPreviewLoading(false);
+    setBulkDownloadError(null);
+    setBulkDownloading(false);
     setPreviewBlobUrl((currentUrl) => {
       if (currentUrl) {
         revokeObjectUrl(currentUrl);
@@ -343,7 +359,77 @@ const Expedients = () => {
   useEffect(() => {
     setPreviewError(null);
     setSelectedPreviewDocument(null);
+    setBulkDownloadError(null);
   }, [selectedExpedient?.expedienteid]);
+
+  const handleBulkDownload = async () => {
+    if (!selectedExpedient?.expediente_documentos?.length || bulkDownloading) {
+      return;
+    }
+
+    setBulkDownloading(true);
+    setBulkDownloadError(null);
+
+    try {
+      const pdfFiles = selectedExpedient.expediente_documentos.filter((file) =>
+        /\.pdf$/i.test(file.filename || file.filepath)
+      );
+
+      if (!pdfFiles.length) {
+        throw new Error(t("No PDF files are available to merge."));
+      }
+
+      const mergedPdf = await PDFDocument.create();
+
+      for (const file of pdfFiles) {
+        const fileUrl = getExpedientDocumentUrl(file.filepath);
+
+        if (!fileUrl) {
+          throw new Error(t("Unable to generate the combined PDF."));
+        }
+
+        const response = await fetch(fileUrl, { method: "GET" });
+
+        if (!response.ok) {
+          throw new Error(t("Unable to generate the combined PDF."));
+        }
+
+        const sourceBytes = await response.arrayBuffer();
+        const sourcePdf = await PDFDocument.load(sourceBytes);
+        const copiedPages = await mergedPdf.copyPages(
+          sourcePdf,
+          sourcePdf.getPageIndices()
+        );
+
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+
+      if (mergedPdf.getPageCount() === 0) {
+        throw new Error(t("No PDF files are available to merge."));
+      }
+
+      const mergedBytes = await mergedPdf.save();
+      const mergedBlob = new Blob([mergedBytes], {
+        type: "application/pdf",
+      });
+      const mergedBlobUrl = URL.createObjectURL(mergedBlob);
+      const fileName = `expediente-${selectedExpedient.expedienteid}-documentos.pdf`;
+
+      triggerPdfDownload(mergedBlobUrl, fileName);
+
+      window.setTimeout(() => {
+        revokeObjectUrl(mergedBlobUrl);
+      }, 1500);
+    } catch (downloadError) {
+      const message =
+        downloadError instanceof Error
+          ? downloadError.message
+          : t("Unable to generate the combined PDF.");
+      setBulkDownloadError(message);
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!selectedPreviewDocument) {
@@ -755,17 +841,42 @@ const Expedients = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              className="expedient-drawer-close"
-              onClick={handleCloseDrawer}
-              aria-label={t("Close")}
-            >
-              <i className="ri-close-line" />
-            </button>
+            <div className="expedient-drawer-header-actions">
+              {!!selectedExpedient?.expediente_documentos?.length && (
+                <Button
+                  color="primary"
+                  className="expedient-bulk-download-button"
+                  onClick={handleBulkDownload}
+                  disabled={bulkDownloading}
+                >
+                  {bulkDownloading ? (
+                    <Spinner size="sm" className="me-2" />
+                  ) : (
+                    <i className="ri-download-2-line me-2" />
+                  )}
+                  {bulkDownloading ? t("Preparing PDF...") : t("Bulk download")}
+                </Button>
+              )}
+
+              <button
+                type="button"
+                className="expedient-drawer-close"
+                onClick={handleCloseDrawer}
+                aria-label={t("Close")}
+              >
+                <i className="ri-close-line" />
+              </button>
+            </div>
           </div>
 
           <div className="expedient-drawer-body">
+            {bulkDownloadError && (
+              <div className="expedient-drawer-alert" role="alert">
+                <i className="ri-error-warning-line" />
+                <span>{bulkDownloadError}</span>
+              </div>
+            )}
+
             {selectedExpedient?.expediente_documentos?.length ? (
               <div className="expedient-drawer-list">
                 {selectedExpedient.expediente_documentos.map((file, index) => {

@@ -57,6 +57,7 @@
     "jspdf-autotable": "^5.0.7",
     "moment": "^2.30.1",
     "nouislider-react": "^3.4.2",
+    "pdf-lib": "^1.17.1",
     "prismjs": "^1.29.0",
     "quill": "^2.0.2",
     "react": "^18.2.0",
