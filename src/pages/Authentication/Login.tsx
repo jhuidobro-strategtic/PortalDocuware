@@ -182,8 +182,12 @@ const Login = (props: any) => {
               <div className="w-100 p-4" style={{ maxWidth: "400px" }}>
                 <Card className="shadow-sm border-0 cardDatosIniciales">
                   <CardBody className="p-4">
-                    <div className="text-center mt-2">
-                      <img src={logologin} alt="Docuware Logo" height="135" />
+                    <div className="login-brand">
+                      <img
+                        src={logologin}
+                        alt="Docuware Logo"
+                        className="login-brand-logo"
+                      />
                     </div>
 
                     <Form

@@ -80,3 +80,31 @@
     width: 100%;
   }
 }
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 108px;
+  margin: 0 auto 1.5rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.login-brand-logo {
+  display: block;
+  width: min(100%, 300px);
+  max-width: 300px;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 576px) {
+  .login-brand {
+    min-height: 88px;
+    margin-bottom: 1.25rem;
+  }
+
+  .login-brand-logo {
+    width: min(100%, 240px);
+  }
+}
