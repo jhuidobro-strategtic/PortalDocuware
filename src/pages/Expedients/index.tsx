@@ -684,7 +684,7 @@ const Expedients = () => {
       }
 
       const mergedBytes = await mergedPdf.save();
-      const mergedBlob = new Blob([mergedBytes], {
+      const mergedBlob = new Blob([new Uint8Array(mergedBytes)], {
         type: "application/pdf",
       });
       const mergedBlobUrl = URL.createObjectURL(mergedBlob);
