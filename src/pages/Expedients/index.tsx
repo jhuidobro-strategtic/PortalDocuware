@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFPage } from "pdf-lib";
+import Select from "react-select";
 import {
   Badge,
   Button,
@@ -18,6 +19,9 @@ import {
 } from "reactstrap";
 import { useTranslation } from "react-i18next";
 import BreadCrumb from "../../Components/Common/BreadCrumb";
+import FloatingAlerts, {
+  FloatingAlertItem,
+} from "../../Components/Common/FloatingAlerts";
 import { API_BASE_URL, buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import "./Expedients.css";
@@ -123,7 +127,63 @@ interface Expedient {
   expediente_documentos: ExpedientDocument[];
 }
 
+interface SessionUser {
+  id: number | null;
+  token: string;
+}
+
+interface ExpedientUploadTypeOption {
+  value: string;
+  label: string;
+}
+
 const ITEMS_PER_PAGE = 10;
+const DEFAULT_UPLOAD_DOCUMENT_TYPE = 3;
+const EXPEDIENT_UPLOAD_TYPE_OPTIONS = [
+  { id: 1, labelKey: "Invoice" },
+  { id: 2, labelKey: "Purchase Order" },
+  { id: 3, labelKey: "Supporting Document" },
+];
+
+const uploadDocumentTypeSelectStyles = {
+  control: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
+    ...base,
+    minHeight: "56px",
+    borderRadius: "18px",
+    borderColor: state.isFocused ? "#8ea4cb" : "#d7dfed",
+    boxShadow: state.isFocused
+      ? "0 0 0 0.22rem rgba(64, 81, 137, 0.12)"
+      : "none",
+    backgroundColor: "#ffffff",
+    paddingInline: "0.15rem",
+  }),
+  valueContainer: (base: Record<string, unknown>) => ({
+    ...base,
+    paddingInline: "0.6rem",
+  }),
+  placeholder: (base: Record<string, unknown>) => ({
+    ...base,
+    color: "#98a2b3",
+  }),
+  indicatorSeparator: () => ({
+    display: "none",
+  }),
+  dropdownIndicator: (base: Record<string, unknown>) => ({
+    ...base,
+    color: "#667085",
+  }),
+  menu: (base: Record<string, unknown>) => ({
+    ...base,
+    zIndex: 9999,
+    borderRadius: "16px",
+    overflow: "hidden",
+    boxShadow: "0 18px 42px rgba(15, 23, 42, 0.16)",
+  }),
+  menuPortal: (base: Record<string, unknown>) => ({
+    ...base,
+    zIndex: 9999,
+  }),
+};
 
 const matchesSearchValue = (value: unknown, term: string): boolean => {
   if (value === null || value === undefined) {
@@ -223,6 +283,10 @@ const getRegisteredDocumentTypeLabel = (
     return t("Purchase Order");
   }
 
+  if (file.tipodocumentoid === 3) {
+    return t("Supporting Document");
+  }
+
   return `${t("Type")} #${file.tipodocumentoid}`;
 };
 
@@ -250,6 +314,53 @@ const triggerPdfDownload = (blobUrl: string, fileName: string) => {
   document.body.removeChild(link);
 };
 
+const getCurrentSessionUser = (): SessionUser => {
+  try {
+    const authUser = sessionStorage.getItem("authUser");
+    if (!authUser) {
+      return { id: null, token: "" };
+    }
+
+    const parsedUser = JSON.parse(authUser);
+    const sessionData = parsedUser?.data || {};
+    const parsedId = Number(
+      sessionData?.userID ?? sessionData?.id ?? sessionData?.profileID ?? ""
+    );
+
+    return {
+      id: Number.isFinite(parsedId) ? parsedId : null,
+      token: parsedUser?.token ?? "",
+    };
+  } catch {
+    return { id: null, token: "" };
+  }
+};
+
+const fetchExpedientsData = async (
+  t: (key: string) => string
+): Promise<Expedient[]> => {
+  const response = await fetch(buildApiUrl("expedientes/"));
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || !payload?.success || !Array.isArray(payload?.data)) {
+    throw new Error(payload?.message || t("Error loading expedients"));
+  }
+
+  return payload.data as Expedient[];
+};
+
+const formatFileSize = (size: number, t: (key: string) => string) => {
+  if (!Number.isFinite(size) || size <= 0) {
+    return t("Unknown size");
+  }
+
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  return `${Math.max(size / 1024, 0.1).toFixed(1)} KB`;
+};
+
 const Expedients = () => {
   const { t, i18n } = useTranslation();
   const [expedients, setExpedients] = useState<Expedient[]>([]);
@@ -267,13 +378,66 @@ const Expedients = () => {
   const [bulkDownloadError, setBulkDownloadError] = useState<string | null>(
     null
   );
+  const [floatingAlerts, setFloatingAlerts] = useState<FloatingAlertItem[]>([]);
+  const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(false);
+  const [uploadDocumentType, setUploadDocumentType] = useState(
+    String(DEFAULT_UPLOAD_DOCUMENT_TYPE)
+  );
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const numberLocale = getNumberLocale(i18n.language);
+  const sessionUser = getCurrentSessionUser();
+  const uploadTypeOptions = useMemo<ExpedientUploadTypeOption[]>(
+    () =>
+      EXPEDIENT_UPLOAD_TYPE_OPTIONS.map((option) => ({
+        value: String(option.id),
+        label: t(option.labelKey),
+      })),
+    [t]
+  );
+  const selectedUploadTypeOption =
+    uploadTypeOptions.find((option) => option.value === uploadDocumentType) ||
+    null;
 
-  const handleCloseDrawer = () => {
+  const handleRemoveFloatingAlert = (id: FloatingAlertItem["id"]) => {
+    setFloatingAlerts((currentAlerts) =>
+      currentAlerts.filter((alert) => alert.id !== id)
+    );
+  };
+
+  const pushFloatingAlert = (
+    type: FloatingAlertItem["type"],
+    message: string
+  ) => {
+    setFloatingAlerts((currentAlerts) => [
+      ...currentAlerts,
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        type,
+        message,
+        autoDismissMs: 4200,
+      },
+    ]);
+  };
+
+  const resetUploadState = useCallback(() => {
+    setUploadDocumentType(String(DEFAULT_UPLOAD_DOCUMENT_TYPE));
+    setSelectedUploadFile(null);
+    setUploadingDocument(false);
+    setIsUploadPanelOpen(false);
+
+    if (uploadInputRef.current) {
+      uploadInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
     setPreviewError(null);
     setPreviewLoading(false);
     setBulkDownloadError(null);
     setBulkDownloading(false);
+    resetUploadState();
     setPreviewBlobUrl((currentUrl) => {
       if (currentUrl) {
         revokeObjectUrl(currentUrl);
@@ -282,7 +446,7 @@ const Expedients = () => {
     });
     setSelectedPreviewDocument(null);
     setSelectedExpedient(null);
-  };
+  }, [resetUploadState]);
 
   useEffect(() => {
     document.title = `${t("Expedient List")} | Docuware`;
@@ -293,17 +457,7 @@ const Expedients = () => {
       try {
         setLoading(true);
         setError(null);
-
-        const response = await fetch(buildApiUrl("expedientes/"));
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok || !payload?.success || !Array.isArray(payload?.data)) {
-          throw new Error(
-            payload?.message || t("Error loading expedients")
-          );
-        }
-
-        setExpedients(payload.data as Expedient[]);
+        setExpedients(await fetchExpedientsData(t));
       } catch (fetchError) {
         const message =
           fetchError instanceof Error
@@ -370,13 +524,118 @@ const Expedients = () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [selectedExpedient]);
+  }, [handleCloseDrawer, selectedExpedient]);
 
   useEffect(() => {
     setPreviewError(null);
     setSelectedPreviewDocument(null);
     setBulkDownloadError(null);
-  }, [selectedExpedient?.expedienteid]);
+    resetUploadState();
+  }, [resetUploadState, selectedExpedient?.expedienteid]);
+
+  const handleUploadFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const nextFile = event.target.files?.[0] ?? null;
+
+    if (!nextFile) {
+      setSelectedUploadFile(null);
+      return;
+    }
+
+    const isPdf =
+      nextFile.type === "application/pdf" ||
+      /\.pdf$/i.test(nextFile.name || "");
+
+    if (!isPdf) {
+      setSelectedUploadFile(null);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+      }
+      pushFloatingAlert("warning", t("Only PDF files are allowed."));
+      return;
+    }
+
+    setSelectedUploadFile(nextFile);
+  };
+
+  const handleUploadDocument = async () => {
+    if (!selectedExpedient || uploadingDocument) {
+      return;
+    }
+
+    const documentTypeId = Number(uploadDocumentType);
+
+    if (!documentTypeId || !selectedUploadFile) {
+      pushFloatingAlert(
+        "warning",
+        t("Please select a document type and a PDF file.")
+      );
+      return;
+    }
+
+    if (!sessionUser.id) {
+      pushFloatingAlert(
+        "danger",
+        t("Unable to identify the signed-in user to complete Created by.")
+      );
+      return;
+    }
+
+    setUploadingDocument(true);
+
+    try {
+      const payload = new FormData();
+      payload.append("tipodocumentoid", String(documentTypeId));
+      payload.append("file", selectedUploadFile);
+      payload.append("createdby", String(sessionUser.id));
+
+      const response = await fetch(
+        buildApiUrl(`expedientes/${selectedExpedient.expedienteid}/documentos/`),
+        {
+          method: "POST",
+          headers: sessionUser.token
+            ? {
+                Authorization: `Bearer ${sessionUser.token}`,
+              }
+            : undefined,
+          body: payload,
+        }
+      );
+      const responseData = await response.json().catch(() => null);
+
+      if (!response.ok || responseData?.success === false) {
+        throw new Error(
+          responseData?.message || t("Unable to upload the document to this expedient.")
+        );
+      }
+
+      try {
+        const updatedExpedients = await fetchExpedientsData(t);
+        setExpedients(updatedExpedients);
+        setSelectedExpedient(
+          updatedExpedients.find(
+            (expedient) =>
+              expedient.expedienteid === selectedExpedient.expedienteid
+          ) || null
+        );
+      } catch {
+        // The upload already succeeded. Keep the current state if the refresh fails.
+      }
+
+      setSelectedPreviewDocument(null);
+      resetUploadState();
+      pushFloatingAlert("success", t("Document uploaded successfully."));
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error
+          ? uploadError.message
+          : t("Unable to upload the document to this expedient.");
+      pushFloatingAlert("danger", message);
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
 
   const handleBulkDownload = async () => {
     if (!selectedExpedient?.expediente_documentos?.length || bulkDownloading) {
@@ -417,7 +676,7 @@ const Expedients = () => {
           sourcePdf.getPageIndices()
         );
 
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
+        copiedPages.forEach((page: PDFPage) => mergedPdf.addPage(page));
       }
 
       if (mergedPdf.getPageCount() === 0) {
@@ -525,6 +784,10 @@ const Expedients = () => {
   return (
     <div className="page-content">
       <Container fluid>
+        <FloatingAlerts
+          alerts={floatingAlerts}
+          onRemove={handleRemoveFloatingAlert}
+        />
         <BreadCrumb title="Expedient List" pageTitle="Expedients" />
 
         <Card className="border-0 shadow-sm">
@@ -874,6 +1137,20 @@ const Expedients = () => {
                 </Button>
               )}
 
+              <Button
+                color="light"
+                className="expedient-upload-toggle-button"
+                onClick={() => setIsUploadPanelOpen((current) => !current)}
+                disabled={uploadingDocument}
+              >
+                <i
+                  className={`${
+                    isUploadPanelOpen ? "ri-close-line" : "ri-upload-2-line"
+                  } me-2`}
+                />
+                {isUploadPanelOpen ? t("Hide uploader") : t("Upload document")}
+              </Button>
+
               <button
                 type="button"
                 className="expedient-drawer-close"
@@ -890,6 +1167,105 @@ const Expedients = () => {
               <div className="expedient-drawer-alert" role="alert">
                 <i className="ri-error-warning-line" />
                 <span>{bulkDownloadError}</span>
+              </div>
+            )}
+
+            {selectedExpedient && isUploadPanelOpen && (
+              <div className="expedient-upload-panel">
+                <div className="expedient-upload-panel-header">
+                  <div>
+                    <span className="expedient-upload-panel-kicker">
+                      {t("New document")}
+                    </span>
+                    <h6 className="mb-1">{t("Upload PDF")}</h6>
+                    <p className="text-muted mb-0">
+                      {t(
+                        "Choose the type and PDF file to attach it to this expedient."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="expedient-upload-grid">
+                  <div className="expedient-upload-field">
+                    <label className="expedient-upload-label">
+                      {t("Document Type")}
+                    </label>
+                    <Select
+                      value={selectedUploadTypeOption}
+                      options={uploadTypeOptions}
+                      onChange={(selected: ExpedientUploadTypeOption | null) =>
+                        setUploadDocumentType(
+                          selected?.value || String(DEFAULT_UPLOAD_DOCUMENT_TYPE)
+                        )
+                      }
+                      placeholder={t("Search document type...")}
+                      isSearchable
+                      isClearable={false}
+                      noOptionsMessage={() => t("No results")}
+                      classNamePrefix="expedient-upload-select"
+                      styles={uploadDocumentTypeSelectStyles}
+                      menuPortalTarget={document.body}
+                      isDisabled={uploadingDocument}
+                    />
+                  </div>
+
+                  <div className="expedient-upload-field expedient-upload-field-file">
+                    <label className="expedient-upload-label">
+                      {t("PDF File")}
+                    </label>
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="d-none"
+                      onChange={handleUploadFileChange}
+                    />
+                    <button
+                      type="button"
+                      className="expedient-upload-dropzone"
+                      onClick={() => uploadInputRef.current?.click()}
+                      disabled={uploadingDocument}
+                    >
+                      <span className="expedient-upload-dropzone-icon">
+                        <i className="ri-file-upload-line" />
+                      </span>
+                      <span className="expedient-upload-dropzone-copy">
+                        <strong>
+                          {selectedUploadFile
+                            ? selectedUploadFile.name
+                            : t("Select a PDF file")}
+                        </strong>
+                        <small>
+                          {selectedUploadFile
+                            ? `${formatFileSize(selectedUploadFile.size, t)}`
+                            : t("Click here to browse and attach the file.")}
+                        </small>
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="expedient-upload-actions">
+                    <Button
+                      color="primary"
+                      className="expedient-upload-submit-button"
+                      onClick={handleUploadDocument}
+                      disabled={uploadingDocument}
+                    >
+                      {uploadingDocument ? (
+                        <>
+                          <Spinner size="sm" className="me-2" />
+                          {t("Uploading...")}
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-upload-cloud-2-line me-2" />
+                          {t("Upload document")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
