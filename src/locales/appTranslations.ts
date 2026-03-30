@@ -331,7 +331,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "This view is ready to build the expediente listing.": "Esta vista esta lista para construir el listado de expedientes.",
     "Latest registered expedients.": "Ultimos expedientes registrados.",
     "Search expedients...": "Buscar expedientes...",
-    "Invoice ID": "Factura ID",
+    "Invoice ID": "Nro Factura",
     "Invoice": "Factura",
     "Purchase Order": "Orden de Compra",
     "Purchase Order ID": "Orden de Compra ID",

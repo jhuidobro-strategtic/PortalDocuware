@@ -840,14 +840,11 @@ const Expedients = () => {
                   >
                     <thead className="table-light">
                       <tr>
-                        <th className="text-center" style={{ minWidth: "90px" }}>
-                          ID
-                        </th>
                         <th className="text-center" style={{ minWidth: "150px" }}>
                           {t("Invoice ID")}
-                        </th>
-                        <th className="text-center" style={{ minWidth: "150px" }}>
-                          {t("Document Type")}
+                        </th>                        
+                        <th className="text-center" style={{ minWidth: "170px" }}>
+                          {t("Order Number")}
                         </th>
                         <th className="text-center" style={{ minWidth: "260px" }}>
                           {t("Supplier")}
@@ -858,21 +855,14 @@ const Expedients = () => {
                         <th className="text-center" style={{ minWidth: "130px" }}>
                           {t("Total")}
                         </th>
-                        <th className="text-center" style={{ minWidth: "170px" }}>
-                          {t("Order Number")}
-                        </th>
                         <th className="text-center" style={{ minWidth: "150px" }}>
                           {t("Status")}
-                        </th>
-                        <th className="text-center">{t("Files")}</th>
-                        <th className="text-center" style={{ minWidth: "340px" }}>
-                          {t("Registered Documents")}
                         </th>
                         <th className="text-center" style={{ minWidth: "160px" }}>
                           {t("Created")}
                         </th>
-                        <th className="text-center" style={{ minWidth: "160px" }}>
-                          {t("Updated")}
+                        <th className="text-center" style={{ minWidth: "340px" }}>
+                          {t("Registered Documents")}
                         </th>
                       </tr>
                     </thead>
@@ -897,9 +887,6 @@ const Expedients = () => {
 
                           return (
                             <tr key={expedient.expedienteid}>
-                              <td className="fw-semibold text-center">
-                                #{expedient.expedienteid}
-                              </td>
                               <td style={{ whiteSpace: "normal" }} className="text-center">
                                 <div className="fw-semibold">
                                   #
@@ -911,13 +898,22 @@ const Expedients = () => {
                                   {invoiceCode || "-"}
                                 </div>
                               </td>
-                              <td className="text-center">
-                                {invoiceType ? (
-                                  <span className="badge rounded-pill bg-light text-body border px-3 py-2">
-                                    {invoiceType}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted">-</span>
+                              <td style={{ whiteSpace: "normal" }} className="text-center">
+                                <div className="fw-semibold">
+                                  {expedient.ordencompra?.orderNo ||
+                                    (expedient.ordencompraid
+                                      ? `#${expedient.ordencompraid}`
+                                      : "-")}
+                                </div>
+                                {expedient.ordencompra && (
+                                  <>
+                                    <div className="text-muted small">
+                                      {expedient.ordencompra.documentAssociatedNo || "-"}
+                                    </div>
+                                    <div className="text-muted small">
+                                      {expedient.ordencompra.guideNo || "-"}
+                                    </div>
+                                  </>
                                 )}
                               </td>
                               <td style={{ whiteSpace: "normal" }}>
@@ -957,38 +953,19 @@ const Expedients = () => {
                                 ) : (
                                   <span className="text-muted">-</span>
                                 )}
-                              </td>
-                              <td style={{ whiteSpace: "normal" }} className="text-center">
-                                <div className="fw-semibold">
-                                  {expedient.ordencompra?.orderNo ||
-                                    (expedient.ordencompraid
-                                      ? `#${expedient.ordencompraid}`
-                                      : "-")}
-                                </div>
-                                {expedient.ordencompra && (
-                                  <>
-                                    <div className="text-muted small">
-                                      {expedient.ordencompra.documentAssociatedNo || "-"}
-                                    </div>
-                                    <div className="text-muted small">
-                                      {expedient.ordencompra.guideNo || "-"}
-                                    </div>
-                                  </>
-                                )}
-                              </td>
+                              </td>                              
                               <td className="text-center">
                                 <span className={statusMeta.className}>
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
                                 </span>
                               </td>
-                              <td className="text-center">
-                                <Badge
-                                  color="light"
-                                  className="border text-body fw-semibold px-3 py-2"
-                                >
-                                  {expedient.expediente_documentos?.length || 0}
-                                </Badge>
+                              <td>
+                                <div className="fw-semibold">
+                                  {moment(expedient.createat).format(
+                                    "DD/MM/YYYY HH:mm"
+                                  )}
+                                </div>
                               </td>
                               <td
                                 className="text-center"
@@ -1009,36 +986,6 @@ const Expedients = () => {
                                   <span className="text-muted">
                                     {t("No files attached")}
                                   </span>
-                                )}
-                              </td>
-                              <td>
-                                <div className="fw-semibold">
-                                  {moment(expedient.createat).format(
-                                    "DD/MM/YYYY HH:mm"
-                                  )}
-                                </div>
-                                {/* <div className="text-muted small">
-                                  {expedient.createdby
-                                    ? `${t("Created by")} #${expedient.createdby}`
-                                    : "-"}
-                                </div> */}
-                              </td>
-                              <td>
-                                {expedient.updatedat ? (
-                                  <>
-                                    <div className="fw-semibold">
-                                      {moment(expedient.updatedat).format(
-                                        "DD/MM/YYYY HH:mm"
-                                      )}
-                                    </div>
-                                    {/* <div className="text-muted small">
-                                      {expedient.updatedby
-                                        ? `${t("Updated by")} #${expedient.updatedby}`
-                                        : "-"}
-                                    </div> */}
-                                  </>
-                                ) : (
-                                  <span className="text-muted">-</span>
                                 )}
                               </td>
                             </tr>
