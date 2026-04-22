@@ -19,6 +19,7 @@ import {
 import BreadCrumb from "../../Components/Common/BreadCrumb";
 import FloatingAlerts from "../../Components/Common/FloatingAlerts";
 import type { FloatingAlertItem } from "../../Components/Common/FloatingAlerts";
+import { getNumberLocale } from "../../common/locale";
 import { buildApiUrl } from "../../helpers/api-url";
 import { buildSunatUrl, getSunatToken } from "../../helpers/external-api";
 import { Document } from "../Documents/types";
@@ -88,6 +89,12 @@ interface SupplierOptionItem {
   supplierID: number;
   supplierNo: string;
   supplierName: string;
+}
+
+interface OrderCSummaryValues {
+  subtotal: string;
+  igv: string;
+  total: string;
 }
 
 type SelectOption = { value: string; label: string; flagUrl?: string };
@@ -186,6 +193,11 @@ interface SunatInvoicePayload {
     fecha_emision?: string;
     serie?: string;
     numero?: string;
+  };
+  totales?: {
+    total_grav_oner?: number | string;
+    total_igv?: number | string;
+    monto_total_general?: number | string;
   };
   emisor?: {
     ruc?: string;
@@ -424,8 +436,41 @@ const getDetailTotal = (detail: OrderCDetailFormValues) => {
   return (quantity * unitPrice).toFixed(2);
 };
 
-const formatListAmount = (value: string) =>
-  Number(value || 0).toLocaleString("es-PE", {
+const buildSummaryFromDetails = (
+  details: OrderCDetailFormValues[]
+): OrderCSummaryValues => {
+  const subtotal = details.reduce(
+    (sum, detail) => sum + Number(getDetailTotal(detail)),
+    0
+  );
+
+  return {
+    subtotal: subtotal.toFixed(2),
+    igv: "0.00",
+    total: subtotal.toFixed(2),
+  };
+};
+
+const getSummaryFromSunatPayload = (
+  payload: SunatInvoicePayload,
+  details: OrderCDetailFormValues[]
+): OrderCSummaryValues => {
+  if (payload.totales) {
+    const subtotal = formatDecimalValue(payload.totales.total_grav_oner, "0.00");
+    const igv = formatDecimalValue(payload.totales.total_igv, "0.00");
+    const total = formatDecimalValue(
+      payload.totales.monto_total_general,
+      (Number(subtotal) + Number(igv)).toFixed(2)
+    );
+
+    return { subtotal, igv, total };
+  }
+
+  return buildSummaryFromDetails(details);
+};
+
+const formatListAmount = (value: string, locale = "es-PE") =>
+  Number(value || 0).toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -471,11 +516,12 @@ const requiredFields: OrderCFieldName[] = [
 ];
 
 const DocumentOrderC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { documentId } = useParams();
   const locationState = location.state as { document?: Document } | null;
+  const numberLocale = getNumberLocale(i18n.language);
 
   const [document, setDocument] = useState<Document | null>(
     locationState?.document ?? null
@@ -487,6 +533,9 @@ const DocumentOrderC = () => {
     createInitialSunatSearchValues(locationState?.document ?? null)
   );
   const [details, setDetails] = useState<OrderCDetailFormValues[]>([]);
+  const [summaryValues, setSummaryValues] = useState<OrderCSummaryValues | null>(
+    null
+  );
   const [loading, setLoading] = useState(!locationState?.document);
   const [submitting, setSubmitting] = useState(false);
   const [prefillingFromSunat, setPrefillingFromSunat] = useState(false);
@@ -589,6 +638,7 @@ const DocumentOrderC = () => {
     setValues(createInitialValues(document));
     setSunatSearchValues(createInitialSunatSearchValues(document));
     setDetails([]);
+    setSummaryValues(null);
     setFeedback(null);
   }, [document]);
 
@@ -797,6 +847,7 @@ const DocumentOrderC = () => {
         numero: payload.detalle?.numero || prev.numero,
       }));
       setDetails(detailRows);
+      setSummaryValues(getSummaryFromSunatPayload(payload, detailRows));
       setFeedback({
         type: hasSunatDetails ? "info" : "danger",
         message: hasSunatDetails
@@ -1244,10 +1295,13 @@ const DocumentOrderC = () => {
                             <td>{detail.descriptionItem || t("No description")}</td>
                             <td className="text-center">{detail.quantity}</td>
                             <td className="text-end">
-                              {formatListAmount(detail.unitPrice)}
+                              {formatListAmount(detail.unitPrice, numberLocale)}
                             </td>
                             <td className="text-end fw-semibold">
-                              {formatListAmount(getDetailTotal(detail))}
+                              {formatListAmount(
+                                getDetailTotal(detail),
+                                numberLocale
+                              )}
                             </td>
                           </tr>
                         ))
@@ -1255,6 +1309,31 @@ const DocumentOrderC = () => {
                     </tbody>
                   </Table>
                 </div>
+
+                {summaryValues && (
+                  <div className="d-flex justify-content-end mt-3">
+                    <div className="w-100" style={{ maxWidth: "360px" }}>
+                      <div className="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span className="fw-semibold">{t("Subtotal")}:</span>
+                        <span>
+                          {formatListAmount(summaryValues.subtotal, numberLocale)}
+                        </span>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span className="fw-semibold">IGV:</span>
+                        <span>
+                          {formatListAmount(summaryValues.igv, numberLocale)}
+                        </span>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center py-2">
+                        <span className="fw-semibold">{t("Total")}:</span>
+                        <span className="fw-bold">
+                          {formatListAmount(summaryValues.total, numberLocale)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="d-flex flex-wrap justify-content-end gap-2 mt-4">
