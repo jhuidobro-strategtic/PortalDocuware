@@ -15,6 +15,7 @@ import {
   NuevaProgramacion,
   Notification,
 } from "./types";
+import { intelligentSearch } from "../../helpers/search-utils";
 
 const initialProgramacion: NuevaProgramacion = {
   programacionfecha: moment().format("YYYY-MM-DD"),
@@ -194,15 +195,9 @@ const ProgramacionDiaria: React.FC = () => {
     setSearchTerm(value);
   };
 
-  const filteredProgramaciones = programaciones.filter((prog) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      prog.programacionid.toString().includes(searchLower) ||
-      prog.vehiculo.no_vehiculo.toLowerCase().includes(searchLower) ||
-      prog.conductor.conductor_nm.toLowerCase().includes(searchLower) ||
-      moment(prog.programacionfecha).format("DD/MM/YYYY").includes(searchLower)
-    );
-  });
+  const filteredProgramaciones = programaciones.filter((prog) =>
+    intelligentSearch(prog, searchTerm)
+  );
 
   if (loading) {
     return (

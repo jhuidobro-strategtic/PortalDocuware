@@ -29,6 +29,7 @@ import { getNumberLocale } from "../../common/locale";
 import { Document } from "../Documents/types";
 import { getDownloadUrl } from "../Documents/document-utils";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
+import { intelligentSearch } from "../../helpers/search-utils";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
@@ -429,33 +430,7 @@ const getPurchaseStateDescription = (
   }
 };
 
-const matchesSearchValue = (value: unknown, term: string): boolean => {
-  if (value === null || value === undefined) {
-    return false;
-  }
 
-  if (Array.isArray(value)) {
-    return value.some((item) => matchesSearchValue(item, term));
-  }
-
-  if (typeof value === "object") {
-    return Object.values(value).some((item) => matchesSearchValue(item, term));
-  }
-
-  const normalizedValue = String(value).toLowerCase();
-  if (normalizedValue.includes(term)) {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    const parsedDate = moment(value, moment.ISO_8601, true);
-    if (parsedDate.isValid()) {
-      return parsedDate.format("DD/MM/YYYY").toLowerCase().includes(term);
-    }
-  }
-
-  return false;
-};
 
 const PurchaseOrderDetails = () => {
   const { t, i18n } = useTranslation();
@@ -500,46 +475,9 @@ const PurchaseOrderDetails = () => {
     details.reduce((sum, detail) => sum + Number(detail.total || 0), 0);
 
   const itemsPerPage = 10;
-  const filteredPurchaseOrders = purchaseOrders.filter((purchaseOrder) => {
-    const term = searchTerm.toLowerCase().trim();
-
-    if (!term) {
-      return true;
-    }
-
-    const supplierLabel = (
-      purchaseOrder.supplierLabel ||
-      getLookupLabel(supplierLookup, purchaseOrder.supplierID)
-    ).toLowerCase();
-    const paymentConditionLabel = (
-      purchaseOrder.paymentConditionLabel ||
-      getLookupLabel(paymentConditionLookup, purchaseOrder.paymentCondition)
-    ).toLowerCase();
-    const currencyLabel = getCurrencyMeta(
-      purchaseOrder.currency,
-      t,
-      purchaseOrder.currencyLabel || currencyLookup[purchaseOrder.currency]
-    ).label.toLowerCase();
-    const storeLabel = (
-      purchaseOrder.storeLabel ||
-      getLookupLabel(storeLookup, purchaseOrder.store)
-    ).toLowerCase();
-    const purchaseStateLabel = getPurchaseStateMeta(
-      purchaseOrder.purchaseState,
-      t,
-      purchaseOrder.purchaseStateLabel ||
-        purchaseStateLookup[purchaseOrder.purchaseState]
-    ).label.toLowerCase();
-
-    return (
-      matchesSearchValue(purchaseOrder, term) ||
-      supplierLabel.includes(term) ||
-      paymentConditionLabel.includes(term) ||
-      currencyLabel.includes(term) ||
-      storeLabel.includes(term) ||
-      purchaseStateLabel.includes(term)
-    );
-  });
+  const filteredPurchaseOrders = purchaseOrders.filter((purchaseOrder) =>
+    intelligentSearch(purchaseOrder, searchTerm)
+  );
 
   const totalPages = Math.ceil(filteredPurchaseOrders.length / itemsPerPage);
   const paginatedPurchaseOrders = filteredPurchaseOrders.slice(

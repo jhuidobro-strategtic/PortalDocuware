@@ -9,6 +9,7 @@ import { buildApiUrl } from "../../helpers/api-url";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
 import { DocumentDetailsRow } from "./types";
+import { intelligentSearch } from "../../helpers/search-utils";
 
 const DocumentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -49,18 +50,7 @@ const DocumentDetails: React.FC = () => {
 
   // filtrado
   const filteredDocuments = documents.filter((doc) => {
-    const term = searchTerm.toLowerCase();
-
-    const matchesSearch =
-      doc.documentserial.toLowerCase().includes(term) ||
-      doc.documentnumber.toLowerCase().includes(term) ||
-      doc.suppliernumber.toLowerCase().includes(term) ||
-      doc.suppliername.toLowerCase().includes(term) ||
-      doc.documenttype.toLowerCase().includes(term) ||
-      doc.vehicle_nro.toLowerCase().includes(term) ||
-      doc.unit_measure_description.toLowerCase().includes(term) ||
-      doc.description.toLowerCase().includes(term) ||
-      doc.driver.toLowerCase().includes(term);
+    const matchesSearch = intelligentSearch(doc, searchTerm);
 
     // Usamos moment para comparar correctamente las fechas
     const docDate = moment(doc.documentdate, ["YYYY/MM/DD", "DD/MM/YYYY"]);
@@ -132,24 +122,6 @@ const DocumentDetails: React.FC = () => {
 
     // 🔹 Encabezados
     const headers = [
-      // "Tipo Documento",
-      // "Comprador",
-      // "Serie",
-      // "Número",
-      // "Fecha",
-      // "Proveedor (RUC)",
-      // "Nombre Proveedor",
-      // "Centro de Costos",
-      // "Descripción",
-      // "Vehículo",
-      // "Unidad Medida",
-      // "Cantidad",
-      // "Valor Unitario",
-      // "Valor Total (línea)",
-      // "Moneda",
-      // "Sub Total",
-      // "IGV",
-      // "Total",
       "Movimiento Orden Servicio o Orden",
       "Fecha de Emisión del Comprobante de Pago o Documento",
       "Fecha de Vencimiento o Fecha de Pago",
@@ -226,24 +198,6 @@ const DocumentDetails: React.FC = () => {
       const pIGV = amount > 0 ? ((taxamount / amount) * 100).toFixed(2) : "0.00";
 
       const rowData = [
-        // tipoDocumento,
-        // doc.driver ?? "",
-        // doc.documentserial ?? "",
-        // doc.documentnumber ?? "",
-        // moment(doc.documentdate).format("DD/MM/YYYY"),
-        // doc.suppliernumber ?? "",
-        // doc.suppliername ?? "",
-        // doc.centercost ?? "",
-        // (doc as any).description ?? "—",
-        // (doc as any).vehicle_nro ?? "—",
-        // (doc as any).unit_measure_description ?? "—",
-        // Number((doc as any).quantity ?? 0),
-        // Number((doc as any).unit_value ?? 0),
-        // Number((doc as any).total_value ?? 0),
-        // doc.currency ?? "PEN",
-        // Number((doc as any).amount ?? 0),
-        // Number((doc as any).taxamount ?? 0),
-        // Number((doc as any).totalamount ?? 0),
         movimientoOrden ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
         fechaVencimiento ?? "",

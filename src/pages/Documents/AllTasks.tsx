@@ -18,6 +18,7 @@ import {
   getDownloadUrl,
   getPreviewUrl,
 } from "./document-utils";
+import { intelligentSearch } from "../../helpers/search-utils";
 
 type PurchaseOrderStateValue =
   | number
@@ -224,18 +225,7 @@ const DocumentList: React.FC = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      (doc.documentserial ?? "").toLowerCase().includes(term) ||
-      (doc.documentnumber ?? "").toLowerCase().includes(term) ||
-      (doc.suppliernumber ?? "").toLowerCase().includes(term) ||
-      (doc.suppliername ?? "").toLowerCase().includes(term) ||
-      (typeof doc.documenttype === "object" &&
-        doc.documenttype !== null &&
-        doc.documenttype.tipoid?.toString().toLowerCase().includes(term)) ||
-      (typeof doc.documenttype === "object" &&
-        doc.documenttype !== null &&
-        doc.documenttype.tipo?.toLowerCase().includes(term));
+    const matchesSearch = intelligentSearch(doc, searchTerm);
 
     const matchesStatus =
       statusFilter === "all" ||
