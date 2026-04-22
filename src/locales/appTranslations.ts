@@ -323,6 +323,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Select order type": "Select order type",
     "Type 1": "Type 1",
     "Type 2": "Type 2",
+    "The selected supplier does not match the business name from the document.": "The selected supplier does not match the business name from the document.",
   },
   sp: {
     "Programming": "Programacion",
@@ -642,6 +643,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Select order type": "Seleccione tipo de orden",
     "Type 1": "Tipo 1",
     "Type 2": "Tipo 2",
+    "The selected supplier does not match the business name from the document.": "El proveedor seleccionado no coincide con la razón social del documento.",
   },
   gr: generatedAppTranslations.gr,
   it: generatedAppTranslations.it,

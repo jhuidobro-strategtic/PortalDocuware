@@ -836,6 +836,29 @@ const DocumentOrderC = () => {
       return;
     }
 
+    const selectedSupplier = supplierOptions.find(
+      (s) => String(s.supplierID) === String(normalizedValues.supplierID)
+    );
+
+    const recordSupplierNo = normalizeSupplierNumber(normalizedValues.suppliernumber);
+    const selectedSupplierNo = normalizeSupplierNumber(
+      selectedSupplier?.supplierNo || ""
+    );
+
+    if (
+      recordSupplierNo &&
+      selectedSupplierNo &&
+      recordSupplierNo !== selectedSupplierNo
+    ) {
+      setFeedback({
+        type: "danger",
+        message: t(
+          "The selected supplier does not match the business name from the document."
+        ),
+      });
+      return;
+    }
+
     if (details.length === 0) {
       setFeedback({
         type: "danger",
