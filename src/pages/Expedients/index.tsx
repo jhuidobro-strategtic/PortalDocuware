@@ -971,22 +971,34 @@ const Expedients = () => {
                                 className="text-center"
                                 style={{ whiteSpace: "normal" }}
                               >
-                                {expedient.expediente_documentos?.length ? (
+                                <div className="d-flex flex-wrap justify-content-center gap-2">
+                                  {expedient.expediente_documentos?.length ? (
+                                    <Button
+                                      color="primary"
+                                      outline
+                                      size="sm"
+                                      className="text-nowrap"
+                                      onClick={() => setSelectedExpedient(expedient)}
+                                    >
+                                      <i className="ri-file-list-3-line me-1" />
+                                      {t("View documents")}
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted align-self-center">
+                                      {t("No files attached")}
+                                    </span>
+                                  )}
+
                                   <Button
-                                    color="primary"
-                                    outline
+                                    type="button"
+                                    color="danger"
                                     size="sm"
                                     className="text-nowrap"
-                                    onClick={() => setSelectedExpedient(expedient)}
                                   >
-                                    <i className="ri-file-list-3-line me-1" />
-                                    {t("View documents")}
+                                    <i className="ri-folder-close-line me-1" />
+                                    {t("Close Expedient")}
                                   </Button>
-                                ) : (
-                                  <span className="text-muted">
-                                    {t("No files attached")}
-                                  </span>
-                                )}
+                                </div>
                               </td>
                             </tr>
                           );
