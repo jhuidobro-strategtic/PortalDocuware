@@ -38,6 +38,7 @@ interface OrderCFormValues {
   store: string;
   purchaseState: string;
   orderType: string;
+  signedBy: string;
   createdBy: string;
   createdByName: string;
 }
@@ -258,6 +259,16 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
     placeholderKey: "Select purchase status",
   },
   {
+    name: "signedBy",
+    labelKey: "Signed by",
+    placeholderKey: "Select who signed",
+    options: [
+      { value: "1", label: "Jeferson Huidobro" },
+      { value: "2", label: "Angelo Bendezu" },
+      { value: "3", label: "Son Goku" },
+    ],
+  },
+  {
     name: "createdByName",
     labelKey: "Created by",
     placeholderKey: "Auto-filled from the session",
@@ -396,6 +407,7 @@ const createInitialValues = (document: Document | null): OrderCFormValues => {
     store: "",
     purchaseState: "11",
     orderType: "",
+    signedBy: "",
     createdBy: sessionUser.id,
     createdByName: sessionUser.name,
   };
@@ -432,6 +444,7 @@ const buildPurchaseOrderPayload = (
   store: Number(values.store),
   purchaseState: Number(values.purchaseState),
   orderType: Number(values.orderType),
+  signedBy: Number(values.signedBy),
   createdBy: Number(values.createdBy),
   details: details.map((detail) => ({
     descriptionItem: detail.descriptionItem.trim(),
@@ -453,6 +466,7 @@ const requiredFields: OrderCFieldName[] = [
   "guideNo",
   "store",
   "purchaseState",
+  "signedBy",
   "createdBy",
 ];
 
