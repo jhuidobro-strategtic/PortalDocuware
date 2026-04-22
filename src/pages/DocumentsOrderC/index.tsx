@@ -37,6 +37,7 @@ interface OrderCFormValues {
   guideNo: string;
   store: string;
   purchaseState: string;
+  orderType: string;
   createdBy: string;
   createdByName: string;
 }
@@ -63,6 +64,7 @@ interface OrderCFieldConfig {
   type?: "text" | "number";
   readOnly?: boolean;
   helperTextKey?: string;
+  options?: SelectOption[];
 }
 
 interface FeedbackState {
@@ -209,10 +211,21 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
     helperTextKey:
       "It is completed automatically with the business name from the record.",
   },
+  /*
   {
     name: "orderNo",
     labelKey: "Order Number",
     placeholderKey: "E.g. OC-0002",
+  },
+  */
+  {
+    name: "orderType",
+    labelKey: "Order Type",
+    placeholderKey: "Select order type",
+    options: [
+      { value: "1", label: "Type 1" },
+      { value: "2", label: "Type 2" },
+    ],
   },
   {
     name: "supplierID",
@@ -382,6 +395,7 @@ const createInitialValues = (document: Document | null): OrderCFormValues => {
     guideNo: "",
     store: "",
     purchaseState: "11",
+    orderType: "",
     createdBy: sessionUser.id,
     createdByName: sessionUser.name,
   };
@@ -417,6 +431,7 @@ const buildPurchaseOrderPayload = (
   guideNo: values.guideNo.trim(),
   store: Number(values.store),
   purchaseState: Number(values.purchaseState),
+  orderType: Number(values.orderType),
   createdBy: Number(values.createdBy),
   details: details.map((detail) => ({
     descriptionItem: detail.descriptionItem.trim(),
@@ -427,7 +442,9 @@ const buildPurchaseOrderPayload = (
 });
 
 const requiredFields: OrderCFieldName[] = [
-  "orderNo",
+  "suppliernumber",
+  "suppliername",
+  "orderType",
   "supplierID",
   "documentAssociatedType",
   "documentAssociatedNo",
@@ -1062,7 +1079,13 @@ const DocumentOrderC = () => {
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
                     const isSupplierSelect = field.name === "supplierID";
                     const isCurrencySelect = field.name === "currency";
-                    const selectOptions = isSupplierSelect
+                    const isSelect = !!field.options || isCatalogSelect || isSupplierSelect;
+                    const selectOptions = field.options
+                      ? field.options.map((opt) => ({
+                          ...opt,
+                          label: t(opt.label),
+                        }))
+                      : isSupplierSelect
                       ? supplierSelectOptions
                       : catalogOptions[field.name] ?? [];
                     return (
@@ -1071,7 +1094,7 @@ const DocumentOrderC = () => {
                           <Label className="form-label">
                             {t(field.labelKey)}
                           </Label>
-                          {isCatalogSelect || isSupplierSelect ? (
+                          {isSelect ? (
                             <Select
                               options={selectOptions}
                               value={
