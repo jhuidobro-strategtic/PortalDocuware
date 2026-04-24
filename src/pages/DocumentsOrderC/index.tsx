@@ -233,11 +233,11 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
   */
   {
     name: "orderType",
-    labelKey: "Order Type",
-    placeholderKey: "Select order type",
+    labelKey: "Service Type",
+    placeholderKey: "Select service type",
     options: [
-      { value: "1", label: "Type 1" },
-      { value: "2", label: "Type 2" },
+      { value: "C", label: "Compra" },
+      { value: "S", label: "Servicio" },
     ],
   },
   {
@@ -852,8 +852,8 @@ const DocumentOrderC = () => {
         type: hasSunatDetails ? "info" : "danger",
         message: hasSunatDetails
           ? t(
-              "The selected document was loaded from SUNAT and the details were auto-filled."
-            )
+            "The selected document was loaded from SUNAT and the details were auto-filled."
+          )
           : t("No details found in SUNAT"),
       });
     } catch (prefillError: any) {
@@ -1170,12 +1170,12 @@ const DocumentOrderC = () => {
                     const isSelect = !!field.options || isCatalogSelect || isSupplierSelect;
                     const selectOptions = field.options
                       ? field.options.map((opt) => ({
-                          ...opt,
-                          label: t(opt.label),
-                        }))
+                        ...opt,
+                        label: t(opt.label),
+                      }))
                       : isSupplierSelect
-                      ? supplierSelectOptions
-                      : catalogOptions[field.name] ?? [];
+                        ? supplierSelectOptions
+                        : catalogOptions[field.name] ?? [];
                     return (
                       <Col md={6} key={field.name}>
                         <div>
@@ -1198,9 +1198,9 @@ const DocumentOrderC = () => {
                                 isSupplierSelect
                                   ? handleSupplierChange(selected)
                                   : handleChange(
-                                      field.name,
-                                      selected ? selected.value : ""
-                                    )
+                                    field.name,
+                                    selected ? selected.value : ""
+                                  )
                               }
                               placeholder={t(field.placeholderKey)}
                               isClearable
@@ -1208,19 +1208,19 @@ const DocumentOrderC = () => {
                               formatOptionLabel={
                                 isCurrencySelect
                                   ? (option: SelectOption) => (
-                                      <span className="d-inline-flex align-items-center gap-2">
-                                        {option.flagUrl && (
-                                          <img
-                                            src={option.flagUrl}
-                                            alt={option.label}
-                                            width={20}
-                                            height={15}
-                                            className="rounded-1 flex-shrink-0"
-                                          />
-                                        )}
-                                        <span>{option.label}</span>
-                                      </span>
-                                    )
+                                    <span className="d-inline-flex align-items-center gap-2">
+                                      {option.flagUrl && (
+                                        <img
+                                          src={option.flagUrl}
+                                          alt={option.label}
+                                          width={20}
+                                          height={15}
+                                          className="rounded-1 flex-shrink-0"
+                                        />
+                                      )}
+                                      <span>{option.label}</span>
+                                    </span>
+                                  )
                                   : undefined
                               }
                             />
