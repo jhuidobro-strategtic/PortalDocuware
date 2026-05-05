@@ -22,7 +22,7 @@ import BreadCrumb from "../../Components/Common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../Components/Common/FloatingAlerts";
-import { API_BASE_URL, buildApiUrl } from "../../helpers/api-url";
+import { buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import "./Expedients.css";
 
@@ -105,6 +105,7 @@ interface ExpedientDocument {
   expedienteid: number;
   tipodocumentoid: number;
   filename: string;
+  file_url?: string;
   filepath: string;
   estado: boolean;
   createdby: number | null;
@@ -213,23 +214,7 @@ const matchesSearchValue = (value: unknown, term: string): boolean => {
   return false;
 };
 
-const getExpedientDocumentUrl = (filePath: string) => {
-  const normalizedPath = String(filePath || "").trim().replace(/^\/+/, "");
-
-  if (!normalizedPath) {
-    return "";
-  }
-
-  if (/^https?:\/\//i.test(normalizedPath)) {
-    return normalizedPath;
-  }
-
-  const mediaPath = normalizedPath.startsWith("media/")
-    ? normalizedPath
-    : `media/${normalizedPath}`;
-
-  return new URL(`../${mediaPath}`, API_BASE_URL).toString();
-};
+const getExpedientDocumentUrl = (fileUrl?: string) => String(fileUrl || "").trim();
 
 const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =>
   isActive
@@ -642,12 +627,12 @@ const Expedients = () => {
       return;
     }
 
-    setBulkDownloading(true);
-    setBulkDownloadError(null);
+      setBulkDownloading(true);
+      setBulkDownloadError(null);
 
     try {
       const pdfFiles = selectedExpedient.expediente_documentos.filter((file) =>
-        /\.pdf$/i.test(file.filename || file.filepath)
+        /\.pdf$/i.test(file.filename || file.file_url || "")
       );
 
       if (!pdfFiles.length) {
@@ -657,7 +642,7 @@ const Expedients = () => {
       const mergedPdf = await PDFDocument.create();
 
       for (const file of pdfFiles) {
-        const fileUrl = getExpedientDocumentUrl(file.filepath);
+        const fileUrl = getExpedientDocumentUrl(file.file_url);
 
         if (!fileUrl) {
           throw new Error(t("Unable to generate the combined PDF."));
@@ -719,8 +704,7 @@ const Expedients = () => {
       return;
     }
 
-    const controller = new AbortController();
-    const previewUrl = getExpedientDocumentUrl(selectedPreviewDocument.filepath);
+    const previewUrl = getExpedientDocumentUrl(selectedPreviewDocument.file_url);
 
     if (!previewUrl) {
       setPreviewError(t("Unable to load the selected PDF preview."));
@@ -730,55 +714,13 @@ const Expedients = () => {
 
     setPreviewLoading(true);
     setPreviewError(null);
-
-    const loadPreview = async () => {
-      try {
-        const response = await fetch(previewUrl, {
-          method: "GET",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(t("Unable to load the selected PDF preview."));
-        }
-
-        const previewBlob = await response.blob();
-        const objectUrl = URL.createObjectURL(previewBlob);
-
-        setPreviewBlobUrl((currentUrl) => {
-          if (currentUrl) {
-            revokeObjectUrl(currentUrl);
-          }
-          return objectUrl;
-        });
-      } catch (previewFetchError) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        const message =
-          previewFetchError instanceof Error
-            ? previewFetchError.message
-            : t("Unable to load the selected PDF preview.");
-        setPreviewError(message);
-        setPreviewBlobUrl((currentUrl) => {
-          if (currentUrl) {
-            revokeObjectUrl(currentUrl);
-          }
-          return "";
-        });
-      } finally {
-        if (!controller.signal.aborted) {
-          setPreviewLoading(false);
-        }
+    setPreviewBlobUrl((currentUrl) => {
+      if (currentUrl && currentUrl !== previewUrl) {
+        revokeObjectUrl(currentUrl);
       }
-    };
-
-    loadPreview();
-
-    return () => {
-      controller.abort();
-    };
+      return previewUrl;
+    });
+    setPreviewLoading(false);
   }, [selectedPreviewDocument, t]);
 
   return (
@@ -1231,7 +1173,7 @@ const Expedients = () => {
             {selectedExpedient?.expediente_documentos?.length ? (
               <div className="expedient-drawer-list">
                 {selectedExpedient.expediente_documentos.map((file, index) => {
-                  const fileUrl = getExpedientDocumentUrl(file.filepath);
+                  const fileUrl = getExpedientDocumentUrl(file.file_url);
                   const isPreviewActive =
                     selectedPreviewDocument?.expedientedocid === file.expedientedocid;
                   const documentTypeLabel = getRegisteredDocumentTypeLabel(
@@ -1266,7 +1208,7 @@ const Expedients = () => {
 
                           <div className="expedient-document-card-footer">
                             <span className="expedient-document-card-path">
-                              {file.filepath}
+                              {file.file_url || "-"}
                             </span>
                             <div className="expedient-document-card-actions">
                               <button
