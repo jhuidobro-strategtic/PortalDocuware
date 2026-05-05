@@ -91,6 +91,13 @@ interface SupplierOptionItem {
   supplierName: string;
 }
 
+interface SignerApiItem {
+  userID: number;
+  userName?: string;
+  fullName?: string;
+  status?: boolean;
+}
+
 interface OrderCSummaryValues {
   subtotal: string;
   igv: string;
@@ -129,6 +136,25 @@ const fetchSuppliers = async (): Promise<SupplierOptionItem[]> => {
     supplierNo: item.supplierno ?? "",
     supplierName: item.suppliername ?? "",
   }));
+};
+
+const fetchSigners = async (): Promise<SelectOption[]> => {
+  const response = await fetch(buildApiUrl("users/?profile=2"));
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
+    throw new Error(data?.message || "Error loading signers");
+  }
+
+  return (data.data as SignerApiItem[])
+    .map((item) => ({
+      value: String(item.userID),
+      label:
+        [String(item.fullName ?? "").trim()]
+          .filter(Boolean)
+          .join(" - ") || String(item.userID),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label, "es"));
 };
 
 const getCurrencyMeta = (currencyValue: unknown, currencyLabel?: string) => {
@@ -208,7 +234,7 @@ interface SunatInvoicePayload {
   items?: SunatInvoiceItem[];
 }
 
-const getOrderCFields = (): OrderCFieldConfig[] => [
+const getOrderCFields = (signerOptions: SelectOption[] = []): OrderCFieldConfig[] => [
   {
     name: "suppliernumber",
     labelKey: "RUC",
@@ -274,11 +300,7 @@ const getOrderCFields = (): OrderCFieldConfig[] => [
     name: "signedBy",
     labelKey: "Signed by",
     placeholderKey: "Select who signed",
-    options: [
-      { value: "1", label: "Jeferson Huidobro" },
-      { value: "2", label: "Angelo Bendezu" },
-      { value: "3", label: "Son Goku" },
-    ],
+    options: signerOptions,
   },
   {
     name: "createdByName",
@@ -550,7 +572,9 @@ const DocumentOrderC = () => {
     purchaseState: [],
   });
   const [supplierOptions, setSupplierOptions] = useState<SupplierOptionItem[]>([]);
-  const orderCFields = getOrderCFields();
+  const [signerOptions, setSignerOptions] = useState<SelectOption[]>([]);
+  const [loadingSigners, setLoadingSigners] = useState(false);
+  const orderCFields = getOrderCFields(signerOptions);
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -586,6 +610,25 @@ const DocumentOrderC = () => {
 
     loadSuppliers();
   }, [t]);
+
+  useEffect(() => {
+    const loadSigners = async () => {
+      try {
+        setLoadingSigners(true);
+        setSignerOptions(await fetchSigners());
+      } catch (fetchError: any) {
+        setFeedback({
+          type: "danger",
+          message: fetchError?.message || t("Error loading signers"),
+        });
+      } finally {
+        setLoadingSigners(false);
+      }
+    };
+
+    loadSigners();
+  }, [t]);
+
   const getFieldLabel = (fieldName: OrderCFieldName) =>
     orderCFields.find((field) => field.name === fieldName)?.labelKey || fieldName;
   const floatingAlerts: FloatingAlertItem[] = [];
@@ -1167,11 +1210,12 @@ const DocumentOrderC = () => {
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
                     const isSupplierSelect = field.name === "supplierID";
                     const isCurrencySelect = field.name === "currency";
+                    const isSignedBySelect = field.name === "signedBy";
                     const isSelect = !!field.options || isCatalogSelect || isSupplierSelect;
                     const selectOptions = field.options
                       ? field.options.map((opt) => ({
                         ...opt,
-                        label: t(opt.label),
+                        label: isSignedBySelect ? opt.label : t(opt.label),
                       }))
                       : isSupplierSelect
                         ? supplierSelectOptions
@@ -1204,6 +1248,7 @@ const DocumentOrderC = () => {
                               }
                               placeholder={t(field.placeholderKey)}
                               isClearable
+                              isLoading={isSignedBySelect && loadingSigners}
                               classNamePrefix="select2-selection"
                               formatOptionLabel={
                                 isCurrencySelect
