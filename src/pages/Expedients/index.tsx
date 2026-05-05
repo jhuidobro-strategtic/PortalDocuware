@@ -22,7 +22,7 @@ import BreadCrumb from "../../Components/Common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../Components/Common/FloatingAlerts";
-import { buildApiUrl } from "../../helpers/api-url";
+import { API_BASE_URL, buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import "./Expedients.css";
 
@@ -214,7 +214,34 @@ const matchesSearchValue = (value: unknown, term: string): boolean => {
   return false;
 };
 
-const getExpedientDocumentUrl = (fileUrl?: string) => String(fileUrl || "").trim();
+const getExpedientMediaUrl = (filePath?: string) => {
+  const normalizedPath = String(filePath || "").trim().replace(/^\/+/, "");
+
+  if (!normalizedPath) {
+    return "";
+  }
+
+  const mediaPath = normalizedPath.startsWith("media/")
+    ? normalizedPath
+    : `media/${normalizedPath}`;
+
+  return new URL(`../${mediaPath}`, API_BASE_URL).toString();
+};
+
+const getExpedientDocumentUrl = (
+  document: Pick<ExpedientDocument, "file_url" | "filepath">
+) => String(document.file_url || "").trim() || getExpedientMediaUrl(document.filepath);
+
+const getExpedientDocumentFetchUrls = (
+  document: Pick<ExpedientDocument, "file_url" | "filepath">
+) => {
+  const primaryUrl = String(document.file_url || "").trim();
+  const fallbackUrl = getExpedientMediaUrl(document.filepath);
+
+  return [primaryUrl, fallbackUrl].filter(
+    (candidate, index, candidates) => candidate && candidates.indexOf(candidate) === index
+  );
+};
 
 const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =>
   isActive
@@ -642,20 +669,32 @@ const Expedients = () => {
       const mergedPdf = await PDFDocument.create();
 
       for (const file of pdfFiles) {
-        const fileUrl = getExpedientDocumentUrl(file.file_url);
+        const fetchCandidates = getExpedientDocumentFetchUrls(file);
+        let sourcePdf: PDFDocument | null = null;
 
-        if (!fileUrl) {
-          throw new Error(t("Unable to generate the combined PDF."));
+        for (const candidateUrl of fetchCandidates) {
+          try {
+            const response = await fetch(candidateUrl, { method: "GET" });
+
+            if (!response.ok) {
+              continue;
+            }
+
+            const sourceBytes = await response.arrayBuffer();
+            sourcePdf = await PDFDocument.load(sourceBytes);
+            break;
+          } catch {
+            // Try the next available URL for this document.
+          }
         }
 
-        const response = await fetch(fileUrl, { method: "GET" });
-
-        if (!response.ok) {
-          throw new Error(t("Unable to generate the combined PDF."));
+        if (!sourcePdf) {
+          throw new Error(
+            t("Unable to generate the combined PDF.") +
+              ` (${file.filename || file.file_url || file.filepath})`
+          );
         }
 
-        const sourceBytes = await response.arrayBuffer();
-        const sourcePdf = await PDFDocument.load(sourceBytes);
         const copiedPages = await mergedPdf.copyPages(
           sourcePdf,
           sourcePdf.getPageIndices()
@@ -704,7 +743,7 @@ const Expedients = () => {
       return;
     }
 
-    const previewUrl = getExpedientDocumentUrl(selectedPreviewDocument.file_url);
+    const previewUrl = getExpedientDocumentUrl(selectedPreviewDocument);
 
     if (!previewUrl) {
       setPreviewError(t("Unable to load the selected PDF preview."));
@@ -1173,7 +1212,7 @@ const Expedients = () => {
             {selectedExpedient?.expediente_documentos?.length ? (
               <div className="expedient-drawer-list">
                 {selectedExpedient.expediente_documentos.map((file, index) => {
-                  const fileUrl = getExpedientDocumentUrl(file.file_url);
+                  const fileUrl = getExpedientDocumentUrl(file);
                   const isPreviewActive =
                     selectedPreviewDocument?.expedientedocid === file.expedientedocid;
                   const documentTypeLabel = getRegisteredDocumentTypeLabel(
