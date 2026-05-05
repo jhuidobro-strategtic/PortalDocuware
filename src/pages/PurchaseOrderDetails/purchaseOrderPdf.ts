@@ -242,6 +242,16 @@ const getPurchaseOrderFilePrefix = (orderType?: string | null) => {
   }
 };
 
+const getPurchaseOrderTitle = (orderType?: string | null) => {
+  switch (String(orderType ?? "").trim().toUpperCase()) {
+    case "S":
+      return "ORDEN DE SERVICIO";
+    case "C":
+    default:
+      return "ORDEN DE COMPRA";
+  }
+};
+
 const buildPurchaseOrderPdfFileName = (
   purchaseOrder: Pick<PurchaseOrderPdfOrder, "orderNo" | "purchaseOrderID" | "tipoorden">
 ) =>
@@ -300,7 +310,7 @@ export const generatePurchaseOrderPdf = async ({
   doc.text("RUC: 20129605490", 106, 19, { align: "center" });
 
   doc.setFontSize(16);
-  doc.text("ORDEN DE COMPRA", (123 + (pageWidth - 58)) / 2, 16, {
+  doc.text(getPurchaseOrderTitle(purchaseOrder.tipoorden), (123 + (pageWidth - 58)) / 2, 16, {
     align: "center",
   });
 
