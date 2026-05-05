@@ -380,6 +380,10 @@ const formatDecimalValue = (value: unknown, fallback = "0.00") => {
   return Number.isFinite(parsedValue) ? parsedValue.toFixed(2) : fallback;
 };
 
+const areAmountsEquivalent = (leftValue: unknown, rightValue: unknown) =>
+  Math.abs(Number(formatDecimalValue(leftValue)) - Number(formatDecimalValue(rightValue))) <
+  0.005;
+
 const formatQuantityValue = (value: unknown) => {
   const parsedValue = Number.parseFloat(String(value ?? ""));
 
@@ -970,6 +974,31 @@ const DocumentOrderC = () => {
       setFeedback({
         type: "danger",
         message: t("Load the detail lines from SUNAT before saving."),
+      });
+      return;
+    }
+
+    if (!summaryValues) {
+      setFeedback({
+        type: "danger",
+        message: t("Query SUNAT to validate the total amount before saving."),
+      });
+      return;
+    }
+
+    const documentTotalAmount = formatDecimalValue(document?.totalamount, "0.00");
+    const sunatTotalAmount = formatDecimalValue(summaryValues.total, "0.00");
+
+    if (!areAmountsEquivalent(sunatTotalAmount, documentTotalAmount)) {
+      setFeedback({
+        type: "danger",
+        message: t(
+          "The SUNAT total ({{sunatTotal}}) does not match the total amount of the selected document ({{documentTotal}}).",
+          {
+            sunatTotal: formatListAmount(sunatTotalAmount, numberLocale),
+            documentTotal: formatListAmount(documentTotalAmount, numberLocale),
+          }
+        ),
       });
       return;
     }

@@ -328,6 +328,8 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Type 1": "Purchase",
     "Type 2": "Service",
     "The selected supplier does not match the business name from the document.": "The selected supplier does not match the business name from the document.",
+    "Query SUNAT to validate the total amount before saving.": "Query SUNAT to validate the total amount before saving.",
+    "The SUNAT total ({{sunatTotal}}) does not match the total amount of the selected document ({{documentTotal}}).": "The SUNAT total ({{sunatTotal}}) does not match the total amount of the selected document ({{documentTotal}}).",
   },
   sp: {
     "Programming": "Programacion",
@@ -652,6 +654,8 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Type 1": "Compra",
     "Type 2": "Servicio",
     "The selected supplier does not match the business name from the document.": "El proveedor seleccionado no coincide con la razón social del documento.",
+    "Query SUNAT to validate the total amount before saving.": "Consulte SUNAT para validar el monto total antes de guardar.",
+    "The SUNAT total ({{sunatTotal}}) does not match the total amount of the selected document ({{documentTotal}}).": "El monto total de SUNAT ({{sunatTotal}}) no coincide con el monto total del documento seleccionado ({{documentTotal}}).",
   },
   gr: generatedAppTranslations.gr,
   it: generatedAppTranslations.it,
