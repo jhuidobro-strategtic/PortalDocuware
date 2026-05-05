@@ -55,6 +55,7 @@ interface GeneratePurchaseOrderPdfParams {
   paymentConditionLabel?: string;
   currencyLabel?: string;
   storeLabel?: string;
+  requiredByName?: string;
   executedByName?: string;
   numberLocale: string;
 }
@@ -90,6 +91,9 @@ const safeValue = (value: unknown, fallback = "-") => {
   const normalizedValue = String(value ?? "").trim();
   return normalizedValue || fallback;
 };
+
+const safeUppercaseValue = (value: unknown, fallback = "-") =>
+  safeValue(value, fallback).toLocaleUpperCase("es-PE");
 
 const formatAmount = (value: number | string, numberLocale: string) =>
   Number(value || 0).toLocaleString(numberLocale, {
@@ -243,6 +247,7 @@ export const generatePurchaseOrderPdf = async ({
   paymentConditionLabel,
   currencyLabel,
   storeLabel,
+  requiredByName,
   executedByName,
   numberLocale,
 }: GeneratePurchaseOrderPdfParams): Promise<GeneratedPurchaseOrderPdf> => {
@@ -343,7 +348,7 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       label: "REQUERIDO POR",
-      value: safeValue(relatedDocument?.driver, executedByName),
+      value: safeUppercaseValue(requiredByName),
     },
   ];
   const rightFieldRows: FieldGroupRow[] = [
@@ -384,7 +389,7 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       label: "EJECUTADO POR",
-      value: safeValue(executedByName),
+      value: safeUppercaseValue(executedByName),
     },
   ];
   const infoHeight =

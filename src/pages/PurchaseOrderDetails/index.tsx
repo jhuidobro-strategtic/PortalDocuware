@@ -61,6 +61,8 @@ interface PurchaseOrder {
   storeLabel?: string;
   purchaseState: number;
   purchaseStateLabel?: string;
+  tipoorden: string | null;
+  signature: number | null;
   createdBy: number;
   createAt: string;
   updatedBy: number | null;
@@ -107,11 +109,19 @@ interface PurchaseOrderApiItem {
   guideNo: string;
   store: number | CatalogItem;
   purchaseState: number | CatalogItem;
+  tipoorden?: string | null;
+  signature?: number | null;
   createdBy: number;
   createAt: string;
   updatedBy: number | null;
   updatedAt: string | null;
   details: PurchaseOrderDetail[];
+}
+
+interface UserApiItem {
+  userID: number;
+  userName?: string;
+  fullName?: string;
 }
 
 const getDocumentAssociatedNo = (document: Document) =>
@@ -221,6 +231,17 @@ const mapSupplierDetailsLookup = (items: SupplierReference[]) =>
     return acc;
   }, {});
 
+const mapUserLookup = (items: UserApiItem[]) =>
+  items.reduce((acc: Record<number, string>, item) => {
+    const label =
+      String(item.fullName ?? "").trim() ||
+      String(item.userName ?? "").trim() ||
+      String(item.userID);
+
+    acc[item.userID] = label;
+    return acc;
+  }, {});
+
 const getCatalogId = (value: number | CatalogItem) =>
   typeof value === "number" ? value : Number(value?.id ?? 0);
 
@@ -264,6 +285,11 @@ const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
   storeLabel: getCatalogLabel(item.store),
   purchaseState: getCatalogId(item.purchaseState),
   purchaseStateLabel: getCatalogLabel(item.purchaseState),
+  tipoorden: item.tipoorden ?? null,
+  signature:
+    typeof item.signature === "number" && Number.isFinite(item.signature)
+      ? item.signature
+      : null,
   createdBy: item.createdBy,
   createAt: item.createAt,
   updatedBy: item.updatedBy,
@@ -450,6 +476,7 @@ const PurchaseOrderDetails = () => {
   const [purchaseStateLookup, setPurchaseStateLookup] = useState<
     Record<number, string>
   >({});
+  const [userLookup, setUserLookup] = useState<Record<number, string>>({});
   const [purchaseStateOptions, setPurchaseStateOptions] = useState<CatalogItem[]>(
     []
   );
@@ -655,8 +682,14 @@ const PurchaseOrderDetails = () => {
             orderModal.storeLabel || storeLookup[orderModal.store] || "",
           documentAssociatedTypeLabel:
             orderModal.documentAssociatedTypeLabel || "",
+          requiredByName:
+            userLookup[orderModal.createdBy] ||
+            (orderModal.createdBy === sessionUser.id ? sessionUser.name : ""),
           executedByName:
-            orderModal.createdBy === sessionUser.id ? sessionUser.name : "",
+            (typeof orderModal.signature === "number"
+              ? userLookup[orderModal.signature]
+              : "") ||
+            (orderModal.signature === sessionUser.id ? sessionUser.name : ""),
           numberLocale,
         });
 
@@ -728,6 +761,7 @@ const PurchaseOrderDetails = () => {
           purchaseOrdersResponse,
           documentsResponse,
           suppliersResponse,
+          usersResponse,
           paymentConditionResponse,
           currencyResponse,
           storeResponse,
@@ -736,6 +770,7 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("purchase-orders/")),
           fetch(buildApiUrl("documents")),
           fetch(buildApiUrl("proveedores")),
+          fetch(buildApiUrl("users/")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_CONDITION")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
@@ -761,6 +796,7 @@ const PurchaseOrderDetails = () => {
 
         const documentsData = await documentsResponse.json().catch(() => null);
         const suppliersData = await suppliersResponse.json().catch(() => null);
+        const usersData = await usersResponse.json().catch(() => null);
         const paymentConditionData = await paymentConditionResponse
           .json()
           .catch(() => null);
@@ -803,6 +839,12 @@ const PurchaseOrderDetails = () => {
         } else {
           setSupplierLookup({});
           setSupplierDetailsLookup({});
+        }
+
+        if (usersResponse.ok && usersData?.success && Array.isArray(usersData?.data)) {
+          setUserLookup(mapUserLookup(usersData.data));
+        } else {
+          setUserLookup({});
         }
 
         if (
