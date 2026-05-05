@@ -510,8 +510,8 @@ const buildPurchaseOrderPayload = (
   guideNo: values.guideNo.trim(),
   store: Number(values.store),
   purchaseState: Number(values.purchaseState),
-  orderType: Number(values.orderType),
-  signedBy: Number(values.signedBy),
+  tipoorden: values.orderType.trim(),
+  signature: Number(values.signedBy),
   createdBy: Number(values.createdBy),
   details: details.map((detail) => ({
     descriptionItem: detail.descriptionItem.trim(),
@@ -530,7 +530,6 @@ const requiredFields: OrderCFieldName[] = [
   "documentAssociatedNo",
   "paymentCondition",
   "currency",
-  "guideNo",
   "store",
   "purchaseState",
   "signedBy",
