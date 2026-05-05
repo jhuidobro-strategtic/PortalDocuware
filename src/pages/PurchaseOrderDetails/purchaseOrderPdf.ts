@@ -24,6 +24,7 @@ interface PurchaseOrderPdfOrder {
   guideNo: string;
   store: number;
   purchaseState: number;
+  tipoorden?: string | null;
   createdBy: number;
   createAt: string;
   details: PurchaseOrderPdfDetail[];
@@ -231,10 +232,20 @@ const drawFieldGroup = (
   });
 };
 
+const getPurchaseOrderFilePrefix = (orderType?: string | null) => {
+  switch (String(orderType ?? "").trim().toUpperCase()) {
+    case "S":
+      return "Orden_Servicio";
+    case "C":
+    default:
+      return "Orden_Compra";
+  }
+};
+
 const buildPurchaseOrderPdfFileName = (
-  purchaseOrder: Pick<PurchaseOrderPdfOrder, "orderNo" | "purchaseOrderID">
+  purchaseOrder: Pick<PurchaseOrderPdfOrder, "orderNo" | "purchaseOrderID" | "tipoorden">
 ) =>
-  `Orden_C_${safeValue(
+  `${getPurchaseOrderFilePrefix(purchaseOrder.tipoorden)}_${safeValue(
     purchaseOrder.orderNo,
     String(purchaseOrder.purchaseOrderID)
   ).replace(/[\\/:*?"<>|]/g, "_")}.pdf`;
