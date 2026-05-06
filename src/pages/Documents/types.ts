@@ -12,6 +12,7 @@ export interface Document {
   taxamount: string;
   totalamount: string;
   documenturl: string;
+  file_url?: string;
   notes: string;
   status: boolean;
   created_by: number;

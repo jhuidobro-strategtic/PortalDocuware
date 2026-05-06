@@ -27,7 +27,6 @@ import FloatingAlerts, {
 import { buildApiUrl } from "../../helpers/api-url";
 import { getNumberLocale } from "../../common/locale";
 import { Document } from "../Documents/types";
-import { getDownloadUrl } from "../Documents/document-utils";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
 import { intelligentSearch } from "../../helpers/search-utils";
 
@@ -149,12 +148,18 @@ const buildInvoicePdfFileName = (document: Document) =>
     "Factura"
   )}.pdf`;
 
+const isGoogleDriveUrl = (value: string) =>
+  /(^https?:\/\/)?(www\.)?drive\.google\.com\//i.test(String(value || "").trim());
+
 const fetchRelatedInvoicePdfFile = async (
   document: Document
 ): Promise<File | null> => {
-  const primaryUrl = getDownloadUrl(document.documenturl || "");
-  const fallbackUrl = String(document.documenturl || "").trim();
-  const candidateUrls = [primaryUrl, fallbackUrl].filter(Boolean);
+  const publicFileUrl = String(document.file_url || "").trim();
+  const directDocumentUrl = String(document.documenturl || "").trim();
+  const candidateUrls = [publicFileUrl, directDocumentUrl]
+    .filter(Boolean)
+    .filter((url, index, urls) => urls.indexOf(url) === index)
+    .filter((url) => !isGoogleDriveUrl(url));
 
   for (const candidateUrl of candidateUrls) {
     try {

@@ -236,9 +236,13 @@ const getExpedientDocumentFetchUrls = (
   document: Pick<ExpedientDocument, "file_url" | "filepath">
 ) => {
   const primaryUrl = String(document.file_url || "").trim();
+  if (primaryUrl) {
+    return [primaryUrl];
+  }
+
   const fallbackUrl = getExpedientMediaUrl(document.filepath);
 
-  return [primaryUrl, fallbackUrl].filter(
+  return [fallbackUrl].filter(
     (candidate, index, candidates) => candidate && candidates.indexOf(candidate) === index
   );
 };
