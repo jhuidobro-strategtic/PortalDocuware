@@ -1,7 +1,7 @@
 import React from 'react';
 
 //constants
-import { LAYOUT_MODE_TYPES } from "../../Components/constants/layout";
+import { LAYOUT_MODE_TYPES } from "../../components/constants/layout";
 
 interface LightDarkProps {
     layoutMode : string;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from "prop-types";
-import withRouter from '../Components/Common/withRouter';
+import withRouter from '../components/common/withRouter';
 
 //import Components
 import Header from './Header';

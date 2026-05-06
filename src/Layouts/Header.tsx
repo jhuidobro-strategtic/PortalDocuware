@@ -8,11 +8,11 @@ import logoDark from "../assets/images/logo-dark.png";
 import logoLight from "../assets/images/logo-light.png";
 
 //import Components
-import SearchOption from '../Components/Common/SearchOption';
-import LanguageDropdown from '../Components/Common/LanguageDropdown';
-import FullScreenDropdown from '../Components/Common/FullScreenDropdown';
-import ProfileDropdown from '../Components/Common/ProfileDropdown';
-import LightDark from '../Components/Common/LightDark';
+import SearchOption from '../components/common/SearchOption';
+import LanguageDropdown from '../components/common/LanguageDropdown';
+import FullScreenDropdown from '../components/common/FullScreenDropdown';
+import ProfileDropdown from '../components/common/ProfileDropdown';
+import LightDark from '../components/common/LightDark';
 import { useTranslation } from "react-i18next";
 
 import { changeSidebarVisibility } from '../slices/layouts/thunk';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import getChartColorsArray from '../Common/DynamicChartsColor';
+import getChartColorsArray from './DynamicChartsColor';
 import { useSelector } from 'react-redux';
 import { createSelector } from 'reselect';
 

@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { setAuthorization } from "../helpers/api_helper";
 import { useDispatch } from "react-redux";
 
-import { useProfile } from "../Components/Hooks/UserHooks";
+import { useProfile } from "../components/Hooks/UserHooks";
 
 import { logoutUser } from "../slices/auth/login/thunk";
 

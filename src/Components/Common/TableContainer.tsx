@@ -29,7 +29,7 @@ import {
   TicketsListGlobalFilter,
   NFTRankingGlobalFilter,
   TaskListGlobalFilter,
-} from "../../Components/Common/GlobalSearchFilter";
+} from "../../components/common/GlobalSearchFilter";
 
 // Column Filter
 const Filter = ({
