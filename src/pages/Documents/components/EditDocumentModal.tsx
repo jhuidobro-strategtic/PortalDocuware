@@ -63,6 +63,16 @@ interface EditDocumentModalProps {
   onSearchDocument: () => Promise<void>;
 }
 
+const normalizeDocumentNumber = (value: string) => {
+  const trimmedValue = value.trim();
+
+  if (!/^\d+$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return trimmedValue.replace(/^0+(?=\d)/, "");
+};
+
 const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
   editDoc,
   isOpen,
@@ -238,7 +248,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                           onChange={(e) =>
                             setEditDoc({
                               ...editDoc,
-                              documentnumber: e.target.value,
+                              documentnumber: normalizeDocumentNumber(e.target.value),
                             })
                           }
                         placeholder={t("E.g. 000123")}

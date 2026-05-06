@@ -897,9 +897,10 @@ const DocumentOrderC = () => {
       setFeedback({
         type: hasSunatDetails ? "info" : "danger",
         message: hasSunatDetails
-          ? t(
-            "The selected document was loaded from SUNAT and the details were auto-filled."
-          )
+          ? data.message ||
+            t(
+              "The selected document was loaded from SUNAT and the details were auto-filled."
+            )
           : t("No details found in SUNAT"),
       });
     } catch (prefillError: any) {

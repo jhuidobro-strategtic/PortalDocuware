@@ -32,10 +32,20 @@ interface LocationState {
   document?: Document;
 }
 
+const normalizeSunatDocumentNumber = (value: string | null | undefined) => {
+  const trimmedValue = String(value ?? "").trim();
+
+  if (!/^\d+$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return trimmedValue.replace(/^0+(?=\d)/, "");
+};
+
 const normalizeDocumentForForm = (document: Document): Document => ({
   ...document,
   documentserial: document.documentserial ?? "",
-  documentnumber: document.documentnumber ?? "",
+  documentnumber: normalizeSunatDocumentNumber(document.documentnumber),
   customer: document.customer ?? "",
   isDuplicated: document.isDuplicated ?? "",
   suppliernumber: document.suppliernumber ?? "",
@@ -285,11 +295,14 @@ const DocumentEditPage: React.FC = () => {
         documentData.documenttype !== null
           ? String(documentData.documenttype.tipoid).padStart(2, "0")
           : String(documentData.documenttype || "").padStart(2, "0");
+      const normalizedDocumentNumber = normalizeSunatDocumentNumber(
+        documentData.documentnumber
+      );
 
       if (
         !tipoComprobante ||
         !documentData.documentserial?.trim() ||
-        !documentData.documentnumber?.trim()
+        !normalizedDocumentNumber
       ) {
         if (notifyErrors) {
           addNotification(
@@ -310,7 +323,7 @@ const DocumentEditPage: React.FC = () => {
           tipo_comprobante: tipoComprobante,
           ruc_emisor: documentData.suppliernumber,
           serie: documentData.documentserial,
-          numero: documentData.documentnumber,
+          numero: normalizedDocumentNumber,
         }),
       });
 
@@ -323,6 +336,10 @@ const DocumentEditPage: React.FC = () => {
         return existingDetails;
       }
 
+      const sunatSuccessMessage =
+        typeof payload.message === "string" && payload.message.trim()
+          ? payload.message.trim()
+          : t("Details loaded successfully from SUNAT");
       const sunatPayload = payload.payload as SunatPayload;
       const nextDocument = {
         ...documentData,
@@ -395,14 +412,12 @@ const DocumentEditPage: React.FC = () => {
         if (failedSyncs > 0 || skippedDetails > 0) {
           addNotification(
             "warning",
-            t(
+            `${sunatSuccessMessage}. ${t(
               "Some invoice details could not be saved because the backend only accepts whole-number quantities, but the full detail from SUNAT is shown."
-            )
+            )}`
           );
-        } else if (existingDetails.length > 0) {
-          addNotification("success", t("Invoice details were refreshed from SUNAT."));
         } else {
-          addNotification("success", t("Details loaded successfully from SUNAT"));
+          addNotification("success", sunatSuccessMessage);
         }
       }
 

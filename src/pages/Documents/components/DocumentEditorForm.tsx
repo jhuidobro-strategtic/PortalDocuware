@@ -54,6 +54,16 @@ interface DocumentEditorFormProps {
   onCancel: () => void;
 }
 
+const normalizeDocumentNumber = (value: string) => {
+  const trimmedValue = value.trim();
+
+  if (!/^\d+$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return trimmedValue.replace(/^0+(?=\d)/, "");
+};
+
 const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   editDoc,
   setEditDoc,
@@ -217,7 +227,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                 onChange={(event) =>
                   setEditDoc({
                     ...editDoc,
-                    documentnumber: event.target.value,
+                    documentnumber: normalizeDocumentNumber(event.target.value),
                   })
                 }
                 placeholder={t("E.g. 000123")}
