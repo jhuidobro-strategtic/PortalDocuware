@@ -23,20 +23,14 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
   const numberLocale = getNumberLocale(i18n.language);
 
   const subtotal = details.reduce(
-    (sum, detail) => sum + parseFloat(detail.unit_value || "0"),
+    (sum, detail) => sum + parseFloat(detail.total_value || "0"),
     0
   );
   const taxTotal = details.reduce(
     (sum, detail) => sum + parseFloat(detail.tax_value || "0"),
     0
   );
-  const grandTotal = details.reduce(
-    (sum, detail) =>
-      sum +
-      parseFloat(detail.unit_value || "0") +
-      parseFloat(detail.tax_value || "0"),
-    0
-  );
+  const grandTotal = subtotal + taxTotal;
 
   return (
     <Card className="border-0 shadow-sm document-edit-details-card">

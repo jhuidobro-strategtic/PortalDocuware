@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, CardBody, Col, Container, Row, Spinner } from "reactstrap";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,146 @@ interface LocationState {
   document?: Document;
 }
 
+interface SunatItem {
+  unidad_medida_descripcion?: string;
+  descripcion?: string;
+  cantidad?: number | string;
+  valor_unitario?: number | string;
+  valor_venta?: number | string;
+  impuesto_valor?: number | string;
+}
+
+interface SunatPayload {
+  emisor?: {
+    ruc?: string;
+  };
+  detalle?: {
+    serie?: string;
+    numero?: string;
+    codigo_moneda?: string;
+    fecha_emision?: string;
+  };
+  totales?: {
+    total_grav_oner?: number | string;
+    total_igv?: number | string;
+    monto_total_general?: number | string;
+  };
+  items?: SunatItem[];
+}
+
+const parseAmount = (value: unknown) => {
+  const parsed = Number.parseFloat(String(value ?? 0).replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toAmountString = (value: unknown) => parseAmount(value).toFixed(2);
+
+const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => {
+  if (Array.isArray(payload)) {
+    return payload as DocumentDetail[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; detailid?: number };
+
+    if (Array.isArray(typedPayload.data)) {
+      return typedPayload.data as DocumentDetail[];
+    }
+
+    if (
+      typedPayload.data &&
+      typeof typedPayload.data === "object" &&
+      "detailid" in typedPayload.data
+    ) {
+      return [typedPayload.data as DocumentDetail];
+    }
+
+    if ("detailid" in typedPayload) {
+      return [typedPayload as DocumentDetail];
+    }
+  }
+
+  return [];
+};
+
+const extractVehiclePlate = (text: string) => {
+  const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+  const directMatch = cleanText.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
+  let candidateSource = directMatch ? directMatch[1] : null;
+
+  if (!candidateSource) {
+    const possibleMatches = cleanText.match(/\b[A-Z0-9-]{5,8}\b/g);
+    if (possibleMatches) {
+      candidateSource =
+        possibleMatches.find(
+          (candidate: string) => /[A-Z]/i.test(candidate) && /\d/.test(candidate)
+        ) || null;
+    }
+  }
+
+  if (!candidateSource) {
+    return null;
+  }
+
+  const candidate = candidateSource.toUpperCase().replace(/-/g, "");
+
+  if (
+    candidate.length >= 5 &&
+    candidate.length <= 7 &&
+    /[A-Z]/.test(candidate) &&
+    /\d/.test(candidate)
+  ) {
+    return candidate;
+  }
+
+  return null;
+};
+
+const buildDetailSignature = (
+  detail: Pick<
+    DocumentDetail,
+    | "documentserial"
+    | "documentnumber"
+    | "suppliernumber"
+    | "unit_measure_description"
+    | "description"
+    | "vehicle_no"
+    | "quantity"
+    | "unit_value"
+  >
+) =>
+  [
+    detail.documentserial,
+    detail.documentnumber,
+    detail.suppliernumber,
+    detail.unit_measure_description,
+    detail.description,
+    detail.vehicle_no || "",
+    parseAmount(detail.quantity).toFixed(2),
+    parseAmount(detail.unit_value).toFixed(2),
+  ].join("|");
+
+const mapSunatItemsToDocumentDetails = (sunatPayload: SunatPayload): DocumentDetail[] =>
+  (sunatPayload.items || []).map((item, index) => ({
+    detailid: -(index + 1),
+    documentserial: sunatPayload.detalle?.serie || "",
+    documentnumber: sunatPayload.detalle?.numero || "",
+    suppliernumber: sunatPayload.emisor?.ruc || "",
+    unit_measure_description: item.unidad_medida_descripcion || "",
+    description: item.descripcion || "",
+    vehicle_no: extractVehiclePlate(item.descripcion || "") || "",
+    quantity: parseAmount(item.cantidad),
+    unit_value: toAmountString(item.valor_unitario),
+    tax_value: toAmountString(item.impuesto_valor),
+    total_value: toAmountString(item.valor_venta),
+    status: false,
+    created_by: 1,
+    created_at: new Date().toISOString(),
+    updated_by: null,
+    updated_at: null,
+  }));
+
 const DocumentEditPage: React.FC = () => {
   const { documentId } = useParams();
   const { t } = useTranslation();
@@ -55,20 +195,20 @@ const DocumentEditPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = (type: Notification["type"], message: string) => {
+  const addNotification = useCallback((type: Notification["type"], message: string) => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
-  };
+  }, []);
 
-  const syncIgvPercent = (documentData: Document) => {
+  const syncIgvPercent = useCallback((documentData: Document) => {
     const amount = parseFloat(documentData.amount || "0");
     const tax = parseFloat(documentData.taxamount || "0");
     setEditIgvPercent(
       amount > 0 && tax > 0 ? Math.round((tax / amount) * 100) : 0
     );
-  };
+  }, []);
 
-  const fetchDetailsByValues = async (
+  const fetchDetailsByValues = useCallback(async (
     suppliernumber: string,
     documentserial: string,
     documentnumber: string
@@ -92,8 +232,165 @@ const DocumentEditPage: React.FC = () => {
     }
 
     const payload = await response.json();
-    return Array.isArray(payload) ? payload : [];
-  };
+    return normalizeDocumentDetailsPayload(payload);
+  }, []);
+
+  const syncDocumentDetailsFromSunat = useCallback(
+    async (
+      documentData: Document,
+      options: {
+        existingDetails?: DocumentDetail[];
+        notifySuccess?: boolean;
+        notifyErrors?: boolean;
+      } = {}
+    ) => {
+      const {
+        existingDetails = [],
+        notifySuccess = true,
+        notifyErrors = true,
+      } = options;
+      const sunatToken = getSunatToken();
+
+      if (!sunatToken) {
+        if (notifyErrors) {
+          addNotification(
+            "danger",
+            t("SUNAT token is not configured in the environment")
+          );
+        }
+        return existingDetails;
+      }
+
+      const tipoComprobante =
+        typeof documentData.documenttype === "object" &&
+        documentData.documenttype !== null
+          ? String(documentData.documenttype.tipoid).padStart(2, "0")
+          : String(documentData.documenttype || "").padStart(2, "0");
+
+      if (
+        !tipoComprobante ||
+        !documentData.documentserial?.trim() ||
+        !documentData.documentnumber?.trim()
+      ) {
+        if (notifyErrors) {
+          addNotification(
+            "warning",
+            t("Complete Type, Series and Number before querying SUNAT")
+          );
+        }
+        return existingDetails;
+      }
+
+      const response = await fetch(buildSunatUrl("sunat/comprobante"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sunatToken}`,
+        },
+        body: JSON.stringify({
+          tipo_comprobante: tipoComprobante,
+          ruc_emisor: documentData.suppliernumber,
+          serie: documentData.documentserial,
+          numero: documentData.documentnumber,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!payload.success || !payload.payload) {
+        if (notifyErrors) {
+          addNotification("danger", t("Error fetching invoice data from SUNAT"));
+        }
+        return existingDetails;
+      }
+
+      const sunatPayload = payload.payload as SunatPayload;
+      const nextDocument = {
+        ...documentData,
+        currency: sunatPayload.detalle?.codigo_moneda || "PEN",
+        amount: toAmountString(sunatPayload.totales?.total_grav_oner),
+        taxamount: toAmountString(sunatPayload.totales?.total_igv),
+        totalamount: toAmountString(sunatPayload.totales?.monto_total_general),
+        documentdate: sunatPayload.detalle?.fecha_emision || documentData.documentdate,
+      };
+
+      setEditDoc((prev) =>
+        prev && prev.documentid === documentData.documentid ? nextDocument : prev
+      );
+      syncIgvPercent(nextDocument);
+
+      const sunatDetails = mapSunatItemsToDocumentDetails(sunatPayload);
+      if (sunatDetails.length === 0) {
+        setDocDetails(existingDetails);
+        if (notifyErrors) {
+          addNotification("warning", t("No details found in SUNAT"));
+        }
+        return existingDetails;
+      }
+
+      setDocDetails(sunatDetails);
+
+      const existingSignatures = new Set(
+        existingDetails.map((detail) => buildDetailSignature(detail))
+      );
+      const missingDetails = sunatDetails.filter(
+        (detail) => !existingSignatures.has(buildDetailSignature(detail))
+      );
+      const persistableDetails = missingDetails.filter((detail) =>
+        Number.isInteger(parseAmount(detail.quantity))
+      );
+      const skippedDetails = missingDetails.length - persistableDetails.length;
+
+      let failedSyncs = 0;
+      for (const detail of persistableDetails) {
+        const createResponse = await fetch(buildApiUrl("documents-detail/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            documentserial: detail.documentserial,
+            documentnumber: detail.documentnumber,
+            suppliernumber: detail.suppliernumber,
+            unit_measure_description: detail.unit_measure_description,
+            description: detail.description,
+            vehicle_no: detail.vehicle_no,
+            quantity: detail.quantity,
+            unit_value: detail.unit_value,
+            tax_value: detail.tax_value,
+            total_value: detail.total_value,
+            status: detail.status,
+            created_by: detail.created_by,
+            created_at: detail.created_at,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          failedSyncs += 1;
+          console.error(
+            "No se pudo registrar un detalle de SUNAT",
+            await createResponse.text()
+          );
+        }
+      }
+
+      if (notifySuccess) {
+        if (failedSyncs > 0 || skippedDetails > 0) {
+          addNotification(
+            "warning",
+            t(
+              "Some invoice details could not be saved because the backend only accepts whole-number quantities, but the full detail from SUNAT is shown."
+            )
+          );
+        } else if (existingDetails.length > 0) {
+          addNotification("success", t("Invoice details were refreshed from SUNAT."));
+        } else {
+          addNotification("success", t("Details loaded successfully from SUNAT"));
+        }
+      }
+
+      return sunatDetails;
+    },
+    [addNotification, syncIgvPercent, t]
+  );
 
   useEffect(() => {
     document.title = `${t("Edit Document")} | Docuware`;
@@ -155,6 +452,18 @@ const DocumentEditPage: React.FC = () => {
             resolvedDocument.documentnumber
           );
           setDocDetails(details);
+
+          if (getSunatToken()) {
+            try {
+              await syncDocumentDetailsFromSunat(resolvedDocument, {
+                existingDetails: details,
+                notifySuccess: false,
+                notifyErrors: false,
+              });
+            } catch (sunatSyncError) {
+              console.error("Error sincronizando detalles desde SUNAT:", sunatSyncError);
+            }
+          }
         } catch (detailsError) {
           console.error("Error cargando detalles:", detailsError);
           setDocDetails([]);
@@ -173,7 +482,7 @@ const DocumentEditPage: React.FC = () => {
     };
 
     loadData();
-  }, [documentId, t]);
+  }, [documentId, fetchDetailsByValues, syncDocumentDetailsFromSunat, syncIgvPercent, t]);
 
   const handleSearchRuc = async () => {
     if (!editDoc?.suppliernumber) {
@@ -229,15 +538,6 @@ const DocumentEditPage: React.FC = () => {
       return;
     }
 
-    const sunatToken = getSunatToken();
-    if (!sunatToken) {
-      addNotification(
-        "danger",
-        t("SUNAT token is not configured in the environment")
-      );
-      return;
-    }
-
     setLoadingDocument(true);
     try {
       const existingDetails = await fetchDetailsByValues(
@@ -245,140 +545,7 @@ const DocumentEditPage: React.FC = () => {
         editDoc.documentserial,
         editDoc.documentnumber
       );
-
-      if (existingDetails.length > 0) {
-        setDocDetails(existingDetails);
-        addNotification(
-          "info",
-          t("Details already exist. SUNAT was not queried.")
-        );
-        return;
-      }
-
-      const tipoComprobante =
-        typeof editDoc.documenttype === "object" && editDoc.documenttype !== null
-          ? String(editDoc.documenttype.tipoid).padStart(2, "0")
-          : String(editDoc.documenttype).padStart(2, "0");
-
-      if (!tipoComprobante || !editDoc.documentserial || !editDoc.documentnumber) {
-        addNotification(
-          "warning",
-          t("Complete Type, Series and Number before querying SUNAT")
-        );
-        return;
-      }
-
-      const response = await fetch(buildSunatUrl("sunat/comprobante"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sunatToken}`,
-        },
-        body: JSON.stringify({
-          tipo_comprobante: tipoComprobante,
-          ruc_emisor: editDoc.suppliernumber,
-          serie: editDoc.documentserial,
-          numero: editDoc.documentnumber,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!payload.success) {
-        addNotification("danger", t("Error fetching invoice data from SUNAT"));
-        return;
-      }
-
-      const sunatPayload = payload.payload;
-      const { detalle, totales, items } = sunatPayload;
-      const currency = detalle.codigo_moneda || "PEN";
-      const subtotal = parseFloat(totales.total_grav_oner || 0).toFixed(2);
-      const tax = parseFloat(totales.total_igv || 0).toFixed(2);
-      const total = parseFloat(totales.monto_total_general || 0).toFixed(2);
-      const issueDate = detalle.fecha_emision || editDoc.documentdate;
-
-      const nextDocument = {
-        ...editDoc,
-        currency,
-        amount: subtotal,
-        taxamount: tax,
-        totalamount: total,
-        documentdate: issueDate,
-      };
-
-      setEditDoc(nextDocument);
-      syncIgvPercent(nextDocument);
-
-      const round2 = (value: unknown) => Number(parseFloat(String(value)).toFixed(2));
-      const itemsToRegister = items || [];
-
-      for (const item of itemsToRegister) {
-        let text = item.descripcion || "";
-        let cleanText = text
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        let match = cleanText.match(/PLACA[:\s-]*([A-Z0-9-]{5,8})\b/i);
-        if (!match) {
-          const possibleMatches = cleanText.match(/\b[A-Z0-9-]{5,8}\b/g);
-          if (possibleMatches) {
-            match =
-              possibleMatches.find(
-                (candidate: string) =>
-                  /[A-Z]/i.test(candidate) && /\d/.test(candidate)
-              ) || null;
-          }
-        }
-
-        let plate = null;
-        if (match) {
-          const candidate = (typeof match === "string" ? match : match[1])
-            .toUpperCase()
-            .replace(/-/g, "");
-          if (
-            candidate.length >= 5 &&
-            candidate.length <= 7 &&
-            /[A-Z]/.test(candidate) &&
-            /\d/.test(candidate)
-          ) {
-            plate = candidate;
-          }
-        }
-
-        await fetch(buildApiUrl("documents-detail/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            documentserial: detalle.serie,
-            documentnumber: detalle.numero,
-            suppliernumber: sunatPayload.emisor.ruc,
-            unit_measure_description: item.unidad_medida_descripcion,
-            description: item.descripcion,
-            vehicle_no: plate,
-            quantity: round2(item.cantidad),
-            unit_value: round2(item.valor_unitario),
-            tax_value: round2(item.impuesto_valor),
-            total_value: round2(item.precio_unitario),
-            status: false,
-            created_by: 1,
-            created_at: new Date().toISOString(),
-          }),
-        });
-      }
-
-      const refreshedDetails = await fetchDetailsByValues(
-        nextDocument.suppliernumber,
-        nextDocument.documentserial,
-        nextDocument.documentnumber
-      );
-
-      if (refreshedDetails.length > 0) {
-        setDocDetails(refreshedDetails);
-        addNotification("success", t("Details loaded successfully from SUNAT"));
-      } else {
-        addNotification("warning", t("No details found in SUNAT"));
-      }
+      await syncDocumentDetailsFromSunat(editDoc, { existingDetails });
     } catch (documentError) {
       console.error(documentError);
       addNotification("danger", t("Error querying SUNAT data"));
