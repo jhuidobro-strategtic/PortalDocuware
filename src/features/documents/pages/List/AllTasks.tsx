@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardBody, Col, Container, Row, Spinner } from "reactstrap";
 import moment from "moment";
@@ -141,8 +141,14 @@ const DocumentList: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(
+    async (showLoader = true) => {
+      if (showLoader) {
+        setLoading(true);
+      }
+
+      setError(null);
+
       try {
         const [
           documentsResponse,
@@ -198,13 +204,21 @@ const DocumentList: React.FC = () => {
             ? fetchError.message
             : t("Unexpected server response");
         setError(message);
+        throw fetchError;
       } finally {
-        setLoading(false);
+        if (showLoader) {
+          setLoading(false);
+        }
       }
-    };
+    },
+    [t]
+  );
 
-    fetchInitialData();
-  }, [t]);
+  useEffect(() => {
+    fetchInitialData().catch(() => {
+      // Error state is already handled inside fetchInitialData.
+    });
+  }, [fetchInitialData]);
 
   const handleResize = (column: keyof ColumnWidths, newWidth: number) => {
     setColumnWidths((prev) => ({ ...prev, [column]: newWidth }));
@@ -315,6 +329,51 @@ const DocumentList: React.FC = () => {
     navigate(`/documents/edit/${doc.documentid}`, {
       state: { document: doc },
     });
+  };
+
+  const handleExtract = async ({
+    startDate,
+    endDate,
+  }: {
+    startDate: Date | null;
+    endDate: Date | null;
+  }) => {
+    if (!startDate || !endDate) {
+      addNotification("warning", t("Please select start and end dates."));
+      return false;
+    }
+
+    const queryParams = new URLSearchParams({
+      fecha_inicio: moment(startDate).format("YYYY-MM-DD"),
+      fecha_fin: moment(endDate).format("YYYY-MM-DD"),
+    });
+
+    try {
+      const response = await fetch(
+        `${buildApiUrl("apisunat/GetDocumentosSunat/")}?${queryParams.toString()}`
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (response.ok && payload?.success) {
+        addNotification(
+          "success",
+          payload.message || t("Documents extracted successfully")
+        );
+        await fetchInitialData(false);
+        setCurrentPage(1);
+        return true;
+      }
+
+      addNotification(
+        "danger",
+        payload?.message || t("Unexpected server response")
+      );
+      return false;
+    } catch (extractError) {
+      console.error("Error extracting SUNAT documents:", extractError);
+      addNotification("danger", t("Unexpected server response"));
+      return false;
+    }
   };
 
   const exportToExcel = async () => {
@@ -503,7 +562,7 @@ const DocumentList: React.FC = () => {
                   setDateRange(dates);
                   setCurrentPage(1);
                 }}
-                onExtract={() => {}}
+                onExtract={handleExtract}
                 onExport={exportToExcel}
               />
 

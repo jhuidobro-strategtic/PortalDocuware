@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Button,
+  Col,
   FormGroup,
   Input,
   InputGroup,
@@ -10,6 +11,8 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Row,
+  Spinner,
 } from "reactstrap";
 import Flatpickr from "react-flatpickr";
 import { useTranslation } from "react-i18next";
@@ -23,7 +26,10 @@ interface DocumentFiltersProps {
   onStatusChange: (value: string) => void;
   onDateRangeChange: (dates: Date[]) => void;
   onExport: () => void;
-  onExtract?: (payload: { startDate: Date | null; endDate: Date | null }) => void;
+  onExtract?: (payload: {
+    startDate: Date | null;
+    endDate: Date | null;
+  }) => Promise<boolean> | boolean;
 }
 
 const DocumentFilters: React.FC<DocumentFiltersProps> = ({
@@ -40,17 +46,34 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
   const [extractModalOpen, setExtractModalOpen] = useState(false);
   const [extractStartDate, setExtractStartDate] = useState<Date[]>([]);
   const [extractEndDate, setExtractEndDate] = useState<Date[]>([]);
+  const [extractSubmitting, setExtractSubmitting] = useState(false);
 
   const toggleExtractModal = () => {
     setExtractModalOpen((prev) => !prev);
   };
 
-  const handleConfirmExtract = () => {
-    onExtract?.({
-      startDate: extractStartDate[0] ?? null,
-      endDate: extractEndDate[0] ?? null,
-    });
-    setExtractModalOpen(false);
+  const handleConfirmExtract = async () => {
+    if (!onExtract) {
+      setExtractModalOpen(false);
+      return;
+    }
+
+    setExtractSubmitting(true);
+
+    try {
+      const shouldClose = await onExtract({
+        startDate: extractStartDate[0] ?? null,
+        endDate: extractEndDate[0] ?? null,
+      });
+
+      if (shouldClose !== false) {
+        setExtractModalOpen(false);
+        setExtractStartDate([]);
+        setExtractEndDate([]);
+      }
+    } finally {
+      setExtractSubmitting(false);
+    }
   };
 
   return (
@@ -125,37 +148,61 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
         </div>
       </div>
 
-      <Modal isOpen={extractModalOpen} toggle={toggleExtractModal} centered>
-        <ModalHeader toggle={toggleExtractModal}>{t("Extract")}</ModalHeader>
+      <Modal
+        isOpen={extractModalOpen}
+        toggle={extractSubmitting ? undefined : toggleExtractModal}
+        backdrop={extractSubmitting ? "static" : true}
+        keyboard={!extractSubmitting}
+        centered
+      >
+        <ModalHeader toggle={extractSubmitting ? undefined : toggleExtractModal}>
+          {t("Extract")}
+        </ModalHeader>
         <ModalBody>
-          <FormGroup>
-            <Label className="form-label">{t("Start date")}</Label>
-            <Flatpickr
-              className="form-control"
-              options={{ dateFormat: "d/m/Y" }}
-              value={extractStartDate}
-              onChange={(dates) => setExtractStartDate(dates)}
-              placeholder={t("Start date")}
-            />
-          </FormGroup>
+          <Row className="g-3">
+            <Col md={6}>
+              <FormGroup className="mb-0">
+                <Label className="form-label">{t("Start date")}</Label>
+                <Flatpickr
+                  className="form-control"
+                  options={{ dateFormat: "d/m/Y" }}
+                  value={extractStartDate}
+                  onChange={(dates) => setExtractStartDate(dates)}
+                  placeholder={t("Start date")}
+                />
+              </FormGroup>
+            </Col>
 
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("End date")}</Label>
-            <Flatpickr
-              className="form-control"
-              options={{ dateFormat: "d/m/Y" }}
-              value={extractEndDate}
-              onChange={(dates) => setExtractEndDate(dates)}
-              placeholder={t("End date")}
-            />
-          </FormGroup>
+            <Col md={6}>
+              <FormGroup className="mb-0">
+                <Label className="form-label">{t("End date")}</Label>
+                <Flatpickr
+                  className="form-control"
+                  options={{ dateFormat: "d/m/Y" }}
+                  value={extractEndDate}
+                  onChange={(dates) => setExtractEndDate(dates)}
+                  placeholder={t("End date")}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
         </ModalBody>
         <ModalFooter>
-          <Button color="light" onClick={toggleExtractModal}>
+          <Button
+            color="light"
+            onClick={toggleExtractModal}
+            disabled={extractSubmitting}
+          >
             {t("Cancel")}
           </Button>
-          <Button color="primary" onClick={handleConfirmExtract}>
-            {t("Confirm")}
+          <Button
+            color="primary"
+            onClick={handleConfirmExtract}
+            disabled={extractSubmitting}
+            className="d-inline-flex align-items-center gap-2"
+          >
+            {extractSubmitting && <Spinner size="sm" />}
+            <span>{extractSubmitting ? t("Processing...") : t("Confirm")}</span>
           </Button>
         </ModalFooter>
       </Modal>
