@@ -150,7 +150,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                       <Label className="form-label">RUC</Label>
                       <InputGroup>
                         <Input
-                          value={editDoc.suppliernumber}
+                          value={editDoc.suppliernumber ?? ""}
                           onChange={(e) =>
                             setEditDoc({
                               ...editDoc,
@@ -177,7 +177,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                   <Col md="8">
                     <FormGroup>
                       <Label className="form-label">{t("Business Name")}</Label>
-                      <Input value={editDoc.suppliername} disabled />
+                      <Input value={editDoc.suppliername ?? ""} disabled />
                     </FormGroup>
                   </Col>
                 </Row>
@@ -217,7 +217,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                     <FormGroup>
                       <Label className="form-label">{t("Series No.")}</Label>
                       <Input
-                        value={editDoc.documentserial}
+                        value={editDoc.documentserial ?? ""}
                         onChange={(e) =>
                           setEditDoc({
                             ...editDoc,
@@ -234,7 +234,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                       <Label className="form-label">{t("Document No.")}</Label>
                       <InputGroup>
                         <Input
-                          value={editDoc.documentnumber}
+                          value={editDoc.documentnumber ?? ""}
                           onChange={(e) =>
                             setEditDoc({
                               ...editDoc,
@@ -270,7 +270,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                         <Flatpickr
                           className="form-control"
                           options={{ dateFormat: "Y-m-d" }}
-                          value={editDoc.documentdate}
+                          value={editDoc.documentdate || ""}
                           onChange={(dates: Date[]) =>
                             setEditDoc({
                               ...editDoc,
@@ -299,7 +299,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                       <Label>{t("Subtotal")}</Label>
                       <Input
                         type="number"
-                        value={editDoc.amount}
+                        value={editDoc.amount ?? ""}
                         onChange={(e) => handleAmountChange(e.target.value)}
                       />
                     </FormGroup>
@@ -337,7 +337,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                       <Label>{t("Total")}</Label>
                       <Input
                         type="number"
-                        value={editDoc.totalamount}
+                        value={editDoc.totalamount ?? "0.00"}
                         disabled
                         readOnly
                       />
@@ -350,7 +350,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                     <FormGroup>
                       <Label className="form-label">{t("Buyer")}</Label>
                       <Input
-                        value={editDoc.driver}
+                        value={editDoc.driver ?? ""}
                         onChange={(e) =>
                           setEditDoc({ ...editDoc, driver: e.target.value })
                         }
@@ -389,7 +389,7 @@ const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
                       <Input
                         type="textarea"
                         rows={3}
-                        value={editDoc.notes}
+                        value={editDoc.notes ?? ""}
                         onChange={(e) =>
                           setEditDoc({ ...editDoc, notes: e.target.value })
                         }

@@ -131,7 +131,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
             <Label className="form-label">RUC</Label>
             <InputGroup>
               <Input
-                value={editDoc.suppliernumber}
+                value={editDoc.suppliernumber ?? ""}
                 onChange={(event) =>
                   setEditDoc({
                     ...editDoc,
@@ -159,7 +159,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         <Col md={8}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Business Name")}</Label>
-            <Input value={editDoc.suppliername} disabled />
+            <Input value={editDoc.suppliername ?? ""} disabled />
           </FormGroup>
         </Col>
 
@@ -196,7 +196,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Series No.")}</Label>
             <Input
-              value={editDoc.documentserial}
+              value={editDoc.documentserial ?? ""}
               onChange={(event) =>
                 setEditDoc({
                   ...editDoc,
@@ -213,7 +213,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
             <Label className="form-label">{t("Document No.")}</Label>
             <InputGroup>
               <Input
-                value={editDoc.documentnumber}
+                value={editDoc.documentnumber ?? ""}
                 onChange={(event) =>
                   setEditDoc({
                     ...editDoc,
@@ -248,7 +248,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
               <Flatpickr
                 className="form-control"
                 options={{ dateFormat: "Y-m-d" }}
-                value={editDoc.documentdate}
+                value={editDoc.documentdate || ""}
                 onChange={(dates: Date[]) =>
                   setEditDoc({
                     ...editDoc,
@@ -264,7 +264,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Buyer")}</Label>
             <Input
-              value={editDoc.driver}
+              value={editDoc.driver ?? ""}
               onChange={(event) =>
                 setEditDoc({
                   ...editDoc,
@@ -296,7 +296,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
             <Label className="form-label">{t("Subtotal")}</Label>
             <Input
               type="number"
-              value={editDoc.amount}
+              value={editDoc.amount ?? ""}
               onChange={(event) => handleAmountChange(event.target.value)}
             />
           </FormGroup>
@@ -328,7 +328,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         <Col md={3}>
           <FormGroup className="mb-0">
             <Label className="form-label">{t("Total")}</Label>
-            <Input type="number" value={editDoc.totalamount} disabled />
+            <Input type="number" value={editDoc.totalamount ?? "0.00"} disabled />
           </FormGroup>
         </Col>        
 
@@ -360,7 +360,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
             <Input
               type="textarea"
               rows={3}
-              value={editDoc.notes}
+              value={editDoc.notes ?? ""}
               onChange={(event) =>
                 setEditDoc({
                   ...editDoc,

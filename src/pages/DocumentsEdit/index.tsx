@@ -32,6 +32,25 @@ interface LocationState {
   document?: Document;
 }
 
+const normalizeDocumentForForm = (document: Document): Document => ({
+  ...document,
+  documentserial: document.documentserial ?? "",
+  documentnumber: document.documentnumber ?? "",
+  customer: document.customer ?? "",
+  isDuplicated: document.isDuplicated ?? "",
+  suppliernumber: document.suppliernumber ?? "",
+  suppliername: document.suppliername ?? "",
+  documentdate: document.documentdate ?? "",
+  amount: document.amount ?? "",
+  taxamount: document.taxamount ?? "",
+  totalamount: document.totalamount ?? "",
+  documenturl: document.documenturl ?? "",
+  file_url: document.file_url ?? "",
+  notes: document.notes ?? "",
+  currency: document.currency ?? "",
+  driver: document.driver ?? "",
+});
+
 interface SunatItem {
   unidad_medida_descripcion?: string;
   descripcion?: string;
@@ -180,7 +199,7 @@ const DocumentEditPage: React.FC = () => {
   const locationState = location.state as LocationState | null;
 
   const [editDoc, setEditDoc] = useState<Document | null>(
-    locationState?.document ?? null
+    locationState?.document ? normalizeDocumentForForm(locationState.document) : null
   );
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
@@ -429,8 +448,9 @@ const DocumentEditPage: React.FC = () => {
           );
         }
 
-        setEditDoc(resolvedDocument);
-        syncIgvPercent(resolvedDocument);
+        const normalizedDocument = normalizeDocumentForForm(resolvedDocument);
+        setEditDoc(normalizedDocument);
+        syncIgvPercent(normalizedDocument);
 
         if (tiposPayload?.success && Array.isArray(tiposPayload.data)) {
           setTiposDocumento(tiposPayload.data);
@@ -447,15 +467,15 @@ const DocumentEditPage: React.FC = () => {
         setLoadingDetails(true);
         try {
           const details = await fetchDetailsByValues(
-            resolvedDocument.suppliernumber,
-            resolvedDocument.documentserial,
-            resolvedDocument.documentnumber
+            normalizedDocument.suppliernumber,
+            normalizedDocument.documentserial,
+            normalizedDocument.documentnumber
           );
           setDocDetails(details);
 
           if (getSunatToken()) {
             try {
-              await syncDocumentDetailsFromSunat(resolvedDocument, {
+              await syncDocumentDetailsFromSunat(normalizedDocument, {
                 existingDetails: details,
                 notifySuccess: false,
                 notifyErrors: false,
