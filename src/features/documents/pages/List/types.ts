@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 export interface Document {
   documentid: number;
   documentserial: string;
@@ -57,7 +59,7 @@ export interface DocumentDetail {
 export interface Notification {
   id: number;
   type: "success" | "danger" | "warning" | "info";
-  message: string;
+  message: ReactNode;
 }
 
 export type ColumnWidths = {

@@ -33,6 +33,12 @@ type PurchaseOrderReference = {
   purchaseState?: PurchaseOrderStateValue;
 };
 
+type ImportSummary = {
+  documents_created?: number;
+  documents_updated?: number;
+  details_created?: number;
+};
+
 const APPROVED_PURCHASE_STATE_ID = 12;
 
 const normalizeAssociatedNo = (value: string) => value.trim().toUpperCase();
@@ -55,6 +61,33 @@ const isApprovedPurchaseState = (purchaseState: PurchaseOrderStateValue) => {
   return (
     stateId === APPROVED_PURCHASE_STATE_ID ||
     stateDescription.includes("APROBADO")
+  );
+};
+
+const buildImportSummaryMessage = (
+  baseMessage: string,
+  summary: ImportSummary | null | undefined,
+  t: (key: string) => string
+) => {
+  if (!summary) {
+    return baseMessage;
+  }
+
+  return (
+    <div>
+      <div>{baseMessage}</div>
+      <div className="mt-2 small">
+        <div>
+          {t("Documents created")}: {Number(summary.documents_created ?? 0)}
+        </div>
+        <div>
+          {t("Documents updated")}: {Number(summary.documents_updated ?? 0)}
+        </div>
+        <div>
+          {t("Details created")}: {Number(summary.details_created ?? 0)}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -101,7 +134,10 @@ const DocumentList: React.FC = () => {
     acciones: 320,
   });
 
-  const addNotification = (type: Notification["type"], message: string) => {
+  const addNotification = (
+    type: Notification["type"],
+    message: Notification["message"]
+  ) => {
     const id = Date.now();
     setNotifications((prev) => [...prev, { id, type, message }]);
   };
@@ -355,9 +391,15 @@ const DocumentList: React.FC = () => {
       const payload = await response.json().catch(() => null);
 
       if (response.ok && payload?.success) {
+        const successMessage = buildImportSummaryMessage(
+          payload.message || t("Documents extracted successfully"),
+          payload?.data?.import_summary,
+          t
+        );
+
         addNotification(
           "success",
-          payload.message || t("Documents extracted successfully")
+          successMessage
         );
         await fetchInitialData(false);
         setCurrentPage(1);
