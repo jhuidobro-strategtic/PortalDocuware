@@ -246,7 +246,7 @@ const SuppliersPage = () => {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -491,9 +491,9 @@ const SuppliersPage = () => {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-            (editingSupplier
-              ? t("Error updating supplier")
-              : t("Error registering supplier"))
+          (editingSupplier
+            ? t("Error updating supplier")
+            : t("Error registering supplier"))
         );
       }
 
@@ -501,10 +501,10 @@ const SuppliersPage = () => {
       setSuppliers((prev) =>
         editingSupplier
           ? prev.map((supplier) =>
-              supplier.supplierID === editingSupplier.supplierID
-                ? persistedSupplier
-                : supplier
-            )
+            supplier.supplierID === editingSupplier.supplierID
+              ? persistedSupplier
+              : supplier
+          )
           : [persistedSupplier, ...prev]
       );
       setFeedback({
@@ -954,3 +954,4 @@ const SuppliersPage = () => {
 };
 
 export default SuppliersPage;
+// 
