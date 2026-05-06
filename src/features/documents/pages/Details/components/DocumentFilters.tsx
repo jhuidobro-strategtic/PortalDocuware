@@ -51,7 +51,7 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
           />
         </InputGroup>
 
-        <Button color="success" onClick={onExport} title={t("Download")}>
+        <Button color="success" onClick={onExport} title={t("Export Excel")}>
           <i className="ri-file-excel-2-line"></i>
         </Button>
       </div>

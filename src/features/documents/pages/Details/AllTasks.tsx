@@ -10,12 +10,14 @@ import DocumentFilters from "./components/DocumentFilters";
 import DocumentTable from "./components/DocumentTable";
 import { DocumentDetailsRow } from "./types";
 import { intelligentSearch } from "../../../../helpers/search-utils";
+import { downloadBlob } from "../../../../helpers/download-blob";
 
 const DocumentDetails: React.FC = () => {
   const { t } = useTranslation();
   const [documents, setDocuments] = useState<DocumentDetailsRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportAlert, setExportAlert] = useState<string | null>(null);
 
   // filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,61 +82,57 @@ const DocumentDetails: React.FC = () => {
 
   // exportar a excel Detalles
   const exportToExcel = async () => {
-    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
-      import("exceljs"),
-      import("file-saver"),
-    ]);
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Detalles de Documentos");
-
-    // 🔹 Insertar logo temporal
     try {
-      const response = await fetch(LogoDocuware);
-      const imageBuffer = await response.arrayBuffer();
-      const imageId = workbook.addImage({
-        buffer: imageBuffer,
-        extension: "png",
-      });
-      worksheet.addImage(imageId, "B1:B2");
-    } catch {
-      console.warn("⚠️ No se pudo cargar el logo, se continúa sin bloquear.");
-    }
+      setExportAlert(null);
+      const { Workbook } = await import("exceljs");
+      const workbook = new Workbook();
+      const worksheet = workbook.addWorksheet("Detalles de Documentos");
 
-    // 🔹 Título
-    worksheet.mergeCells("E1:AA2");
-    const titleCell = worksheet.getCell("E1");
-    titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
-    titleCell.alignment = { vertical: "middle", horizontal: "center" };
-    titleCell.font = { size: 14, bold: true };
-    titleCell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "D9E1F2" },
-    };
+      try {
+        const response = await fetch(LogoDocuware);
+        const imageBuffer = await response.arrayBuffer();
+        const imageId = workbook.addImage({
+          buffer: imageBuffer,
+          extension: "png",
+        });
+        worksheet.addImage(imageId, "B1:B2");
+      } catch {
+        // Keep the export available even if the logo cannot be embedded.
+      }
 
-    ["A1", "A2", "B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
-      worksheet.getCell(cell).fill = {
+      worksheet.mergeCells("E1:AA2");
+      const titleCell = worksheet.getCell("E1");
+      titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
+      titleCell.alignment = { vertical: "middle", horizontal: "center" };
+      titleCell.font = { size: 14, bold: true };
+      titleCell.fill = {
         type: "pattern",
         pattern: "solid",
         fgColor: { argb: "D9E1F2" },
       };
-    });
 
-    // 🔹 Encabezados
-    const headers = [
-      "Movimiento Orden Servicio o Orden",
-      "Fecha de Emisión del Comprobante de Pago o Documento",
-      "Fecha de Vencimiento o Fecha de Pago",
-      "Tipo",
-      "Serie/Codigo Aduana",
-      "Año Emisión DUA o DSI",
-      "Nº Comprobante Pago",
-      "Tipo",
-      "Número",
-      "Apellidos y Nombres, Denominación o Razon social",
-      "Producto",
-      "Unidad",
-      "Valor de Compra",
+      ["A1", "A2", "B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
+        worksheet.getCell(cell).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "D9E1F2" },
+        };
+      });
+
+      const headers = [
+        "Movimiento Orden Servicio o Orden",
+        "Fecha de Emision del Comprobante de Pago o Documento",
+        "Fecha de Vencimiento o Fecha de Pago",
+        "Tipo",
+        "Serie/Codigo Aduana",
+        "Anio Emision DUA o DSI",
+        "Nro Comprobante Pago",
+        "Tipo",
+        "Numero",
+        "Apellidos y Nombres, Denominacion o Razon social",
+        "Producto",
+        "Unidad",
+        "Valor de Compra",
       "Base Imponible",
       "IGV",
       "Importe Total",
@@ -142,46 +140,43 @@ const DocumentDetails: React.FC = () => {
       "Fecha",
       "Tipo",
       "Serie",
-      "Nº Comprobante Pago o Documento",
-      "Moneda",
-      "Equivalente en Dolares Americanos",
-      "Condición Contado/Credito",
-      "Codigo Centro de Costos",
-      "Codigo Centro de Costos 2",
-      "Porcentaje I.G.V."
-    ];
+      "Nro Comprobante Pago o Documento",
+        "Moneda",
+        "Equivalente en Dolares Americanos",
+        "Condicion Contado/Credito",
+        "Codigo Centro de Costos",
+        "Codigo Centro de Costos 2",
+        "Porcentaje I.G.V.",
+      ];
 
-    headers.forEach((header, i) => {
-      const cell = worksheet.getCell(3, i + 1);
-      cell.value = header;
-      cell.font = { bold: true };
-      cell.alignment = { vertical: "middle", horizontal: "center" };
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "F2F2F2" },
-      };
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
+      headers.forEach((header, index) => {
+        const cell = worksheet.getCell(3, index + 1);
+        cell.value = header;
+        cell.font = { bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "F2F2F2" },
+        };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
 
-    // 🔹 Datos (empiezan en fila 4)
-    filteredDocuments.forEach((doc) => {
-      // asegurar que todos los valores sean strings o números válidos
-      const tipoDocumento =
-        typeof doc.documenttype === "object" && doc.documenttype !== null
-          ? (doc.documenttype as any).tipo ?? "N/A"
-          : (doc.documenttype ?? "N/A").toString();
+      const rows = filteredDocuments.map((doc) => {
+        const tipoDocumento =
+          typeof doc.documenttype === "object" && doc.documenttype !== null
+            ? (doc.documenttype as any).tipo ?? "N/A"
+            : (doc.documenttype ?? "N/A").toString();
 
-      //temporal
-      const movimientoOrden = "";
-      const fechaVencimiento = "";
-      const añoEmision = "";
-      const dTipo = "";
+        const movimientoOrden = "";
+        const fechaVencimiento = "";
+        const anioEmision = "";
+        const dTipo = "";
       const producto = "";
       const vCompra = "";
       const rFecha = "";
@@ -191,19 +186,20 @@ const DocumentDetails: React.FC = () => {
       const tipoCambio = "";
       const equivalenteDolar = "";
       const condicionCC = "";
-      const codigoCC = "";
-      const codigoCC2 = "";
-      const amount = Number((doc as any).amount ?? 0);
-      const taxamount = Number((doc as any).taxamount ?? 0);
-      const pIGV = amount > 0 ? ((taxamount / amount) * 100).toFixed(2) : "0.00";
+        const codigoCC = "";
+        const codigoCC2 = "";
+        const amount = Number((doc as any).amount ?? 0);
+        const taxamount = Number((doc as any).taxamount ?? 0);
+        const pIGV =
+          amount > 0 ? ((taxamount / amount) * 100).toFixed(2) : "0.00";
 
-      const rowData = [
-        movimientoOrden ?? "",
+        return [
+          movimientoOrden ?? "",
         moment(doc.documentdate).format("DD/MM/YYYY"),
         fechaVencimiento ?? "",
         tipoDocumento,
         doc.documentserial ?? "",
-        añoEmision ?? "",
+        anioEmision ?? "",
         doc.documentnumber ?? "",
         dTipo ?? "",
         doc.suppliernumber ?? "",
@@ -221,76 +217,75 @@ const DocumentDetails: React.FC = () => {
         rNroComprobante,
         doc.currency ?? "PEN",
         equivalenteDolar,
-        condicionCC,
-        codigoCC,
-        codigoCC2,
-        pIGV
+          condicionCC,
+          codigoCC,
+          codigoCC2,
+          pIGV,
+        ];
+      });
+
+      rows.forEach((rowData) => {
+        const row = worksheet.addRow(rowData);
+
+        row.eachCell((cell, columnNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          if ([12, 14, 15, 16, 27].includes(columnNumber)) {
+            cell.numFmt = "#,##0.00";
+            cell.alignment = { horizontal: "right" };
+          } else {
+            cell.alignment = { horizontal: "left" };
+          }
+        });
+      });
+
+      worksheet.columns = [
+        { width: 35 },
+        { width: 55 },
+        { width: 40 },
+        { width: 20 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 50 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 20 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 20 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 35 },
+        { width: 20 },
       ];
 
-      const row = worksheet.addRow(rowData);
-
-      row.eachCell((cell, colNumber) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-
-        if ([10, 11, 12, 14, 15, 16].includes(colNumber)) {
-          if (colNumber === 10) {
-            cell.numFmt = "#,##0";
-          } else {
-            cell.numFmt = "#,##0.00";
-          }
-          cell.alignment = { horizontal: "right" };
-        } else {
-          cell.alignment = { horizontal: "left" };
-        }
-      });
-    });
-
-    // 🔹 Ajustar anchos
-    worksheet.columns = [
-      { width: 35 },
-      { width: 55 },
-      { width: 40 },
-      { width: 20 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 50 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 20 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 20 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 35 },
-      { width: 20 },
-    ];
-
-    // 🔹 Descargar Excel
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(
-      new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }),
-      `Documentos_Detalle_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
-    );
+      const buffer = await workbook.xlsx.writeBuffer();
+      await downloadBlob(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        `Documentos_Detalle_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
+      );
+    } catch (exportError) {
+      console.error("Error exporting document details to Excel:", exportError);
+      setExportAlert(t("Could not export Excel file"));
+    }
   };
-
 
   if (loading)
     return (
@@ -311,6 +306,18 @@ const DocumentDetails: React.FC = () => {
 
   return (
     <Container fluid className="mt-4 small-text">
+      {exportAlert && (
+        <FloatingAlerts
+          alerts={[
+            {
+              id: "document-details-export-error",
+              type: "danger",
+              message: exportAlert,
+            },
+          ]}
+        />
+      )}
+
       <Row>
         <Col lg={12}>
           <Card>
