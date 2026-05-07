@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Button,
   Pagination,
   PaginationItem,
   PaginationLink,
@@ -15,6 +14,7 @@ import {
   DocumentStatusBadge,
 } from "../../../../../components/common/RecordBadges";
 import { getNumberLocale } from "../../../../../common/locale";
+import TableActionsMenu from "../../../../../components/common/TableActionsMenu";
 
 interface DocumentTableProps {
   columnWidths: ColumnWidths;
@@ -303,40 +303,33 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       whiteSpace: "normal",
                     }}
                   >
-                    <div className="document-actions-group">
-                      {/* <Button
-                        size="sm"
-                        color="info"
-                        outline
-                        onClick={() => onView(doc)}
-                      >
-                        <i className="ri-eye-line align-bottom" /> {t("View")}
-                      </Button> */}
-                      <Button
-                        size="sm"
-                        color="primary"
-                        outline
-                        disabled={hasApprovedPurchaseOrder}
-                        onClick={() => onOrderC(doc)}
-                      >
-                        <i className="ri-file-list-3-line align-bottom" /> {t("Order C.")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="warning"
-                        outline
-                        onClick={() => onEdit(doc)}
-                      >
-                        <i className="ri-edit-box-line align-bottom" /> {t("Edit")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="danger"
-                        outline
-                        onClick={() => onDelete(doc)}
-                      >
-                        <i className="ri-delete-bin-line align-bottom" /> {t("Delete")}
-                      </Button>
+                    <div className="d-flex justify-content-center">
+                      <TableActionsMenu
+                        items={[
+                          {
+                            id: `order-c-${doc.documentid}`,
+                            label: t("Order C."),
+                            icon: "ri-file-list-3-line",
+                            tone: "neutral",
+                            disabled: hasApprovedPurchaseOrder,
+                            onClick: () => onOrderC(doc),
+                          },
+                          {
+                            id: `edit-${doc.documentid}`,
+                            label: t("Edit"),
+                            icon: "ri-edit-line",
+                            tone: "neutral",
+                            onClick: () => onEdit(doc),
+                          },
+                          {
+                            id: `delete-${doc.documentid}`,
+                            label: t("Delete"),
+                            icon: "ri-delete-bin-line",
+                            tone: "danger",
+                            onClick: () => onDelete(doc),
+                          },
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>

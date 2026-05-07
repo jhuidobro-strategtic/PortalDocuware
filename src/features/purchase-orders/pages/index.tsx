@@ -24,6 +24,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
+import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { Document } from "../../documents/pages/List/types";
@@ -971,7 +972,7 @@ const PurchaseOrderDetails = () => {
                         <th className="text-end">{t("Order Total")}</th>
                         <th
                           className="text-center"
-                          style={{ minWidth: "245px", whiteSpace: "nowrap" }}
+                          style={{ minWidth: "110px", whiteSpace: "nowrap" }}
                         >
                           {t("Actions")}
                         </th>
@@ -1063,34 +1064,24 @@ const PurchaseOrderDetails = () => {
                                 className="text-center"
                                 style={{ whiteSpace: "nowrap" }}
                               >
-                                <div className="d-inline-flex align-items-center gap-2 flex-nowrap justify-content-center">
-                                  <Button
-                                    color="primary"
-                                    size="sm"
-                                    outline
-                                    className="text-nowrap"
+                                <div className="d-inline-flex justify-content-center">
+                                  <TableActionsMenu
                                     disabled={
                                       generatingOrderId ===
                                         purchaseOrder.purchaseOrderID ||
                                       isActionBlocked
                                     }
-                                    onClick={() =>
-                                      handleOpenOrderModal(purchaseOrder)
-                                    }
-                                  >
-                                    {generatingOrderId ===
-                                    purchaseOrder.purchaseOrderID ? (
-                                      <>
-                                        <Spinner size="sm" className="me-2" />
-                                        {t("Generating...")}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <i className="ri-file-text-line me-1" />
-                                        {t("Generate Order C.")}
-                                      </>
-                                    )}
-                                  </Button>
+                                    items={[
+                                      {
+                                        id: `generate-order-${purchaseOrder.purchaseOrderID}`,
+                                        label: t("Generate Order C."),
+                                        icon: "ri-file-text-line",
+                                        tone: "primary",
+                                        onClick: () =>
+                                          handleOpenOrderModal(purchaseOrder),
+                                      },
+                                    ]}
+                                  />
                                 </div>
                               </td>
                             </tr>

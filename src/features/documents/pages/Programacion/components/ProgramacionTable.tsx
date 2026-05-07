@@ -1,8 +1,9 @@
 import React from "react";
-import { Table, Button } from "reactstrap";
+import { Table } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import { Programacion } from "../types";
+import TableActionsMenu from "../../../../../components/common/TableActionsMenu";
 
 interface ProgramacionTableProps {
   programaciones: Programacion[];
@@ -54,14 +55,17 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
                 <td className="text-center">{prog.vehiculo.no_vehiculo}</td>
                 <td>{prog.conductor.conductor_nm}</td>
                 <td className="text-center">
-                  <Button
-                    size="sm"
-                    color="warning"
-                    outline
-                    onClick={() => onEdit(prog)}
-                  >
-                    <i className="ri-edit-box-line align-bottom" /> {t("Edit")}
-                  </Button>
+                  <TableActionsMenu
+                    items={[
+                      {
+                        id: `edit-${prog.programacionid}`,
+                        label: t("Edit"),
+                        icon: "ri-edit-line",
+                        tone: "neutral",
+                        onClick: () => onEdit(prog),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))

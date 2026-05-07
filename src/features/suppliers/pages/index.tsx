@@ -29,6 +29,7 @@ import {
 import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts from "../../../components/common/FloatingAlerts";
 import type { FloatingAlertItem } from "../../../components/common/FloatingAlerts";
+import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../helpers/api-url";
 import {
   buildFactilizaUrl,
@@ -674,15 +675,17 @@ const SuppliersPage = () => {
                               )}
                             </td>
                             <td className="text-center">
-                              <Button
-                                color="warning"
-                                outline
-                                size="sm"
-                                onClick={() => handleOpenEditModal(supplier)}
-                              >
-                                <i className="ri-edit-box-line align-bottom me-1" />
-                                {t("Edit")}
-                              </Button>
+                              <TableActionsMenu
+                                items={[
+                                  {
+                                    id: `edit-${supplier.supplierID}`,
+                                    label: t("Edit"),
+                                    icon: "ri-edit-line",
+                                    tone: "neutral",
+                                    onClick: () => handleOpenEditModal(supplier),
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         ))
