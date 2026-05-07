@@ -716,8 +716,8 @@ const DocumentEditPage: React.FC = () => {
           </Button>
         </div>
 
-        <Row className="g-4 align-items-start">
-          <Col lg={6}>
+        <Row className="g-4 document-edit-panels-row">
+          <Col lg={6} className="d-flex">
             <Card className="border-0 shadow-sm document-edit-form-card">
               <CardBody className="p-4">
                 <DocumentEditorForm
@@ -739,7 +739,7 @@ const DocumentEditPage: React.FC = () => {
             </Card>
           </Col>
 
-          <Col lg={6}>
+          <Col lg={6} className="d-flex">
             <DocumentEditPreviewPanel
               document={editDoc}
               previewUrl={getPreviewUrl(editDoc.documenturl)}

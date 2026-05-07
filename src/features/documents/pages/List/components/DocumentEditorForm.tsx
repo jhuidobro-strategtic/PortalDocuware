@@ -130,258 +130,261 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
   return (
     <Form
+      className="document-edit-form"
       onSubmit={(event) => {
         event.preventDefault();
         onSave();
       }}
     >
-      <Row className="g-4">
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">RUC</Label>
-            <InputGroup>
-              <Input
-                value={editDoc.suppliernumber ?? ""}
-                onChange={(event) =>
-                  setEditDoc({
-                    ...editDoc,
-                    suppliernumber: event.target.value,
-                  })
-                }
-                placeholder={t("Enter RUC")}
-              />
-              <Button
-                color="secondary"
-                type="button"
-                onClick={onSearchRuc}
-                disabled={loadingRuc}
-              >
-                {loadingRuc ? (
-                  <Spinner size="sm" color="light" />
-                ) : (
-                  <i className="ri-search-line" />
-                )}
-              </Button>
-            </InputGroup>
-          </FormGroup>
-        </Col>
+      <div className="document-edit-form-fields">
+        <Row className="g-4">
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">RUC</Label>
+              <InputGroup>
+                <Input
+                  value={editDoc.suppliernumber ?? ""}
+                  onChange={(event) =>
+                    setEditDoc({
+                      ...editDoc,
+                      suppliernumber: event.target.value,
+                    })
+                  }
+                  placeholder={t("Enter RUC")}
+                />
+                <Button
+                  color="secondary"
+                  type="button"
+                  onClick={onSearchRuc}
+                  disabled={loadingRuc}
+                >
+                  {loadingRuc ? (
+                    <Spinner size="sm" color="light" />
+                  ) : (
+                    <i className="ri-search-line" />
+                  )}
+                </Button>
+              </InputGroup>
+            </FormGroup>
+          </Col>
 
-        <Col md={8}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Business Name")}</Label>
-            <Input value={editDoc.suppliername ?? ""} disabled />
-          </FormGroup>
-        </Col>
+          <Col md={8}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Business Name")}</Label>
+              <Input value={editDoc.suppliername ?? ""} disabled />
+            </FormGroup>
+          </Col>
 
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Document Type")}</Label>
-            <Input
-              type="select"
-              value={
-                editDoc.documenttype && typeof editDoc.documenttype === "object"
-                  ? editDoc.documenttype.tipoid
-                  : editDoc.documenttype ?? ""
-              }
-              onChange={(event) =>
-                setEditDoc({
-                  ...editDoc,
-                  documenttype: event.target.value
-                    ? Number(event.target.value)
-                    : null,
-                })
-              }
-            >
-              <option value="">{t("Select...")}</option>
-              {tiposDocumento.map((tipo) => (
-                <option key={tipo.tipoid} value={tipo.tipoid}>
-                  {tipo.tipo}
-                </option>
-              ))}
-            </Input>
-          </FormGroup>
-        </Col>
-
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Series No.")}</Label>
-            <Input
-              value={editDoc.documentserial ?? ""}
-              onChange={(event) =>
-                setEditDoc({
-                  ...editDoc,
-                  documentserial: event.target.value,
-                })
-              }
-              placeholder={t("E.g. F001")}
-            />
-          </FormGroup>
-        </Col>
-
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Document No.")}</Label>
-            <InputGroup>
-              <Input
-                value={editDoc.documentnumber ?? ""}
-                onChange={(event) =>
-                  setEditDoc({
-                    ...editDoc,
-                    documentnumber: normalizeDocumentNumber(event.target.value),
-                  })
-                }
-                placeholder={t("E.g. 000123")}
-              />
-              <Button
-                color="secondary"
-                type="button"
-                onClick={onSearchDocument}
-                disabled={loadingDocument}
-              >
-                {loadingDocument ? (
-                  <Spinner size="sm" color="light" />
-                ) : (
-                  <i className="ri-search-line" />
-                )}
-              </Button>
-            </InputGroup>
-          </FormGroup>
-        </Col>
-
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Issue date")}</Label>
-            <InputGroup>
-              <InputGroupText>
-                <i className="ri-calendar-line" />
-              </InputGroupText>
-              <Flatpickr
-                className="form-control"
-                options={{ dateFormat: "Y-m-d" }}
-                value={editDoc.documentdate || ""}
-                onChange={(dates: Date[]) =>
-                  setEditDoc({
-                    ...editDoc,
-                    documentdate: moment(dates[0]).format("YYYY-MM-DD"),
-                  })
-                }
-              />
-            </InputGroup>
-          </FormGroup>
-        </Col>
-
-        <Col md={5}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Buyer")}</Label>
-            <Input
-              value={editDoc.driver ?? ""}
-              onChange={(event) =>
-                setEditDoc({
-                  ...editDoc,
-                  driver: event.target.value,
-                })
-              }
-              placeholder={t("Enter buyer name")}
-            />
-          </FormGroup>
-        </Col>
-
-        <Col md={3}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Currency")}</Label>
-            <CurrencyDropdown
-              value={editDoc.currency || "PEN"}
-              onChange={(value) =>
-                setEditDoc({
-                  ...editDoc,
-                  currency: value,
-                })
-              }
-            />
-          </FormGroup>
-        </Col>
-
-        <Col md={4}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Subtotal")}</Label>
-            <Input
-              type="number"
-              value={editDoc.amount ?? ""}
-              onChange={(event) => handleAmountChange(event.target.value)}
-            />
-          </FormGroup>
-        </Col>
-
-        <Col md={5}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">IGV</Label>
-            <InputGroup className="document-edit-igv-group">
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Document Type")}</Label>
               <Input
                 type="select"
-                className="document-edit-igv-percent"
-                value={editIgvPercent}
+                value={
+                  editDoc.documenttype && typeof editDoc.documenttype === "object"
+                    ? editDoc.documenttype.tipoid
+                    : editDoc.documenttype ?? ""
+                }
                 onChange={(event) =>
-                  handleIgvPercentChange(parseFloat(event.target.value))
+                  setEditDoc({
+                    ...editDoc,
+                    documenttype: event.target.value
+                      ? Number(event.target.value)
+                      : null,
+                  })
                 }
               >
-                <option value={0}>0%</option>
-                <option value={2}>2%</option>
-                <option value={8}>8%</option>
-                <option value={16}>16%</option>
-                <option value={18}>18%</option>
+                <option value="">{t("Select...")}</option>
+                {tiposDocumento.map((tipo) => (
+                  <option key={tipo.tipoid} value={tipo.tipoid}>
+                    {tipo.tipo}
+                  </option>
+                ))}
               </Input>
-              <Input type="number" value={editDoc.taxamount || "0.00"} disabled />
-            </InputGroup>
-          </FormGroup>
-        </Col>
+            </FormGroup>
+          </Col>
 
-        <Col md={3}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Total")}</Label>
-            <Input type="number" value={editDoc.totalamount ?? "0.00"} disabled />
-          </FormGroup>
-        </Col>        
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Series No.")}</Label>
+              <Input
+                value={editDoc.documentserial ?? ""}
+                onChange={(event) =>
+                  setEditDoc({
+                    ...editDoc,
+                    documentserial: event.target.value,
+                  })
+                }
+                placeholder={t("E.g. F001")}
+              />
+            </FormGroup>
+          </Col>
 
-        <Col md={12}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Cost center")}</Label>
-            <Select
-              value={selectedCentro}
-              options={centroOptions}
-              onChange={(selected: CentroOption | null) =>
-                setEditDoc({
-                  ...editDoc,
-                  centercost: selected ? Number(selected.value) : null,
-                })
-              }
-              placeholder={t("Select cost center")}
-              isClearable
-              isSearchable
-              noOptionsMessage={() => t("No results")}
-              styles={selectStyles}
-              menuPortalTarget={document.body}
-            />
-          </FormGroup>
-        </Col>
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Document No.")}</Label>
+              <InputGroup>
+                <Input
+                  value={editDoc.documentnumber ?? ""}
+                  onChange={(event) =>
+                    setEditDoc({
+                      ...editDoc,
+                      documentnumber: normalizeDocumentNumber(event.target.value),
+                    })
+                  }
+                  placeholder={t("E.g. 000123")}
+                />
+                <Button
+                  color="secondary"
+                  type="button"
+                  onClick={onSearchDocument}
+                  disabled={loadingDocument}
+                >
+                  {loadingDocument ? (
+                    <Spinner size="sm" color="light" />
+                  ) : (
+                    <i className="ri-search-line" />
+                  )}
+                </Button>
+              </InputGroup>
+            </FormGroup>
+          </Col>
 
-        <Col md={12}>
-          <FormGroup className="mb-0">
-            <Label className="form-label">{t("Notes")}</Label>
-            <Input
-              type="textarea"
-              rows={3}
-              value={editDoc.notes ?? ""}
-              onChange={(event) =>
-                setEditDoc({
-                  ...editDoc,
-                  notes: event.target.value,
-                })
-              }
-              placeholder={t("Enter notes...")}
-            />
-          </FormGroup>
-        </Col>
-      </Row>
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Issue date")}</Label>
+              <InputGroup>
+                <InputGroupText>
+                  <i className="ri-calendar-line" />
+                </InputGroupText>
+                <Flatpickr
+                  className="form-control"
+                  options={{ dateFormat: "Y-m-d" }}
+                  value={editDoc.documentdate || ""}
+                  onChange={(dates: Date[]) =>
+                    setEditDoc({
+                      ...editDoc,
+                      documentdate: moment(dates[0]).format("YYYY-MM-DD"),
+                    })
+                  }
+                />
+              </InputGroup>
+            </FormGroup>
+          </Col>
+
+          <Col md={5}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Buyer")}</Label>
+              <Input
+                value={editDoc.driver ?? ""}
+                onChange={(event) =>
+                  setEditDoc({
+                    ...editDoc,
+                    driver: event.target.value,
+                  })
+                }
+                placeholder={t("Enter buyer name")}
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={3}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Currency")}</Label>
+              <CurrencyDropdown
+                value={editDoc.currency || "PEN"}
+                onChange={(value) =>
+                  setEditDoc({
+                    ...editDoc,
+                    currency: value,
+                  })
+                }
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={4}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Subtotal")}</Label>
+              <Input
+                type="number"
+                value={editDoc.amount ?? ""}
+                onChange={(event) => handleAmountChange(event.target.value)}
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={5}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">IGV</Label>
+              <InputGroup className="document-edit-igv-group">
+                <Input
+                  type="select"
+                  className="document-edit-igv-percent"
+                  value={editIgvPercent}
+                  onChange={(event) =>
+                    handleIgvPercentChange(parseFloat(event.target.value))
+                  }
+                >
+                  <option value={0}>0%</option>
+                  <option value={2}>2%</option>
+                  <option value={8}>8%</option>
+                  <option value={16}>16%</option>
+                  <option value={18}>18%</option>
+                </Input>
+                <Input type="number" value={editDoc.taxamount || "0.00"} disabled />
+              </InputGroup>
+            </FormGroup>
+          </Col>
+
+          <Col md={3}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Total")}</Label>
+              <Input type="number" value={editDoc.totalamount ?? "0.00"} disabled />
+            </FormGroup>
+          </Col>
+
+          <Col md={12}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Cost center")}</Label>
+              <Select
+                value={selectedCentro}
+                options={centroOptions}
+                onChange={(selected: CentroOption | null) =>
+                  setEditDoc({
+                    ...editDoc,
+                    centercost: selected ? Number(selected.value) : null,
+                  })
+                }
+                placeholder={t("Select cost center")}
+                isClearable
+                isSearchable
+                noOptionsMessage={() => t("No results")}
+                styles={selectStyles}
+                menuPortalTarget={document.body}
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={12}>
+            <FormGroup className="mb-0">
+              <Label className="form-label">{t("Notes")}</Label>
+              <Input
+                type="textarea"
+                rows={3}
+                value={editDoc.notes ?? ""}
+                onChange={(event) =>
+                  setEditDoc({
+                    ...editDoc,
+                    notes: event.target.value,
+                  })
+                }
+                placeholder={t("Enter notes...")}
+              />
+            </FormGroup>
+          </Col>
+        </Row>
+      </div>
 
       <div className="document-edit-actions">
         <Button color="light" type="button" onClick={onCancel}>
