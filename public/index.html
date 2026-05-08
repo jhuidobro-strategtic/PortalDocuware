@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
@@ -8,6 +8,7 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#405189" />
+    <meta name="color-scheme" content="light" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -39,6 +40,528 @@
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <style>
+      :root {
+        color-scheme: light;
+        --shell-bg:
+          radial-gradient(circle at 12% 16%, rgba(137, 170, 255, 0.28), transparent 26%),
+          radial-gradient(circle at 82% 18%, rgba(80, 255, 226, 0.2), transparent 24%),
+          radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.18), transparent 34%),
+          linear-gradient(145deg, #eef3ff 0%, #e8efff 34%, #dfe8ff 100%);
+        --shell-card-bg: rgba(255, 255, 255, 0.74);
+        --shell-card-border: rgba(96, 116, 187, 0.14);
+        --shell-card-shadow: 0 32px 80px rgba(31, 52, 113, 0.18);
+        --shell-brand: #405189;
+        --shell-brand-strong: #2f3f74;
+        --shell-accent: #12c7b0;
+        --shell-accent-soft: rgba(18, 199, 176, 0.16);
+        --shell-text: #203057;
+        --shell-text-soft: #64739e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: #eaf0ff;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        font-family:
+          "Segoe UI",
+          "Inter",
+          "Poppins",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        color: var(--shell-text);
+        background: var(--shell-bg);
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: auto;
+        z-index: 0;
+        pointer-events: none;
+        filter: blur(12px);
+      }
+
+      body::before {
+        top: -8rem;
+        left: -6rem;
+        width: 18rem;
+        height: 18rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(64, 81, 137, 0.24), transparent 72%);
+        animation: shellBlobOne 11s ease-in-out infinite alternate;
+      }
+
+      body::after {
+        right: -7rem;
+        bottom: -5rem;
+        width: 20rem;
+        height: 20rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(18, 199, 176, 0.2), transparent 72%);
+        animation: shellBlobTwo 13s ease-in-out infinite alternate;
+      }
+
+      #root {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+      }
+
+      .docuware-shell {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding:
+          max(1.5rem, env(safe-area-inset-top))
+          max(1.25rem, env(safe-area-inset-right))
+          max(1.5rem, env(safe-area-inset-bottom))
+          max(1.25rem, env(safe-area-inset-left));
+      }
+
+      .docuware-shell__card {
+        position: relative;
+        width: min(100%, 64rem);
+        overflow: hidden;
+        border: 1px solid var(--shell-card-border);
+        border-radius: 32px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%);
+        box-shadow: var(--shell-card-shadow);
+        backdrop-filter: blur(24px);
+      }
+
+      .docuware-shell__card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at top left, rgba(64, 81, 137, 0.08), transparent 24%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.26), transparent 42%);
+        pointer-events: none;
+      }
+
+      .docuware-shell__layout {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+        gap: 2rem;
+        padding: 2.25rem;
+      }
+
+      .docuware-shell__hero {
+        display: flex;
+        flex-direction: column;
+        gap: 1.35rem;
+      }
+
+      .docuware-shell__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: fit-content;
+        padding: 0.58rem 0.9rem;
+        border: 1px solid rgba(64, 81, 137, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.74);
+        color: var(--shell-brand);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+      }
+
+      .docuware-shell__badge::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #38d8c5, #0db39e);
+        box-shadow: 0 0 0 0.25rem rgba(18, 199, 176, 0.12);
+      }
+
+      .docuware-shell__brand-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .docuware-shell__orbital {
+        position: relative;
+        flex: 0 0 auto;
+        width: clamp(5rem, 12vw, 6.5rem);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: linear-gradient(180deg, rgba(64, 81, 137, 0.14), rgba(255, 255, 255, 0.9));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.6),
+          0 20px 30px rgba(64, 81, 137, 0.14);
+      }
+
+      .docuware-shell__orbital::before,
+      .docuware-shell__orbital::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+
+      .docuware-shell__orbital::before {
+        inset: -0.55rem;
+        border: 1px solid rgba(64, 81, 137, 0.15);
+        animation: shellSpin 16s linear infinite;
+      }
+
+      .docuware-shell__orbital::after {
+        inset: -1rem;
+        border: 1px dashed rgba(18, 199, 176, 0.34);
+        animation: shellSpin 12s linear infinite reverse;
+      }
+
+      .docuware-shell__logo {
+        width: 72%;
+        height: 72%;
+        object-fit: contain;
+        filter: drop-shadow(0 14px 24px rgba(64, 81, 137, 0.14));
+      }
+
+      .docuware-shell__title {
+        margin: 0 0 0.35rem;
+        color: var(--shell-brand-strong);
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .docuware-shell__subtitle {
+        margin: 0;
+        max-width: 38rem;
+        color: var(--shell-text-soft);
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+
+      .docuware-shell__status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+      }
+
+      .docuware-shell__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.48rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid rgba(64, 81, 137, 0.1);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.76);
+        color: var(--shell-text);
+        font-size: 0.92rem;
+        font-weight: 600;
+        box-shadow: 0 12px 24px rgba(29, 43, 82, 0.06);
+      }
+
+      .docuware-shell__chip::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #405189, #6178c2);
+      }
+
+      .docuware-shell__progress {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 0.35rem;
+      }
+
+      .docuware-shell__progress-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        color: var(--shell-text-soft);
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      .docuware-shell__progress-track {
+        position: relative;
+        height: 0.7rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(64, 81, 137, 0.09);
+      }
+
+      .docuware-shell__progress-bar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        border-radius: inherit;
+        background:
+          linear-gradient(90deg, rgba(64, 81, 137, 0.96), rgba(18, 199, 176, 0.96), rgba(64, 81, 137, 0.96));
+        box-shadow: 0 0 24px rgba(18, 199, 176, 0.26);
+        animation: shellProgress 1.45s ease-in-out infinite;
+      }
+
+      .docuware-shell__aside {
+        display: grid;
+        gap: 1rem;
+        align-content: start;
+      }
+
+      .docuware-shell__panel,
+      .docuware-shell__timeline {
+        border: 1px solid rgba(64, 81, 137, 0.1);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 20px 40px rgba(30, 45, 89, 0.08);
+      }
+
+      .docuware-shell__panel {
+        padding: 1.25rem;
+      }
+
+      .docuware-shell__panel-title,
+      .docuware-shell__timeline-title {
+        margin: 0 0 0.85rem;
+        color: var(--shell-brand-strong);
+        font-size: 1rem;
+        font-weight: 800;
+      }
+
+      .docuware-shell__metric-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+      }
+
+      .docuware-shell__metric {
+        padding: 0.9rem;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(64, 81, 137, 0.06), rgba(255, 255, 255, 0.88));
+      }
+
+      .docuware-shell__metric-label {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: var(--shell-text-soft);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .docuware-shell__metric-value {
+        display: block;
+        color: var(--shell-brand-strong);
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+
+      .docuware-shell__timeline {
+        padding: 1rem 1.25rem;
+      }
+
+      .docuware-shell__timeline-list {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .docuware-shell__timeline-item {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.8rem;
+        align-items: start;
+      }
+
+      .docuware-shell__timeline-dot {
+        width: 0.8rem;
+        height: 0.8rem;
+        margin-top: 0.28rem;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #405189, #12c7b0);
+        box-shadow: 0 0 0 0.32rem rgba(64, 81, 137, 0.08);
+      }
+
+      .docuware-shell__timeline-text strong {
+        display: block;
+        margin-bottom: 0.12rem;
+        color: var(--shell-text);
+        font-size: 0.94rem;
+      }
+
+      .docuware-shell__timeline-text span {
+        color: var(--shell-text-soft);
+        font-size: 0.86rem;
+        line-height: 1.5;
+      }
+
+      .docuware-shell__footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0 2.25rem 2rem;
+        color: var(--shell-text-soft);
+        font-size: 0.84rem;
+      }
+
+      .docuware-shell__footer strong {
+        color: var(--shell-brand);
+      }
+
+      .docuware-shell__footer-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .docuware-shell__footer-note::before {
+        content: "";
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        background: var(--shell-accent);
+        box-shadow: 0 0 0 0.24rem var(--shell-accent-soft);
+      }
+
+      .docuware-noscript {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding:
+          max(1.5rem, env(safe-area-inset-top))
+          max(1.25rem, env(safe-area-inset-right))
+          max(1.5rem, env(safe-area-inset-bottom))
+          max(1.25rem, env(safe-area-inset-left));
+      }
+
+      .docuware-noscript__card {
+        width: min(100%, 34rem);
+        padding: 2rem;
+        border: 1px solid rgba(64, 81, 137, 0.12);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: var(--shell-card-shadow);
+        text-align: center;
+      }
+
+      .docuware-noscript__title {
+        margin: 1rem 0 0.6rem;
+        color: var(--shell-brand-strong);
+        font-size: 1.6rem;
+        font-weight: 800;
+      }
+
+      .docuware-noscript__text {
+        margin: 0;
+        color: var(--shell-text-soft);
+        font-size: 1rem;
+        line-height: 1.75;
+      }
+
+      .docuware-noscript__logo {
+        width: 5rem;
+        height: 5rem;
+        object-fit: contain;
+      }
+
+      @keyframes shellProgress {
+        0% {
+          transform: translateX(-72%);
+        }
+
+        100% {
+          transform: translateX(265%);
+        }
+      }
+
+      @keyframes shellSpin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes shellBlobOne {
+        0% {
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        100% {
+          transform: translate3d(2rem, 1rem, 0) scale(1.08);
+        }
+      }
+
+      @keyframes shellBlobTwo {
+        0% {
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        100% {
+          transform: translate3d(-2rem, -1.2rem, 0) scale(1.1);
+        }
+      }
+
+      @media (max-width: 960px) {
+        .docuware-shell__layout {
+          grid-template-columns: 1fr;
+        }
+
+        .docuware-shell__aside {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .docuware-shell__layout {
+          padding: 1.4rem;
+          gap: 1.4rem;
+        }
+
+        .docuware-shell__brand-row {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .docuware-shell__aside,
+        .docuware-shell__metric-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .docuware-shell__footer {
+          padding: 0 1.4rem 1.4rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
     <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -51,8 +574,131 @@
     <title>Docuware</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <noscript>
+      <style>
+        #root {
+          display: none !important;
+        }
+      </style>
+      <div class="docuware-noscript">
+        <section class="docuware-noscript__card">
+          <img
+            class="docuware-noscript__logo"
+            src="./logo192.png"
+            alt="Docuware"
+          />
+          <h1 class="docuware-noscript__title">Activa JavaScript para continuar</h1>
+          <p class="docuware-noscript__text">
+            Docuware necesita JavaScript para cargar validaciones, documentos,
+            aprobaciones y la experiencia completa de la aplicacion.
+          </p>
+        </section>
+      </div>
+    </noscript>
+    <div id="root">
+      <div class="docuware-shell" role="status" aria-live="polite">
+        <section class="docuware-shell__card">
+          <div class="docuware-shell__layout">
+            <div class="docuware-shell__hero">
+              <span class="docuware-shell__badge">WORKSPACE OPERATIVO</span>
+              <div class="docuware-shell__brand-row">
+                <div class="docuware-shell__orbital">
+                  <img
+                    class="docuware-shell__logo"
+                    src="./logo192.png"
+                    alt="Docuware"
+                  />
+                </div>
+                <div>
+                  <h1 class="docuware-shell__title">Docuware</h1>
+                  <p class="docuware-shell__subtitle">
+                    Cargando tu centro de trabajo documental con una experiencia
+                    mas clara, veloz y preparada para escritorio y movil.
+                  </p>
+                </div>
+              </div>
+
+              <div class="docuware-shell__status">
+                <span class="docuware-shell__chip">Flujo centralizado</span>
+                <span class="docuware-shell__chip">Validacion automatizada</span>
+                <span class="docuware-shell__chip">Vista segura en la nube</span>
+              </div>
+
+              <div class="docuware-shell__progress">
+                <div class="docuware-shell__progress-label">
+                  <span>Inicializando modulo principal</span>
+                  <strong>Preparando entorno</strong>
+                </div>
+                <div class="docuware-shell__progress-track" aria-hidden="true">
+                  <span class="docuware-shell__progress-bar"></span>
+                </div>
+              </div>
+            </div>
+
+            <aside class="docuware-shell__aside">
+              <section class="docuware-shell__panel">
+                <h2 class="docuware-shell__panel-title">Estado de la experiencia</h2>
+                <div class="docuware-shell__metric-grid">
+                  <article class="docuware-shell__metric">
+                    <span class="docuware-shell__metric-label">UI</span>
+                    <strong class="docuware-shell__metric-value">Activa</strong>
+                  </article>
+                  <article class="docuware-shell__metric">
+                    <span class="docuware-shell__metric-label">PWA</span>
+                    <strong class="docuware-shell__metric-value">Lista</strong>
+                  </article>
+                  <article class="docuware-shell__metric">
+                    <span class="docuware-shell__metric-label">Carga</span>
+                    <strong class="docuware-shell__metric-value">Segura</strong>
+                  </article>
+                  <article class="docuware-shell__metric">
+                    <span class="docuware-shell__metric-label">Vista</span>
+                    <strong class="docuware-shell__metric-value">Responsive</strong>
+                  </article>
+                </div>
+              </section>
+
+              <section class="docuware-shell__timeline">
+                <h2 class="docuware-shell__timeline-title">Que esta pasando</h2>
+                <div class="docuware-shell__timeline-list">
+                  <div class="docuware-shell__timeline-item">
+                    <span class="docuware-shell__timeline-dot"></span>
+                    <div class="docuware-shell__timeline-text">
+                      <strong>Sincronizando recursos visuales</strong>
+                      <span>Preparando estilos, iconos y estructura principal.</span>
+                    </div>
+                  </div>
+                  <div class="docuware-shell__timeline-item">
+                    <span class="docuware-shell__timeline-dot"></span>
+                    <div class="docuware-shell__timeline-text">
+                      <strong>Levantando modulos internos</strong>
+                      <span>Documentos, ordenes, proveedores y expedientes.</span>
+                    </div>
+                  </div>
+                  <div class="docuware-shell__timeline-item">
+                    <span class="docuware-shell__timeline-dot"></span>
+                    <div class="docuware-shell__timeline-text">
+                      <strong>Optimizando para interaccion inmediata</strong>
+                      <span>La interfaz quedara lista en cuanto React termine de montar.</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </aside>
+          </div>
+
+          <footer class="docuware-shell__footer">
+            <span>
+              <strong>Docuware</strong> organiza validaciones, aprobaciones y
+              trazabilidad en un solo lugar.
+            </span>
+            <span class="docuware-shell__footer-note">
+              Preparado para carga en navegadores y modo app
+            </span>
+          </footer>
+        </section>
+      </div>
+    </div>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.
