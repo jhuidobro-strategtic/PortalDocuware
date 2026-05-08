@@ -86,18 +86,11 @@
       background-color: #ffffff; /* Asegurar que tenga fondo sólido para tapar el scroll */
     }
     
-    /* Mostrar el logo en la PWA móvil */
-    .navbar-brand-box.horizontal-logo {
-      display: flex !important;
-      align-items: center;
-      background: transparent !important;
-    }
-
     .main-content {
       /* Eliminamos el margin-top anterior */
       margin-top: 0 !important;
-      /* Ya no sumamos los 70px (Velzon ya lo hace), SOLO sumamos el margen del Notch */
-      padding-top: max(env(safe-area-inset-top), 15px) !important;
+      /* El padding-top debe ser el height original del header (usualmente 70px) + el safe area */
+      padding-top: calc(70px + max(env(safe-area-inset-top), 15px)) !important;
       /* Dar espacio en el footer al contenido para que el navbar inferior no tape elementos */
       padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
     }
