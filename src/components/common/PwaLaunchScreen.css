@@ -2,18 +2,22 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: max(1.5rem, env(safe-area-inset-top))
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom))
+    max(1.5rem, env(safe-area-inset-left));
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.14), transparent 30%),
-    linear-gradient(180deg, #405189 0%, #50629b 100%);
+    radial-gradient(circle at top left, rgba(140, 167, 255, 0.24), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(0, 232, 201, 0.16), transparent 28%),
+    linear-gradient(160deg, #25335f 0%, #405189 52%, #5569a8 100%);
   opacity: 1;
+  visibility: visible;
   transition:
-    opacity 0.35s ease,
-    visibility 0.35s ease;
+    opacity 0.45s ease,
+    visibility 0.45s ease;
 }
 
 .pwa-launch-screen.is-hiding {
@@ -21,33 +25,427 @@
   visibility: hidden;
 }
 
-.pwa-launch-screen__card {
-  width: min(100%, 320px);
-  padding: 2rem 1.5rem 1.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.24);
-  text-align: center;
-  backdrop-filter: blur(16px);
+.pwa-launch-screen__ambient {
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
 }
 
-.pwa-launch-screen__logo {
-  display: block;
-  width: min(100%, 220px);
-  margin: 0 auto 1rem;
+.pwa-launch-screen__blob,
+.pwa-launch-screen__mesh,
+.pwa-launch-screen__particle {
+  position: absolute;
+}
+
+.pwa-launch-screen__blob {
+  filter: blur(18px);
+  border-radius: 999px;
+  opacity: 0.85;
+}
+
+.pwa-launch-screen__blob--one {
+  top: 8%;
+  left: 8%;
+  width: 14rem;
+  height: 14rem;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.32), transparent 70%);
+  animation: pwaLaunchBlobFloat 9s ease-in-out infinite alternate;
+}
+
+.pwa-launch-screen__blob--two {
+  right: 10%;
+  top: 16%;
+  width: 18rem;
+  height: 18rem;
+  background: radial-gradient(circle, rgba(54, 234, 220, 0.25), transparent 72%);
+  animation: pwaLaunchBlobFloat 11s ease-in-out infinite alternate-reverse;
+}
+
+.pwa-launch-screen__blob--three {
+  left: 18%;
+  bottom: 4%;
+  width: 19rem;
+  height: 19rem;
+  background: radial-gradient(circle, rgba(118, 146, 255, 0.2), transparent 72%);
+  animation: pwaLaunchBlobDrift 13s ease-in-out infinite alternate;
+}
+
+.pwa-launch-screen__mesh {
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92), transparent 82%);
+  opacity: 0.25;
+  animation: pwaLaunchMeshShift 14s linear infinite;
+}
+
+.pwa-launch-screen__particle {
+  top: var(--particle-top);
+  left: var(--particle-left);
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.48);
+  opacity: 0.72;
+  animation:
+    pwaLaunchParticleFloat var(--particle-duration) ease-in-out infinite,
+    pwaLaunchParticlePulse 3.4s ease-in-out infinite;
+  animation-delay: var(--particle-delay);
+}
+
+.pwa-launch-screen__scene {
+  position: relative;
+  width: min(100%, 26rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.45rem;
+  padding: 2.2rem 1.5rem 1.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 34px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  box-shadow:
+    0 26px 70px rgba(7, 16, 40, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(22px);
+}
+
+.pwa-launch-screen__scene::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.pwa-launch-screen__orbital {
+  position: relative;
+  width: min(62vw, 13rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.pwa-launch-screen__ring,
+.pwa-launch-screen__spark,
+.pwa-launch-screen__mark-shell,
+.pwa-launch-screen__mark-glow,
+.pwa-launch-screen__mark-core {
+  position: absolute;
+}
+
+.pwa-launch-screen__ring {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  animation: pwaLaunchRingSpin 16s linear infinite;
+}
+
+.pwa-launch-screen__ring--outer {
+  inset: 0;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.pwa-launch-screen__ring--mid {
+  inset: 11%;
+  border-style: dashed;
+  border-color: rgba(110, 235, 226, 0.52);
+  animation-duration: 11s;
+  animation-direction: reverse;
+}
+
+.pwa-launch-screen__ring--inner {
+  inset: 22%;
+  border-color: rgba(169, 191, 255, 0.38);
+  animation-duration: 8.5s;
+}
+
+.pwa-launch-screen__spark {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
+  animation: pwaLaunchSparkOrbit 7.5s ease-in-out infinite;
+}
+
+.pwa-launch-screen__spark--one {
+  top: 7%;
+  left: 50%;
+  animation-delay: 0s;
+}
+
+.pwa-launch-screen__spark--two {
+  top: 52%;
+  right: 6%;
+  animation-delay: 1.6s;
+}
+
+.pwa-launch-screen__spark--three {
+  bottom: 9%;
+  left: 18%;
+  animation-delay: 3s;
+}
+
+.pwa-launch-screen__mark-shell {
+  inset: 28%;
+  display: grid;
+  place-items: center;
+}
+
+.pwa-launch-screen__mark-glow {
+  inset: -18%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 70%);
+  filter: blur(10px);
+  animation: pwaLaunchGlowPulse 3.8s ease-in-out infinite;
+}
+
+.pwa-launch-screen__mark-core {
+  inset: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 18px 30px rgba(10, 18, 45, 0.24);
+  animation: pwaLaunchCoreFloat 4.6s ease-in-out infinite;
+}
+
+.pwa-launch-screen__mark-image {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 8px 18px rgba(64, 81, 137, 0.28))
+    saturate(1.03);
+}
+
+.pwa-launch-screen__copy {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.pwa-launch-screen__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.8rem;
+  margin-bottom: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
 }
 
 .pwa-launch-screen__title {
-  margin: 0 0 0.35rem;
-  color: #405189;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2rem, 6vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 12px 28px rgba(12, 20, 48, 0.25);
+  animation: pwaLaunchTitleReveal 0.9s ease both;
 }
 
 .pwa-launch-screen__subtitle {
-  margin: 0;
-  color: #667085;
-  font-size: 0.92rem;
+  max-width: 20rem;
+  margin: 0.75rem auto 0;
+  color: rgba(231, 236, 255, 0.86);
+  font-size: 0.97rem;
+  line-height: 1.55;
+  animation: pwaLaunchSubtitleReveal 1s ease both 0.1s;
+}
+
+.pwa-launch-screen__progress {
+  position: relative;
+  width: min(100%, 12rem);
+  height: 0.38rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.pwa-launch-screen__progress-bar {
+  display: block;
+  width: 58%;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(95, 235, 225, 0.92), rgba(255, 255, 255, 0.96), rgba(95, 235, 225, 0.92));
+  box-shadow: 0 0 16px rgba(111, 234, 226, 0.4);
+  animation: pwaLaunchProgress 1.45s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes pwaLaunchBlobFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(2.5rem, -1.2rem, 0) scale(1.12);
+  }
+}
+
+@keyframes pwaLaunchBlobDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(-2rem, 1.8rem, 0) scale(1.08);
+  }
+}
+
+@keyframes pwaLaunchMeshShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(1.25rem, -1rem, 0);
+  }
+}
+
+@keyframes pwaLaunchParticleFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0.65rem, -1.1rem, 0);
+  }
+}
+
+@keyframes pwaLaunchParticlePulse {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.95;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes pwaLaunchRingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pwaLaunchSparkOrbit {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.48;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+@keyframes pwaLaunchGlowPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes pwaLaunchCoreFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.4rem);
+  }
+}
+
+@keyframes pwaLaunchTitleReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pwaLaunchSubtitleReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pwaLaunchProgress {
+  0% {
+    transform: translateX(-72%);
+  }
+
+  100% {
+    transform: translateX(145%);
+  }
+}
+
+@media (max-width: 480px) {
+  .pwa-launch-screen__scene {
+    width: 100%;
+    padding: 1.8rem 1.15rem 1.65rem;
+    border-radius: 28px;
+  }
+
+  .pwa-launch-screen__orbital {
+    width: min(72vw, 11rem);
+  }
+
+  .pwa-launch-screen__subtitle {
+    font-size: 0.92rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-launch-screen *,
+  .pwa-launch-screen *::before,
+  .pwa-launch-screen *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
