@@ -1,46 +1,58 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#405189" />
-    <meta name="color-scheme" content="light" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Docuware" />
-    <meta
-      name="description"
-      content="Sistema Web Docuware"
-    />
-    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-640-1136.png" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-750-1334.png" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-828-1792.png" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1125-2436.png" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1170-2532.png" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1179-2556.png" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1242-2688.png" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1284-2778.png" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1290-2796.png" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1536-2048.png" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2048-1536.png" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1668-2224.png" media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2224-1668.png" media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1668-2388.png" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2388-1668.png" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2048-2732.png" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2732-2048.png" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
-    <!--
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#405189" />
+  <meta name="color-scheme" content="light" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Docuware" />
+  <meta name="description" content="Sistema Web Docuware" />
+  <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/newlogodocuware.png" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-640-1136.png"
+    media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-750-1334.png"
+    media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-828-1792.png"
+    media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1125-2436.png"
+    media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1170-2532.png"
+    media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1179-2556.png"
+    media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1242-2688.png"
+    media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1284-2778.png"
+    media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1290-2796.png"
+    media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1536-2048.png"
+    media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2048-1536.png"
+    media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1668-2224.png"
+    media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2224-1668.png"
+    media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-1668-2388.png"
+    media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2388-1668.png"
+    media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2048-2732.png"
+    media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+  <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/pwa/apple-splash-2732-2048.png"
+    media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
+  <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
       Only files inside the `public` folder can be referenced from the HTML.
@@ -49,31 +61,28 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Docuware</title>
-  </head>
-  <body>
-    <noscript>
-      <style>
-        #root {
-          display: none !important;
-        }
-      </style>
-      <div class="docuware-noscript">
-        <section class="docuware-noscript__card">
-          <img
-            class="docuware-noscript__logo"
-            src="./logo192.png"
-            alt="Docuware"
-          />
-          <h1 class="docuware-noscript__title">Activa JavaScript para continuar</h1>
-          <p class="docuware-noscript__text">
-            Docuware necesita JavaScript para cargar validaciones, documentos,
-            aprobaciones y la experiencia completa de la aplicacion.
-          </p>
-        </section>
-      </div>
-    </noscript>
-    <div id="root">
+  <title>Docuware</title>
+</head>
+
+<body>
+  <noscript>
+    <style>
+      #root {
+        display: none !important;
+      }
+    </style>
+    <div class="docuware-noscript">
+      <section class="docuware-noscript__card">
+        <img class="docuware-noscript__logo" src="./logo192.png" alt="Docuware" />
+        <h1 class="docuware-noscript__title">Activa JavaScript para continuar</h1>
+        <p class="docuware-noscript__text">
+          Docuware necesita JavaScript para cargar validaciones, documentos,
+          aprobaciones y la experiencia completa de la aplicacion.
+        </p>
+      </section>
+    </div>
+  </noscript>
+  <div id="root">
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.
@@ -84,5 +93,6 @@
       To begin development, run `npm run dev` or `yarn dev`.
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
-  </body>
+</body>
+
 </html>
