@@ -79,12 +79,18 @@
     }
 
     /* AJUSTE PARA EL NOTCH SUPERIOR (Top Bar y safe area) */
+    /* En lugar de desplazar el header hacia abajo, lo hacemos crecer hacia arriba para que tape el scroll */
     #page-topbar {
-      top: max(env(safe-area-inset-top), 10px) !important;
+      top: 0 !important;
+      padding-top: max(env(safe-area-inset-top), 15px) !important;
+      background-color: #ffffff; /* Asegurar que tenga fondo sólido para tapar el scroll */
     }
+    
     .main-content {
-      /* Bajar todo el contenido empujándolo con margin top */
-      margin-top: max(env(safe-area-inset-top), 10px) !important;
+      /* Eliminamos el margin-top anterior */
+      margin-top: 0 !important;
+      /* El padding-top debe ser el height original del header (usualmente 70px) + el safe area */
+      padding-top: calc(70px + max(env(safe-area-inset-top), 15px)) !important;
       /* Dar espacio en el footer al contenido para que el navbar inferior no tape elementos */
       padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
     }
