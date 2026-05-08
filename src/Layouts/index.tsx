@@ -6,6 +6,7 @@ import withRouter from '../components/common/withRouter';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
+import PwaBottomNav from '../components/common/PwaBottomNav';
 import { changeLayoutMode } from "../slices/layouts/thunk";
 import { changeHTMLAttribute } from "../slices/layouts/utils";
 
@@ -125,6 +126,7 @@ const Layout = (props : any) => {
                     {props.children}
                     <Footer />
                 </div>
+                <PwaBottomNav />
             </div>
             {/* <RightSidebar /> */}
         </React.Fragment>
