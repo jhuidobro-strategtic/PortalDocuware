@@ -47,7 +47,6 @@ const PwaBottomNav: React.FC = () => {
             <li key={item.id || index}>
               <Link to={item.link || '#'} className={`pwa-bottom-nav-link ${isActive ? 'active' : ''}`}>
                 <i className={item.icon}></i>
-                <span className="pwa-bottom-nav-label">{item.label}</span>
               </Link>
             </li>
           );

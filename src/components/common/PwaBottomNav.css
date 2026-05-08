@@ -43,17 +43,8 @@
 }
 
 .pwa-bottom-nav-link i {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.pwa-bottom-nav-label {
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-  max-width: 100%;
 }
 
 /* Estado Activo */
@@ -64,11 +55,6 @@
 .pwa-bottom-nav-link.active i {
   transform: translateY(-2px) scale(1.1);
   color: #6a00ff; /* Color de acento (como el splash screen) */
-}
-
-.pwa-bottom-nav-link.active .pwa-bottom-nav-label {
-  font-weight: 700;
-  color: #405189;
 }
 
 /* 
@@ -92,8 +78,14 @@
       display: none !important;
     }
 
-    /* Dar espacio en el footer al contenido para que el navbar inferior no tape elementos */
+    /* AJUSTE PARA EL NOTCH SUPERIOR (Top Bar y safe area) */
+    #page-topbar {
+      top: max(env(safe-area-inset-top), 10px) !important;
+    }
     .main-content {
+      /* Bajar todo el contenido empujándolo con margin top */
+      margin-top: max(env(safe-area-inset-top), 10px) !important;
+      /* Dar espacio en el footer al contenido para que el navbar inferior no tape elementos */
       padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
     }
   }
