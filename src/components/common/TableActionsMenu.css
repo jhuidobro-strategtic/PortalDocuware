@@ -22,7 +22,7 @@
 
 .table-actions-menu__trigger:hover,
 .table-actions-menu__trigger:focus-visible,
-.table-actions-menu.show .table-actions-menu__trigger {
+.table-actions-menu__trigger.is-open {
   border-color: #b9caea;
   color: #405189;
   box-shadow: 0 14px 34px rgba(64, 81, 137, 0.16);
@@ -43,20 +43,33 @@
 
 .table-actions-menu__dropdown {
   min-width: 190px;
+  max-width: min(220px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 24px));
+  overflow-y: auto;
   padding: 0.6rem;
   border: 1px solid #edf2f7;
   border-radius: 18px;
+  background: #ffffff;
   box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
+}
+
+.table-actions-menu__dropdown--portal {
+  position: fixed;
+  z-index: 1085;
 }
 
 .table-actions-menu__item {
   display: flex;
   align-items: center;
+  width: 100%;
+  border: none;
+  background: transparent;
   gap: 0.7rem;
   min-height: 44px;
   padding: 0.7rem 0.85rem;
   border-radius: 12px;
   font-weight: 600;
+  text-align: left;
   transition:
     background-color 0.16s ease,
     color 0.16s ease;
@@ -126,4 +139,5 @@
 .table-actions-menu__item:disabled {
   color: #98a2b3;
   background: transparent;
+  cursor: not-allowed;
 }

@@ -1,3 +1,12 @@
+.expedients-registered-documents-column,
+.expedients-registered-documents-cell {
+  width: 120px;
+}
+
+.expedients-registered-documents-cell .table-actions-menu {
+  justify-content: center;
+}
+
 .expedient-drawer-backdrop {
   position: fixed;
   inset: 0;

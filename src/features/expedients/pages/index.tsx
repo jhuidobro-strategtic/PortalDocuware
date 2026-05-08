@@ -3,7 +3,6 @@ import moment from "moment";
 import { PDFDocument, PDFPage } from "pdf-lib";
 import Select from "react-select";
 import {
-  Badge,
   Button,
   Card,
   CardBody,
@@ -11,6 +10,10 @@ import {
   Input,
   InputGroup,
   InputGroupText,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Pagination,
   PaginationItem,
   PaginationLink,
@@ -22,6 +25,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
+import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import "./Expedients.css";
@@ -265,9 +269,6 @@ const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =
 const getInvoiceCode = (invoice?: ExpedientInvoice | null) =>
   [invoice?.documentserial, invoice?.documentnumber].filter(Boolean).join("-");
 
-const getInvoiceTypeLabel = (invoice?: ExpedientInvoice | null) =>
-  String(invoice?.documenttype?.tipo ?? "").trim();
-
 const getPurchaseOrderSupplierLabel = (
   purchaseOrder?: ExpedientPurchaseOrder | null
 ) => {
@@ -401,6 +402,11 @@ const Expedients = () => {
   );
   const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [expedientToClose, setExpedientToClose] = useState<Expedient | null>(null);
+  const [closingExpedient, setClosingExpedient] = useState(false);
+  const [locallyClosedExpedientIds, setLocallyClosedExpedientIds] = useState<
+    Set<number>
+  >(new Set());
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const numberLocale = getNumberLocale(i18n.language);
   const sessionUser = getCurrentSessionUser();
@@ -421,6 +427,18 @@ const Expedients = () => {
       currentAlerts.filter((alert) => alert.id !== id)
     );
   };
+
+  const syncExpedientsCollection = useCallback((nextExpedients: Expedient[]) => {
+    setExpedients(nextExpedients);
+    setSelectedExpedient((currentSelected) =>
+      currentSelected
+        ? nextExpedients.find(
+            (expedient) =>
+              expedient.expedienteid === currentSelected.expedienteid
+          ) || null
+        : null
+    );
+  }, []);
 
   const pushFloatingAlert = (
     type: FloatingAlertItem["type"],
@@ -628,13 +646,7 @@ const Expedients = () => {
 
       try {
         const updatedExpedients = await fetchExpedientsData(t);
-        setExpedients(updatedExpedients);
-        setSelectedExpedient(
-          updatedExpedients.find(
-            (expedient) =>
-              expedient.expedienteid === selectedExpedient.expedienteid
-          ) || null
-        );
+        syncExpedientsCollection(updatedExpedients);
       } catch {
         // The upload already succeeded. Keep the current state if the refresh fails.
       }
@@ -650,6 +662,101 @@ const Expedients = () => {
       pushFloatingAlert("danger", message);
     } finally {
       setUploadingDocument(false);
+    }
+  };
+
+  const handleOpenCloseExpedientModal = (expedient: Expedient) => {
+    if (
+      !expedient.estado ||
+      locallyClosedExpedientIds.has(expedient.expedienteid)
+    ) {
+      return;
+    }
+
+    setExpedientToClose(expedient);
+  };
+
+  const handleCloseCloseExpedientModal = () => {
+    if (closingExpedient) {
+      return;
+    }
+
+    setExpedientToClose(null);
+  };
+
+  const handleConfirmCloseExpedient = async () => {
+    if (!expedientToClose || closingExpedient) {
+      return;
+    }
+
+    if (!sessionUser.id) {
+      pushFloatingAlert(
+        "danger",
+        t("Unable to identify the signed-in user to close this expedient.")
+      );
+      return;
+    }
+
+    setClosingExpedient(true);
+
+    try {
+      const response = await fetch(buildApiUrl("locked_expediente/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionUser.token
+            ? { Authorization: `Bearer ${sessionUser.token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          expedienteid: expedientToClose.expedienteid,
+          updateby: sessionUser.id,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.success === false) {
+        throw new Error(payload?.message || t("Unable to close this expedient."));
+      }
+
+      setLocallyClosedExpedientIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.add(expedientToClose.expedienteid);
+        return nextIds;
+      });
+      syncExpedientsCollection(
+        expedients.map((expedient) =>
+          expedient.expedienteid === expedientToClose.expedienteid
+            ? {
+                ...expedient,
+                estado: false,
+                updatedby: sessionUser.id,
+                updatedat: new Date().toISOString(),
+              }
+            : expedient
+        )
+      );
+
+      try {
+        const updatedExpedients = await fetchExpedientsData(t);
+        syncExpedientsCollection(updatedExpedients);
+      } catch {
+        // Keep the optimistic lock if the refresh cannot be completed right away.
+      }
+
+      setExpedientToClose(null);
+      pushFloatingAlert(
+        "success",
+        payload?.message || t("Expedient closed successfully.")
+      );
+    } catch (closeError) {
+      const message =
+        closeError instanceof Error
+          ? closeError.message
+          : t("Unable to close this expedient.");
+      pushFloatingAlert("danger", message);
+    } finally {
+      setClosingExpedient(false);
     }
   };
 
@@ -846,7 +953,10 @@ const Expedients = () => {
                         <th className="text-center" style={{ minWidth: "160px" }}>
                           {t("Created")}
                         </th>
-                        <th className="text-center" style={{ minWidth: "340px" }}>
+                        <th
+                          className="text-center expedients-registered-documents-column"
+                          style={{ minWidth: "120px" }}
+                        >
                           {t("Registered Documents")}
                         </th>
                       </tr>
@@ -860,12 +970,14 @@ const Expedients = () => {
                         </tr>
                       ) : (
                         paginatedExpedients.map((expedient) => {
+                          const isExpedientClosed =
+                            !expedient.estado ||
+                            locallyClosedExpedientIds.has(expedient.expedienteid);
                           const statusMeta = getExpedientStatusMeta(
-                            expedient.estado,
+                            !isExpedientClosed,
                             t
                           );
                           const invoiceCode = getInvoiceCode(expedient.factura);
-                          const invoiceType = getInvoiceTypeLabel(expedient.factura);
                           const purchaseOrderSupplier = getPurchaseOrderSupplierLabel(
                             expedient.ordencompra
                           );
@@ -953,36 +1065,37 @@ const Expedients = () => {
                                 </div>
                               </td>
                               <td
-                                className="text-center"
+                                className="text-center expedients-registered-documents-cell"
                                 style={{ whiteSpace: "normal" }}
                               >
-                                <div className="d-flex flex-wrap justify-content-center gap-2">
-                                  {expedient.expediente_documentos?.length ? (
-                                    <Button
-                                      color="primary"
-                                      outline
-                                      size="sm"
-                                      className="text-nowrap"
-                                      onClick={() => setSelectedExpedient(expedient)}
-                                    >
-                                      <i className="ri-file-list-3-line me-1" />
-                                      {t("View documents")}
-                                    </Button>
-                                  ) : (
-                                    <span className="text-muted align-self-center">
-                                      {t("No files attached")}
-                                    </span>
-                                  )}
-
-                                  <Button
-                                    type="button"
-                                    color="danger"
-                                    size="sm"
-                                    className="text-nowrap"
-                                  >
-                                    <i className="ri-folder-close-line me-1" />
-                                    {t("Close Expedient")}
-                                  </Button>
+                                <div className="d-flex justify-content-center">
+                                  <TableActionsMenu
+                                    disabled={
+                                      closingExpedient &&
+                                      expedientToClose?.expedienteid ===
+                                        expedient.expedienteid
+                                    }
+                                    items={[
+                                      {
+                                        id: `view-documents-${expedient.expedienteid}`,
+                                        label: t("View documents"),
+                                        icon: "ri-file-list-3-line",
+                                        tone: "primary",
+                                        hidden:
+                                          !expedient.expediente_documentos?.length,
+                                        onClick: () => setSelectedExpedient(expedient),
+                                      },
+                                      {
+                                        id: `close-expedient-${expedient.expedienteid}`,
+                                        label: t("Close Expedient"),
+                                        icon: "ri-folder-close-line",
+                                        tone: "danger",
+                                        disabled: isExpedientClosed,
+                                        onClick: () =>
+                                          handleOpenCloseExpedientModal(expedient),
+                                      },
+                                    ]}
+                                  />
                                 </div>
                               </td>
                             </tr>
@@ -1358,6 +1471,51 @@ const Expedients = () => {
           </div>
         </div>
       </aside>
+
+      <Modal
+        isOpen={!!expedientToClose}
+        toggle={closingExpedient ? undefined : handleCloseCloseExpedientModal}
+        backdrop={closingExpedient ? "static" : true}
+        keyboard={!closingExpedient}
+        centered
+      >
+        <ModalHeader
+          toggle={closingExpedient ? undefined : handleCloseCloseExpedientModal}
+        >
+          {t("Close Expedient")}
+        </ModalHeader>
+        <ModalBody>
+          <p className="mb-2 fw-semibold">{t("Are you sure?")}</p>
+          <p className="text-muted mb-0">
+            {t("Are you sure you want to close expedient #{{id}}?", {
+              id: expedientToClose?.expedienteid ?? "-",
+            })}
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="light"
+            onClick={handleCloseCloseExpedientModal}
+            disabled={closingExpedient}
+          >
+            {t("Cancel")}
+          </Button>
+          <Button
+            color="danger"
+            onClick={handleConfirmCloseExpedient}
+            disabled={closingExpedient}
+          >
+            {closingExpedient ? (
+              <>
+                <Spinner size="sm" className="me-2" />
+                {t("Processing...")}
+              </>
+            ) : (
+              t("Confirm")
+            )}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };
