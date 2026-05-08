@@ -1,11 +1,13 @@
-const APP_CACHE = "docuware-app-shell-v1";
-const RUNTIME_CACHE = "docuware-runtime-v1";
+const APP_CACHE = "docuware-app-shell-v2";
+const RUNTIME_CACHE = "docuware-runtime-v2";
 const OFFLINE_URL = "./index.html";
 const APP_SHELL_ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./favicon.ico",
+  "./apple-touch-icon.png",
+  "./newlogodocuware.png",
   "./logo192.png",
   "./logo512.png",
   "./logo192-maskable.png",
