@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Docuware",
+  "name": "Docuware - Gestion Documental",
+  "description": "Sistema web de gestion documental y expedientes de Docuware.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +19,13 @@
       "sizes": "512x512"
     }
   ],
+  "id": ".",
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait-primary",
+  "theme_color": "#405189",
+  "background_color": "#f3f6f9",
+  "lang": "es-PE",
+  "categories": ["business", "productivity"]
 }
