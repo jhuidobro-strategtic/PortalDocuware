@@ -125,6 +125,7 @@ interface Expedient {
   ordencompraid: number | null;
   ordencompra?: ExpedientPurchaseOrder | null;
   estado: boolean;
+  lock_exp?: boolean | null;
   createdby: number | null;
   createat: string;
   updatedby: number | null;
@@ -265,6 +266,17 @@ const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =
           "badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-close-circle-line",
       };
+
+const isExpedientClosed = (
+  expedient?: Pick<Expedient, "expedienteid" | "estado" | "lock_exp"> | null,
+  locallyClosedExpedientIds?: Set<number>
+) =>
+  Boolean(
+    expedient &&
+      (expedient.lock_exp ||
+        !expedient.estado ||
+        locallyClosedExpedientIds?.has(expedient.expedienteid))
+  );
 
 const getInvoiceCode = (invoice?: ExpedientInvoice | null) =>
   [invoice?.documentserial, invoice?.documentnumber].filter(Boolean).join("-");
@@ -421,6 +433,10 @@ const Expedients = () => {
   const selectedUploadTypeOption =
     uploadTypeOptions.find((option) => option.value === uploadDocumentType) ||
     null;
+  const isSelectedExpedientClosed = isExpedientClosed(
+    selectedExpedient,
+    locallyClosedExpedientIds
+  );
 
   const handleRemoveFloatingAlert = (id: FloatingAlertItem["id"]) => {
     setFloatingAlerts((currentAlerts) =>
@@ -514,14 +530,19 @@ const Expedients = () => {
     }
 
     return expedients.filter((expedient) => {
-      const statusLabel = expedient.estado ? t("Active") : t("Inactive");
+      const statusLabel = isExpedientClosed(
+        expedient,
+        locallyClosedExpedientIds
+      )
+        ? t("Inactive")
+        : t("Active");
 
       return (
         matchesSearchValue(expedient, term) ||
         statusLabel.toLowerCase().includes(term)
       );
     });
-  }, [expedients, searchTerm, t]);
+  }, [expedients, locallyClosedExpedientIds, searchTerm, t]);
 
   const totalPages = Math.max(
     1,
@@ -567,6 +588,12 @@ const Expedients = () => {
     resetUploadState();
   }, [resetUploadState, selectedExpedient?.expedienteid]);
 
+  useEffect(() => {
+    if (isSelectedExpedientClosed && isUploadPanelOpen) {
+      resetUploadState();
+    }
+  }, [isSelectedExpedientClosed, isUploadPanelOpen, resetUploadState]);
+
   const handleUploadFileChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -595,6 +622,11 @@ const Expedients = () => {
 
   const handleUploadDocument = async () => {
     if (!selectedExpedient || uploadingDocument) {
+      return;
+    }
+
+    if (isExpedientClosed(selectedExpedient, locallyClosedExpedientIds)) {
+      resetUploadState();
       return;
     }
 
@@ -666,10 +698,7 @@ const Expedients = () => {
   };
 
   const handleOpenCloseExpedientModal = (expedient: Expedient) => {
-    if (
-      !expedient.estado ||
-      locallyClosedExpedientIds.has(expedient.expedienteid)
-    ) {
+    if (isExpedientClosed(expedient, locallyClosedExpedientIds)) {
       return;
     }
 
@@ -730,12 +759,14 @@ const Expedients = () => {
             ? {
                 ...expedient,
                 estado: false,
+                lock_exp: true,
                 updatedby: sessionUser.id,
                 updatedat: new Date().toISOString(),
               }
             : expedient
         )
       );
+      resetUploadState();
 
       try {
         const updatedExpedients = await fetchExpedientsData(t);
@@ -970,11 +1001,12 @@ const Expedients = () => {
                         </tr>
                       ) : (
                         paginatedExpedients.map((expedient) => {
-                          const isExpedientClosed =
-                            !expedient.estado ||
-                            locallyClosedExpedientIds.has(expedient.expedienteid);
+                          const isExpedientClosedByStatus = isExpedientClosed(
+                            expedient,
+                            locallyClosedExpedientIds
+                          );
                           const statusMeta = getExpedientStatusMeta(
-                            !isExpedientClosed,
+                            !isExpedientClosedByStatus,
                             t
                           );
                           const invoiceCode = getInvoiceCode(expedient.factura);
@@ -1090,7 +1122,7 @@ const Expedients = () => {
                                         label: t("Close Expedient"),
                                         icon: "ri-folder-close-line",
                                         tone: "danger",
-                                        disabled: isExpedientClosed,
+                                        disabled: isExpedientClosedByStatus,
                                         onClick: () =>
                                           handleOpenCloseExpedientModal(expedient),
                                       },
@@ -1198,7 +1230,7 @@ const Expedients = () => {
                 color="light"
                 className="expedient-upload-toggle-button"
                 onClick={() => setIsUploadPanelOpen((current) => !current)}
-                disabled={uploadingDocument}
+                disabled={uploadingDocument || isSelectedExpedientClosed}
               >
                 <i
                   className={`${
@@ -1227,7 +1259,9 @@ const Expedients = () => {
               </div>
             )}
 
-            {selectedExpedient && isUploadPanelOpen && (
+            {selectedExpedient &&
+              isUploadPanelOpen &&
+              !isSelectedExpedientClosed && (
               <div className="expedient-upload-panel">
                 <div className="expedient-upload-panel-header">
                   <div>
@@ -1263,7 +1297,7 @@ const Expedients = () => {
                       classNamePrefix="expedient-upload-select"
                       styles={uploadDocumentTypeSelectStyles}
                       menuPortalTarget={document.body}
-                      isDisabled={uploadingDocument}
+                      isDisabled={uploadingDocument || isSelectedExpedientClosed}
                     />
                   </div>
 
@@ -1282,7 +1316,7 @@ const Expedients = () => {
                       type="button"
                       className="expedient-upload-dropzone"
                       onClick={() => uploadInputRef.current?.click()}
-                      disabled={uploadingDocument}
+                      disabled={uploadingDocument || isSelectedExpedientClosed}
                     >
                       <span className="expedient-upload-dropzone-icon">
                         <i className="ri-file-upload-line" />
@@ -1307,7 +1341,7 @@ const Expedients = () => {
                       color="primary"
                       className="expedient-upload-submit-button"
                       onClick={handleUploadDocument}
-                      disabled={uploadingDocument}
+                      disabled={uploadingDocument || isSelectedExpedientClosed}
                     >
                       {uploadingDocument ? (
                         <>
