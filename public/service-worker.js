@@ -8,6 +8,8 @@ const APP_SHELL_ASSETS = [
   "./favicon.ico",
   "./logo192.png",
   "./logo512.png",
+  "./logo192-maskable.png",
+  "./logo512-maskable.png",
 ];
 
 self.addEventListener("install", (event) => {
