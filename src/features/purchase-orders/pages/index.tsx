@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
+import Select from "react-select";
 import {
   Button,
   Card,
@@ -28,8 +29,13 @@ import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { Document } from "../../documents/pages/List/types";
+import { getPreviewUrl } from "../../documents/pages/List/document-utils";
+import { fetchSigners } from "../../documents/pages/OrderC/api";
+import type { SelectOption } from "../../documents/pages/OrderC/types";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
 import { intelligentSearch } from "../../../helpers/search-utils";
+import PurchaseOrderPdfPreviewModal from "./PurchaseOrderPdfPreviewModal";
+import "./PurchaseOrderDetails.css";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
@@ -192,6 +198,14 @@ const fetchRelatedInvoicePdfFile = async (
   }
 
   return null;
+};
+
+const getDocumentSourceUrl = (document?: Document | null) =>
+  String(document?.file_url || document?.documenturl || "").trim();
+
+const getDocumentPreviewUrl = (document?: Document | null) => {
+  const sourceUrl = getDocumentSourceUrl(document);
+  return sourceUrl ? getPreviewUrl(sourceUrl) : "";
 };
 
 const buildExpedientDocumentsPayload = (
@@ -486,13 +500,19 @@ const PurchaseOrderDetails = () => {
   const [purchaseStateOptions, setPurchaseStateOptions] = useState<CatalogItem[]>(
     []
   );
+  const [signerOptions, setSignerOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSigners, setLoadingSigners] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [purchaseStateFilter, setPurchaseStateFilter] = useState("all");
+  const [signerFilter, setSignerFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(null);
   const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
+  const [invoicePreviewDocument, setInvoicePreviewDocument] =
+    useState<Document | null>(null);
   const [selectedState, setSelectedState] = useState<number | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
 
@@ -508,8 +528,95 @@ const PurchaseOrderDetails = () => {
     details.reduce((sum, detail) => sum + Number(detail.total || 0), 0);
 
   const itemsPerPage = 10;
-  const filteredPurchaseOrders = purchaseOrders.filter((purchaseOrder) =>
-    intelligentSearch(purchaseOrder, searchTerm)
+  const purchaseStateFilterOptions = useMemo(() => {
+    const sourceOptions =
+      purchaseStateOptions.length > 0
+        ? purchaseStateOptions
+        : Array.from(
+            new Map(
+              purchaseOrders.map((purchaseOrder) => [
+                purchaseOrder.purchaseState,
+                {
+                  id: purchaseOrder.purchaseState,
+                  descripcion:
+                    purchaseOrder.purchaseStateLabel ||
+                    purchaseStateLookup[purchaseOrder.purchaseState] ||
+                    String(purchaseOrder.purchaseState),
+                },
+              ])
+            ).values()
+          );
+
+    return sourceOptions.map((option) => ({
+      value: String(option.id),
+      label:
+        getPurchaseStateMeta(option.id, t, option.descripcion).label ||
+        option.descripcion,
+    }));
+  }, [purchaseOrders, purchaseStateLookup, purchaseStateOptions, t]);
+
+  const signerFilterOptions = useMemo(() => {
+    const availableSignerIds = new Set(
+      purchaseOrders
+        .map((purchaseOrder) => purchaseOrder.signature)
+        .filter(
+          (signature): signature is number =>
+            typeof signature === "number" && Number.isFinite(signature)
+        )
+        .map((signature) => String(signature))
+    );
+
+    return signerOptions.filter((option) => availableSignerIds.has(option.value));
+  }, [purchaseOrders, signerOptions]);
+
+  const selectedSignerFilterOption =
+    signerFilterOptions.find((option) => option.value === signerFilter) ?? null;
+
+  const filteredPurchaseOrders = useMemo(
+    () =>
+      purchaseOrders.filter((purchaseOrder) => {
+        const purchaseStateLabel =
+          purchaseOrder.purchaseStateLabel ||
+          purchaseStateLookup[purchaseOrder.purchaseState] ||
+          "";
+        const signerLabel =
+          typeof purchaseOrder.signature === "number"
+            ? userLookup[purchaseOrder.signature] || String(purchaseOrder.signature)
+            : "";
+
+        if (
+          purchaseStateFilter !== "all" &&
+          String(purchaseOrder.purchaseState) !== purchaseStateFilter
+        ) {
+          return false;
+        }
+
+        if (
+          signerFilter !== "all" &&
+          String(purchaseOrder.signature ?? "") !== signerFilter
+        ) {
+          return false;
+        }
+
+        return intelligentSearch(
+          {
+            ...purchaseOrder,
+            purchaseStateLabel,
+            signerLabel,
+            createdByLabel:
+              userLookup[purchaseOrder.createdBy] || String(purchaseOrder.createdBy),
+          },
+          searchTerm
+        );
+      }),
+    [
+      purchaseOrders,
+      purchaseStateFilter,
+      purchaseStateLookup,
+      searchTerm,
+      signerFilter,
+      userLookup,
+    ]
   );
 
   const totalPages = Math.ceil(filteredPurchaseOrders.length / itemsPerPage);
@@ -591,6 +698,14 @@ const PurchaseOrderDetails = () => {
     if (alertId === "purchase-orders-action-error") {
       setActionError(null);
     }
+  };
+
+  const handleOpenInvoicePreview = (document: Document) => {
+    setInvoicePreviewDocument(document);
+  };
+
+  const handleCloseInvoicePreview = () => {
+    setInvoicePreviewDocument(null);
   };
 
   const handleConfirmOrderState = async () => {
@@ -907,6 +1022,23 @@ const PurchaseOrderDetails = () => {
     fetchPurchaseOrders();
   }, [t]);
 
+  useEffect(() => {
+    const loadSigners = async () => {
+      try {
+        setLoadingSigners(true);
+        setSignerOptions(await fetchSigners());
+      } catch (fetchError: any) {
+        setActionError(
+          fetchError?.message || t("Error loading signers")
+        );
+      } finally {
+        setLoadingSigners(false);
+      }
+    };
+
+    loadSigners();
+  }, [t]);
+
   return (
     <React.Fragment>
       <div className="page-content">
@@ -922,27 +1054,70 @@ const PurchaseOrderDetails = () => {
 
           <Card className="border-0 shadow-sm">
             <CardBody>
-              <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                <div>
+              <div className="purchase-order-filters-toolbar mb-4">
+                <div className="purchase-order-filters-title">
                   <h5 className="mb-1">{t("Purchase Order List")}</h5>
                   <p className="text-muted mb-0">
                     {t("Latest registered orders.")}
                   </p>
                 </div>
-                <div className="d-flex align-items-center gap-2 flex-wrap">
-                  <InputGroup style={{ maxWidth: "280px" }}>
-                    <InputGroupText>
-                      <i className="ri-search-line" />
-                    </InputGroupText>
-                    <Input
-                      placeholder={t("Search...")}
-                      value={searchTerm}
-                      onChange={(event) => {
-                        setSearchTerm(event.target.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  </InputGroup>
+                <div className="purchase-order-filters-controls-row">
+                  <div className="purchase-order-filters-controls">
+                    <InputGroup className="purchase-order-filter-control purchase-order-filter-control--search">
+                      <InputGroupText>
+                        <i className="ri-search-line" />
+                      </InputGroupText>
+                      <Input
+                        placeholder={t("Search...")}
+                        value={searchTerm}
+                        onChange={(event) => {
+                          setSearchTerm(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
+                    </InputGroup>
+
+                    <div className="purchase-order-toolbar__field purchase-order-filter-control purchase-order-filter-control--status">
+                      <span className="purchase-order-toolbar__label">
+                        {t("Status")}
+                      </span>
+                      <Input
+                        type="select"
+                        value={purchaseStateFilter}
+                        onChange={(event) => {
+                          setPurchaseStateFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="purchase-order-toolbar__select"
+                      >
+                        <option value="all">{t("All")}</option>
+                        {purchaseStateFilterOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </Input>
+                    </div>
+
+                    <div className="purchase-order-toolbar__field purchase-order-filter-control purchase-order-filter-control--signer">
+                      <span className="purchase-order-toolbar__label">
+                        {t("Signer Person")}
+                      </span>
+                      <Select
+                        options={signerFilterOptions}
+                        value={selectedSignerFilterOption}
+                        onChange={(selected: SelectOption | null) => {
+                          setSignerFilter(selected ? selected.value : "all");
+                          setCurrentPage(1);
+                        }}
+                        placeholder={t("Select who signed")}
+                        isClearable
+                        isLoading={loadingSigners}
+                        classNamePrefix="select2-selection"
+                        className="purchase-order-toolbar__react-select"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -987,6 +1162,11 @@ const PurchaseOrderDetails = () => {
                         </tr>
                       ) : (
                         paginatedPurchaseOrders.map((purchaseOrder) => {
+                          const relatedDocument =
+                            documentsByAssociatedNo[purchaseOrder.documentAssociatedNo] ??
+                            null;
+                          const invoicePreviewUrl =
+                            getDocumentPreviewUrl(relatedDocument);
                           const currency = getCurrencyMeta(
                             purchaseOrder.currency,
                             t,
@@ -1064,7 +1244,20 @@ const PurchaseOrderDetails = () => {
                                 className="text-center"
                                 style={{ whiteSpace: "nowrap" }}
                               >
-                                <div className="d-inline-flex justify-content-center">
+                                <div className="purchase-order-row-actions">
+                                  <button
+                                    type="button"
+                                    className="purchase-order-action-icon"
+                                    onClick={() =>
+                                      relatedDocument &&
+                                      handleOpenInvoicePreview(relatedDocument)
+                                    }
+                                    disabled={!relatedDocument || !invoicePreviewUrl}
+                                    title={t("View invoice")}
+                                    aria-label={t("View invoice")}
+                                  >
+                                    <i className="ri-eye-line" />
+                                  </button>
                                   <TableActionsMenu
                                     disabled={
                                       generatingOrderId ===
@@ -1219,6 +1412,19 @@ const PurchaseOrderDetails = () => {
           </Button>
         </ModalFooter>
       </Modal>
+      <PurchaseOrderPdfPreviewModal
+        isOpen={!!invoicePreviewDocument}
+        fileName={
+          invoicePreviewDocument
+            ? t("Series {{serial}} - Number {{number}}", {
+                serial: invoicePreviewDocument.documentserial,
+                number: invoicePreviewDocument.documentnumber,
+              })
+            : ""
+        }
+        previewUrl={getDocumentPreviewUrl(invoicePreviewDocument)}
+        onClose={handleCloseInvoicePreview}
+      />
     </React.Fragment>
   );
 };
