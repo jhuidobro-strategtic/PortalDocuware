@@ -93,7 +93,7 @@
     .main-content {
       /* Quitamos margin-top o padding-top forzado para que no haya espacios en blanco extra */
       margin-top: 0 !important;
-      padding-top: calc(70px + max(env(safe-area-inset-top), 9px)) !important;
+      padding-top: calc(0px + max(env(safe-area-inset-top), 15px)) !important;
       /* Dar espacio en el footer al contenido para que el navbar inferior no tape elementos */
       padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
     }
