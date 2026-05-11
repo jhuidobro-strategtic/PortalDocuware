@@ -114,9 +114,20 @@ export const getOrderCFields = (signerOptions: SelectOption[] = []): OrderCField
     placeholderKey: "Select purchase status",
   },
   {
+    name: "requiredby",
+    labelKey: "Requested by",
+    placeholderKey: "Enter requested by",
+  },
+  {
     name: "signedBy",
-    labelKey: "Signed by",
-    placeholderKey: "Select who signed",
+    labelKey: "Junior Lawyer",
+    placeholderKey: "Select junior lawyer",
+    options: signerOptions,
+  },
+  {
+    name: "signature2",
+    labelKey: "Senior Lawyer",
+    placeholderKey: "Select senior lawyer",
     options: signerOptions,
   },
   {
@@ -237,8 +248,8 @@ export const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
       storedTotal:
         item.valor_venta !== undefined || item.impuesto_valor !== undefined
           ? formatDecimalValue(
-              Number(item.valor_venta ?? 0) + Number(item.impuesto_valor ?? 0)
-            )
+            Number(item.valor_venta ?? 0) + Number(item.impuesto_valor ?? 0)
+          )
           : undefined,
     }))
     .filter((item) => item.descriptionItem || item.unitPrice);
@@ -269,6 +280,8 @@ export const createInitialValues = (document: Document | null): OrderCFormValues
     purchaseState: "11",
     orderType: "",
     signedBy: "",
+    signature2: "",
+    requiredby: "",
     createdBy: sessionUser.id,
     createdByName: sessionUser.name,
   };
@@ -349,6 +362,8 @@ export const buildPurchaseOrderPayload = (
   purchaseState: Number(values.purchaseState),
   tipoorden: values.orderType.trim(),
   signature: Number(values.signedBy),
+  signature2: Number(values.signature2),
+  requiredby: values.requiredby.trim(),
   createdBy: Number(values.createdBy),
   details: details.map((detail) => ({
     descriptionItem: detail.descriptionItem.trim(),
@@ -370,6 +385,8 @@ export const requiredFields: OrderCFieldName[] = [
   "store",
   "purchaseState",
   "signedBy",
+  "signature2",
+  "requiredby",
   "createdBy",
 ];
 

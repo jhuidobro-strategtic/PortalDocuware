@@ -12,6 +12,8 @@ export interface OrderCFormValues {
   purchaseState: string;
   orderType: string;
   signedBy: string;
+  signature2: string;
+  requiredby: string;
   createdBy: string;
   createdByName: string;
 }

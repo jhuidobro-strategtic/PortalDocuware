@@ -71,6 +71,8 @@ interface PurchaseOrder {
   purchaseStateLabel?: string;
   tipoorden: string | null;
   signature: number | null;
+  signature2: number | null;
+  requiredby?: string | null;
   createdBy: number;
   createAt: string;
   updatedBy: number | null;
@@ -119,6 +121,8 @@ interface PurchaseOrderApiItem {
   purchaseState: number | CatalogItem;
   tipoorden?: string | null;
   signature?: number | null;
+  signature2?: number | null;
+  requiredby?: string | null;
   createdBy: number;
   createAt: string;
   updatedBy: number | null;
@@ -317,6 +321,11 @@ const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
     typeof item.signature === "number" && Number.isFinite(item.signature)
       ? item.signature
       : null,
+  signature2:
+    typeof item.signature2 === "number" && Number.isFinite(item.signature2)
+      ? item.signature2
+      : null,
+  requiredby: String(item.requiredby ?? "").trim() || null,
   createdBy: item.createdBy,
   createAt: item.createAt,
   updatedBy: item.updatedBy,
@@ -1051,6 +1060,7 @@ const PurchaseOrderDetails = () => {
           documentAssociatedTypeLabel:
             orderModal.documentAssociatedTypeLabel || "",
           requiredByName:
+            orderModal.requiredby ||
             userLookup[orderModal.createdBy] ||
             (orderModal.createdBy === sessionUser.id ? sessionUser.name : ""),
           executedByName:

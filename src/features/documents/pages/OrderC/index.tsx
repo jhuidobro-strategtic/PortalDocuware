@@ -42,7 +42,6 @@ const DocumentOrderC = () => {
     feedback,
     catalogOptions,
     supplierOptions,
-    signerOptions,
     loadingSigners,
     orderCFields,
     numberLocale,
@@ -294,12 +293,13 @@ const DocumentOrderC = () => {
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
                     const isSupplierSelect = field.name === "supplierID";
                     const isCurrencySelect = field.name === "currency";
-                    const isSignedBySelect = field.name === "signedBy";
+                    const isSignerSelect =
+                      field.name === "signedBy" || field.name === "signature2";
                     const isSelect = !!field.options || isCatalogSelect || isSupplierSelect;
                     const selectOptions = field.options
                       ? field.options.map((opt) => ({
                           ...opt,
-                          label: isSignedBySelect ? opt.label : t(opt.label),
+                          label: isSignerSelect ? opt.label : t(opt.label),
                         }))
                       : isSupplierSelect
                       ? supplierSelectOptions
@@ -332,7 +332,7 @@ const DocumentOrderC = () => {
                               }
                               placeholder={t(field.placeholderKey)}
                               isClearable
-                              isLoading={isSignedBySelect && loadingSigners}
+                              isLoading={isSignerSelect && loadingSigners}
                               classNamePrefix="select2-selection"
                               formatOptionLabel={
                                 isCurrencySelect
