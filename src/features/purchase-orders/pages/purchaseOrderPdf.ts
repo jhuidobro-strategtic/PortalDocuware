@@ -700,7 +700,7 @@ export const generatePurchaseOrderPdf = async ({
   );
   doc.line(signatureStartX, footerTop + 6, summaryStartX, footerTop + 6);
 
-  const signatureText = executedByName ? ` - ${executedByName}` : "";
+  const signatureText = executedByName ? ` ${executedByName}` : "";
   const signatureDate = moment(purchaseOrder.updatedAt || purchaseOrder.createAt).format("DD/MM/YYYY | HH:mm");
   const authLabel = `AUTORIZACIÓN${signatureText} | ${signatureDate}`;
 
