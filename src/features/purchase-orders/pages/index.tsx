@@ -526,6 +526,7 @@ const PurchaseOrderDetails = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [purchaseStateFilter, setPurchaseStateFilter] = useState("all");
   const [signerFilter, setSignerFilter] = useState("all");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(null);
   const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
@@ -628,6 +629,13 @@ const PurchaseOrderDetails = () => {
           return false;
         }
 
+        if (
+          orderTypeFilter !== "all" &&
+          String(purchaseOrder.tipoorden ?? "").trim() !== orderTypeFilter
+        ) {
+          return false;
+        }
+
         return intelligentSearch(
           {
             ...purchaseOrder,
@@ -645,6 +653,7 @@ const PurchaseOrderDetails = () => {
       purchaseStateLookup,
       searchTerm,
       signerFilter,
+      orderTypeFilter,
       userLookup,
     ]
   );
@@ -1359,6 +1368,25 @@ const PurchaseOrderDetails = () => {
                             {option.label}
                           </option>
                         ))}
+                      </Input>
+                    </div>
+
+                    <div className="purchase-order-filter-control purchase-order-filter-control--type">
+                      <span className="purchase-order-toolbar__label">
+                        {t("Type")}
+                      </span>
+                      <Input
+                        type="select"
+                        value={orderTypeFilter}
+                        onChange={(event) => {
+                          setOrderTypeFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="purchase-order-toolbar__select"
+                      >
+                        <option value="all">{t("All")}</option>
+                        <option value="C">{t("Compra")}</option>
+                        <option value="S">{t("Servicio")}</option>
                       </Input>
                     </div>
 

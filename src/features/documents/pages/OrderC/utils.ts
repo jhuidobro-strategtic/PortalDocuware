@@ -195,7 +195,7 @@ export const createInitialSunatSearchValues = (
 ): SunatSearchValues => ({
   tipoComprobante: getSunatDocumentType(document),
   serie: document?.documentserial ?? "",
-  numero: document?.documentnumber ?? "",
+  numero: document?.documentnumber ? document.documentnumber.replace(/^0+/, "") : "",
 });
 
 export const mapSunatCurrencyToOrderCurrency = (currencyCode: unknown) => {

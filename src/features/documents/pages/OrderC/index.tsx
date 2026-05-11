@@ -239,7 +239,7 @@ const DocumentOrderC = () => {
                     <Input
                       value={sunatSearchValues.numero}
                       onChange={(event) =>
-                        handleSunatSearchValueChange("numero", event.target.value)
+                        handleSunatSearchValueChange("numero", event.target.value.replace(/^0+/, ""))
                       }
                       placeholder="2603"
                     />

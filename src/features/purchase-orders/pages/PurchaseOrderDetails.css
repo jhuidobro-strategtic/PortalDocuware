@@ -54,6 +54,10 @@
   width: min(100%, 260px);
 }
 
+.purchase-order-filter-control--type {
+  width: min(100%, 150px);
+}
+
 .purchase-order-toolbar__field {
   display: flex;
   flex-direction: column;
@@ -158,6 +162,7 @@
 
   .purchase-order-filter-control--search,
   .purchase-order-filter-control--status,
+  .purchase-order-filter-control--type,
   .purchase-order-filter-control--signer,
   .purchase-order-filters-controls,
   .purchase-order-actions-group,
