@@ -553,8 +553,8 @@ export const generatePurchaseOrderPdf = async ({
       head: [
         [
           "ITEM",
-          "DESCRIPCION",
-          "CODIGO",
+          "DESCRIPCIÓN",
+          "CÓDIGO",
           "COSTO 1",
           "COSTO 2",
           "MARCA",

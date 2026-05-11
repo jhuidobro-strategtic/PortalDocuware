@@ -24,9 +24,9 @@ import { downloadBlob } from "../../../../helpers/download-blob";
 type PurchaseOrderStateValue =
   | number
   | {
-      id?: number;
-      descripcion?: string;
-    };
+    id?: number;
+    descripcion?: string;
+  };
 
 type PurchaseOrderReference = {
   documentAssociatedNo?: string;
@@ -461,10 +461,10 @@ const DocumentList: React.FC = () => {
         "Serie",
         "Numero",
         "RUC",
-        "Razon Social",
+        "Razón Social",
         "Tipo Documento",
         "Comprador",
-        "Fecha Emision",
+        "Fecha Emisión",
         "Sub Total",
         "IGV",
         "Total",

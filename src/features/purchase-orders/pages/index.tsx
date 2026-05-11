@@ -829,13 +829,13 @@ const PurchaseOrderDetails = () => {
 
       const headers = [
         "ID",
-        "Numero de Orden",
+        "Número de Orden",
         "Proveedor",
         "Documento Asociado",
-        "Condicion de Pago",
+        "Condición de Pago",
         "Moneda",
         "Numero de Guia",
-        "Almacen",
+        "Almacén",
         "Estado",
         "Persona Firmante",
         "Creado por",
