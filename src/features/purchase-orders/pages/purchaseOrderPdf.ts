@@ -364,11 +364,11 @@ export const generatePurchaseOrderPdf = async ({
       value: safeValue(supplier?.supplierno, relatedDocument?.suppliernumber),
     },
     {
-      label: "RAZON SOCIAL",
+      label: "RAZÓN SOCIAL",
       value: safeValue(supplier?.suppliername, relatedDocument?.suppliername),
     },
     {
-      label: "DIRECCION",
+      label: "DIRECCIÓN",
       value: safeValue(supplier?.address),
       minLines: 2,
       valueMaxWidth: 108,
@@ -408,7 +408,7 @@ export const generatePurchaseOrderPdf = async ({
       ),
     },
     {
-      label: "CONDICION DE PAGO",
+      label: "CONDICIÓN DE PAGO",
       value: getPaymentConditionLabel(
         purchaseOrder.paymentCondition,
         paymentConditionLabel
@@ -419,15 +419,15 @@ export const generatePurchaseOrderPdf = async ({
       value: getCurrencyLabel(purchaseOrder.currency, currencyLabel),
     },
     {
-      label: "GUIA REMISION",
+      label: "GUÍA REMISIÓN",
       value: safeValue(purchaseOrder.guideNo),
     },
     {
-      label: "COTIZACION / PROF.",
+      label: "COTIZACIÓN / PROF.",
       value: "-",
     },
     {
-      label: "ALMACEN",
+      label: "ALMACÉN",
       value: safeValue(storeLabel),
     },
     {
@@ -702,10 +702,10 @@ export const generatePurchaseOrderPdf = async ({
 
   const signatureText = executedByName ? ` - ${executedByName}` : "";
   const signatureDate = moment(purchaseOrder.updatedAt || purchaseOrder.createAt).format("DD/MM/YYYY | HH:mm");
-  const authLabel = `AUTORIZACION${signatureText} | ${signatureDate}`;
+  const authLabel = `AUTORIZACIÓN${signatureText} | ${signatureDate}`;
 
   doc.text(authLabel, signatureStartX + 2, footerTop + 4.5);
-  doc.text("VB AREA LOGISTICA", signatureStartX + 2, footerTop + 10.5);
+  doc.text("VB ÁREA LOGÍSTICA", signatureStartX + 2, footerTop + 10.5);
   doc.text(
     "VB JEFATURA",
     signatureStartX + signatureColumnWidth + 2,
