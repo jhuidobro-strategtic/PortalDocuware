@@ -1348,6 +1348,24 @@ const PurchaseOrderDetails = () => {
                         }}
                       />
                     </InputGroup>
+                    <div className="purchase-order-filter-control purchase-order-filter-control--type">
+                      <span className="purchase-order-toolbar__label">
+                        {t("Type")}
+                      </span>
+                      <Input
+                        type="select"
+                        value={orderTypeFilter}
+                        onChange={(event) => {
+                          setOrderTypeFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="purchase-order-toolbar__select"
+                      >
+                        <option value="all">{t("All")}</option>
+                        <option value="C">{t("Compra")}</option>
+                        <option value="S">{t("Servicio")}</option>
+                      </Input>
+                    </div>
 
                     <div className="purchase-order-filter-control purchase-order-filter-control--status">
                       <span className="purchase-order-toolbar__label">
@@ -1368,25 +1386,6 @@ const PurchaseOrderDetails = () => {
                             {option.label}
                           </option>
                         ))}
-                      </Input>
-                    </div>
-
-                    <div className="purchase-order-filter-control purchase-order-filter-control--type">
-                      <span className="purchase-order-toolbar__label">
-                        {t("Type")}
-                      </span>
-                      <Input
-                        type="select"
-                        value={orderTypeFilter}
-                        onChange={(event) => {
-                          setOrderTypeFilter(event.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="purchase-order-toolbar__select"
-                      >
-                        <option value="all">{t("All")}</option>
-                        <option value="C">{t("Compra")}</option>
-                        <option value="S">{t("Servicio")}</option>
                       </Input>
                     </div>
 
@@ -1660,15 +1659,15 @@ const PurchaseOrderDetails = () => {
                   type="button"
                   onClick={() => setSelectedState(option.value)}
                   className={`d-flex align-items-center gap-3 rounded-3 border p-2 text-start bg-transparent w-100 transition-all ${isSelected
-                      ? `border-${option.colorClass} bg-${option.colorClass}-subtle`
-                      : "border-light"
+                    ? `border-${option.colorClass} bg-${option.colorClass}-subtle`
+                    : "border-light"
                     }`}
                   style={{ cursor: "pointer" }}
                 >
                   <div
                     className={`d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${isSelected
-                        ? `bg-${option.colorClass} text-white`
-                        : `text-${option.colorClass} bg-${option.colorClass}-subtle`
+                      ? `bg-${option.colorClass} text-white`
+                      : `text-${option.colorClass} bg-${option.colorClass}-subtle`
                       }`}
                     style={{ width: 36, height: 36 }}
                   >
