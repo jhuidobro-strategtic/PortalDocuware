@@ -26,7 +26,7 @@ const SearchOption = () => {
 
     return (
         <React.Fragment>
-            <form className="app-search d-none d-md-block">
+            {/* <form className="app-search d-none d-md-block">
                 <div className="position-relative">
                     <Input
                         type="text"
@@ -73,7 +73,7 @@ const SearchOption = () => {
                         )}
                     </div>
                 )}
-            </form>
+            </form> */}
         </React.Fragment>
     );
 };
