@@ -513,6 +513,7 @@ const PurchaseOrderDetails = () => {
   const [exportingExcel, setExportingExcel] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [purchaseStateFilter, setPurchaseStateFilter] = useState("all");
   const [signerFilter, setSignerFilter] = useState("all");
@@ -662,6 +663,39 @@ const PurchaseOrderDetails = () => {
     });
   }
 
+  if (actionSuccess) {
+    floatingAlerts.push({
+      id: "purchase-orders-action-success",
+      type: "success",
+      message: actionSuccess,
+      autoDismissMs: 5000,
+    });
+  }
+
+  if (generatingOrderId !== null) {
+    const generatingOrder =
+      purchaseOrders.find(
+        (purchaseOrder) => purchaseOrder.purchaseOrderID === generatingOrderId
+      ) ?? null;
+
+    floatingAlerts.push({
+      id: "purchase-orders-action-loading",
+      type: "info",
+      dismissible: false,
+      message: (
+        <span className="d-inline-flex align-items-center gap-2">
+          <Spinner size="sm" />
+          <span>
+            {t("Generating expedient for order {{orderNo}}...", {
+              orderNo:
+                generatingOrder?.orderNo || `#${String(generatingOrderId)}`,
+            })}
+          </span>
+        </span>
+      ),
+    });
+  }
+
   const modalStateOptions = (
     purchaseStateOptions.length > 0
       ? purchaseStateOptions
@@ -701,6 +735,7 @@ const PurchaseOrderDetails = () => {
     );
     setSelectedState(currentStateOption?.value ?? null);
     setActionError(null);
+    setActionSuccess(null);
     setOrderModal(purchaseOrder);
   };
 
@@ -717,6 +752,11 @@ const PurchaseOrderDetails = () => {
 
     if (alertId === "purchase-orders-action-error") {
       setActionError(null);
+      return;
+    }
+
+    if (alertId === "purchase-orders-action-success") {
+      setActionSuccess(null);
     }
   };
 
@@ -929,6 +969,7 @@ const PurchaseOrderDetails = () => {
     try {
       setConfirmingState(true);
       setActionError(null);
+      setActionSuccess(null);
 
       const response = await fetch(buildApiUrl("purchase-orders/status/"), {
         method: "POST",
@@ -1057,7 +1098,12 @@ const PurchaseOrderDetails = () => {
           );
         }
 
+        setActionSuccess(
+          expedienteData?.message || t("Expedient generated successfully.")
+        );
+
       } else {
+        setActionSuccess(data?.message || t("Purchase order status updated successfully."));
         setOrderModal(null);
       }
     } catch (generateError: any) {
@@ -1083,6 +1129,7 @@ const PurchaseOrderDetails = () => {
         setLoading(true);
         setError(null);
         setActionError(null);
+        setActionSuccess(null);
 
         const [
           purchaseOrdersResponse,
