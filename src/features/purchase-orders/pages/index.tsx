@@ -28,6 +28,7 @@ import FloatingAlerts, {
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
+import { downloadBlob } from "../../../helpers/download-blob";
 import { Document } from "../../documents/pages/List/types";
 import { getPreviewUrl } from "../../documents/pages/List/document-utils";
 import { fetchSigners } from "../../documents/pages/OrderC/api";
@@ -35,6 +36,7 @@ import type { SelectOption } from "../../documents/pages/OrderC/types";
 import { generatePurchaseOrderPdf } from "./purchaseOrderPdf";
 import { intelligentSearch } from "../../../helpers/search-utils";
 import PurchaseOrderPdfPreviewModal from "./PurchaseOrderPdfPreviewModal";
+import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
 
 interface PurchaseOrderDetail {
@@ -503,6 +505,7 @@ const PurchaseOrderDetails = () => {
   const [signerOptions, setSignerOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSigners, setLoadingSigners] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -706,6 +709,192 @@ const PurchaseOrderDetails = () => {
 
   const handleCloseInvoicePreview = () => {
     setInvoicePreviewDocument(null);
+  };
+
+  const exportToExcel = async () => {
+    try {
+      setExportingExcel(true);
+      setActionError(null);
+
+      const { Workbook } = await import("exceljs");
+      const workbook = new Workbook();
+      const worksheet = workbook.addWorksheet("Ordenes de Compra");
+
+      try {
+        const response = await fetch(LogoDocuware);
+        const imageBuffer = await response.arrayBuffer();
+        const imageId = workbook.addImage({
+          buffer: imageBuffer,
+          extension: "png",
+        });
+
+        worksheet.addImage(imageId, "B1:D2");
+      } catch {
+        // Keep the export available even if the logo cannot be embedded.
+      }
+
+      worksheet.mergeCells("E1:N2");
+      const titleCell = worksheet.getCell("E1");
+      titleCell.value = "REPORTE DE ORDENES DE COMPRA";
+      titleCell.alignment = { vertical: "middle", horizontal: "center" };
+      titleCell.font = { size: 14, bold: true };
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "D9E1F2" },
+      };
+
+      ["A1", "A2", "B1", "C1", "D1", "B2", "C2", "D2"].forEach((cell) => {
+        worksheet.getCell(cell).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "D9E1F2" },
+        };
+      });
+
+      const headers = [
+        "ID",
+        "Numero de Orden",
+        "Proveedor",
+        "Documento Asociado",
+        "Condicion de Pago",
+        "Moneda",
+        "Numero de Guia",
+        "Almacen",
+        "Estado",
+        "Persona Firmante",
+        "Creado por",
+        "Fecha",
+        "Items",
+        "Total Orden",
+      ];
+
+      headers.forEach((header, index) => {
+        const cell = worksheet.getCell(3, index + 1);
+        cell.value = header;
+        cell.font = { bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "F2F2F2" },
+        };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      filteredPurchaseOrders.forEach((purchaseOrder) => {
+        const purchaseStateLabel =
+          purchaseOrder.purchaseStateLabel ||
+          purchaseStateLookup[purchaseOrder.purchaseState] ||
+          t("No status");
+        const signerLabel =
+          typeof purchaseOrder.signature === "number"
+            ? userLookup[purchaseOrder.signature] || String(purchaseOrder.signature)
+            : "-";
+        const creatorLabel =
+          userLookup[purchaseOrder.createdBy] || String(purchaseOrder.createdBy);
+        const supplierLabel =
+          purchaseOrder.supplierLabel ||
+          getLookupLabel(supplierLookup, purchaseOrder.supplierID);
+        const paymentConditionLabel =
+          purchaseOrder.paymentConditionLabel ||
+          getLookupLabel(paymentConditionLookup, purchaseOrder.paymentCondition);
+        const currencyLabel =
+          getCurrencyMeta(
+            purchaseOrder.currency,
+            t,
+            purchaseOrder.currencyLabel || currencyLookup[purchaseOrder.currency]
+          ).label || "-";
+        const storeLabel =
+          purchaseOrder.storeLabel ||
+          getLookupLabel(storeLookup, purchaseOrder.store);
+        const row = worksheet.addRow([
+          purchaseOrder.purchaseOrderID,
+          purchaseOrder.orderNo,
+          supplierLabel,
+          purchaseOrder.documentAssociatedNo,
+          paymentConditionLabel,
+          currencyLabel,
+          purchaseOrder.guideNo || "-",
+          storeLabel,
+          purchaseStateLabel,
+          signerLabel,
+          creatorLabel,
+          moment(purchaseOrder.createAt).format("DD/MM/YYYY"),
+          purchaseOrder.details.length,
+          getOrderTotal(purchaseOrder.details),
+        ]);
+
+        row.eachCell((cell, columnNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          if (columnNumber === 9) {
+            const stateKind = getPurchaseStateKind(
+              purchaseOrder.purchaseState,
+              purchaseStateLabel
+            );
+            cell.font = {
+              color: {
+                argb:
+                  stateKind === "approved"
+                    ? "008000"
+                    : stateKind === "rejected"
+                    ? "FF0000"
+                    : stateKind === "pending"
+                    ? "B54708"
+                    : "344054",
+              },
+              bold: true,
+            };
+          }
+
+          if (columnNumber === 14) {
+            cell.numFmt = "#,##0.00";
+            cell.alignment = { horizontal: "right" };
+          }
+        });
+      });
+
+      worksheet.columns = [
+        { width: 8 },
+        { width: 20 },
+        { width: 34 },
+        { width: 22 },
+        { width: 22 },
+        { width: 14 },
+        { width: 18 },
+        { width: 18 },
+        { width: 18 },
+        { width: 28 },
+        { width: 22 },
+        { width: 16 },
+        { width: 10 },
+        { width: 16 },
+      ];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      await downloadBlob(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        `Ordenes_Compra_${moment().format("YYYYMMDD_HHmmss")}.xlsx`
+      );
+    } catch (exportError) {
+      console.error("Error exporting purchase orders to Excel:", exportError);
+      setActionError(t("Could not export Excel file"));
+    } finally {
+      setExportingExcel(false);
+    }
   };
 
   const handleConfirmOrderState = async () => {
@@ -1117,6 +1306,27 @@ const PurchaseOrderDetails = () => {
                         className="purchase-order-toolbar__react-select"
                       />
                     </div>
+                  </div>
+                  <div className="purchase-order-actions-group">
+                    <Button
+                      color="success"
+                      onClick={exportToExcel}
+                      title={t("Export Excel")}
+                      className="purchase-order-action-button"
+                      disabled={exportingExcel}
+                    >
+                      {exportingExcel ? (
+                        <>
+                          <Spinner size="sm" />
+                          <span>{t("Processing...")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-file-excel-2-line" />
+                          <span>{t("Export Excel")}</span>
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
