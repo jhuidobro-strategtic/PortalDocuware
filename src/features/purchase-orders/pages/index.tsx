@@ -583,7 +583,7 @@ const PurchaseOrderDetails = () => {
       label:
         getPurchaseStateMeta(option.id, t, option.descripcion).label ||
         option.descripcion,
-    }));
+    })).filter((option) => !option.label.toLowerCase().includes("temporal") && !option.label.toLowerCase().includes("temproral"));
   }, [purchaseOrders, purchaseStateLookup, purchaseStateOptions, t]);
 
   const signerFilterOptions = useMemo(() => {
@@ -735,7 +735,7 @@ const PurchaseOrderDetails = () => {
     };
   });
   const visibleModalStateOptions = modalStateOptions.filter(
-    (option) => option.kind !== "pending"
+    (option) => option.kind !== "pending" && !option.label.toLowerCase().includes("temporal") && !option.label.toLowerCase().includes("temproral")
   );
   const selectedStateMeta =
     selectedState !== null

@@ -27,6 +27,7 @@ interface PurchaseOrderPdfOrder {
   tipoorden?: string | null;
   createdBy: number;
   createAt: string;
+  updatedAt?: string | null;
   details: PurchaseOrderPdfDetail[];
 }
 
@@ -699,7 +700,11 @@ export const generatePurchaseOrderPdf = async ({
   );
   doc.line(signatureStartX, footerTop + 6, summaryStartX, footerTop + 6);
 
-  doc.text("AUTORIZACION", signatureStartX + 2, footerTop + 4.5);
+  const signatureText = executedByName ? ` - ${executedByName}` : "";
+  const signatureDate = moment(purchaseOrder.updatedAt || purchaseOrder.createAt).format("DD/MM/YYYY | HH:mm");
+  const authLabel = `AUTORIZACION${signatureText} | ${signatureDate}`;
+
+  doc.text(authLabel, signatureStartX + 2, footerTop + 4.5);
   doc.text("VB AREA LOGISTICA", signatureStartX + 2, footerTop + 10.5);
   doc.text(
     "VB JEFATURA",
