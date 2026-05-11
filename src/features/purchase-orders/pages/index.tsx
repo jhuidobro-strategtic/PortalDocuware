@@ -218,10 +218,10 @@ const buildExpedientDocumentsPayload = (
     [
       includeInvoiceFile
         ? {
-            tipodocumentoid: 1,
-            file_field: "factura_file",
-            createdby: createdBy,
-          }
+          tipodocumentoid: 1,
+          file_field: "factura_file",
+          createdby: createdBy,
+        }
         : null,
       {
         tipodocumentoid: 2,
@@ -536,19 +536,19 @@ const PurchaseOrderDetails = () => {
       purchaseStateOptions.length > 0
         ? purchaseStateOptions
         : Array.from(
-            new Map(
-              purchaseOrders.map((purchaseOrder) => [
-                purchaseOrder.purchaseState,
-                {
-                  id: purchaseOrder.purchaseState,
-                  descripcion:
-                    purchaseOrder.purchaseStateLabel ||
-                    purchaseStateLookup[purchaseOrder.purchaseState] ||
-                    String(purchaseOrder.purchaseState),
-                },
-              ])
-            ).values()
-          );
+          new Map(
+            purchaseOrders.map((purchaseOrder) => [
+              purchaseOrder.purchaseState,
+              {
+                id: purchaseOrder.purchaseState,
+                descripcion:
+                  purchaseOrder.purchaseStateLabel ||
+                  purchaseStateLookup[purchaseOrder.purchaseState] ||
+                  String(purchaseOrder.purchaseState),
+              },
+            ])
+          ).values()
+        );
 
     return sourceOptions.map((option) => ({
       value: String(option.id),
@@ -649,10 +649,10 @@ const PurchaseOrderDetails = () => {
     purchaseStateOptions.length > 0
       ? purchaseStateOptions
       : [
-          { id: 11, descripcion: t("Pending") },
-          { id: 12, descripcion: t("Approved") },
-          { id: 13, descripcion: t("Rejected") },
-        ]
+        { id: 11, descripcion: t("Pending") },
+        { id: 12, descripcion: t("Approved") },
+        { id: 13, descripcion: t("Rejected") },
+      ]
   ).map((option) => {
     const stateMeta = getPurchaseStateMeta(option.id, t, option.descripcion);
 
@@ -671,11 +671,11 @@ const PurchaseOrderDetails = () => {
   const selectedStateMeta =
     selectedState !== null
       ? getPurchaseStateMeta(
-          selectedState,
-          t,
-          purchaseStateLookup[selectedState] ||
-            modalStateOptions.find((option) => option.value === selectedState)?.label
-        )
+        selectedState,
+        t,
+        purchaseStateLookup[selectedState] ||
+        modalStateOptions.find((option) => option.value === selectedState)?.label
+      )
       : null;
 
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
@@ -849,10 +849,10 @@ const PurchaseOrderDetails = () => {
                   stateKind === "approved"
                     ? "008000"
                     : stateKind === "rejected"
-                    ? "FF0000"
-                    : stateKind === "pending"
-                    ? "B54708"
-                    : "344054",
+                      ? "FF0000"
+                      : stateKind === "pending"
+                        ? "B54708"
+                        : "344054",
               },
               bold: true,
             };
@@ -1036,7 +1036,7 @@ const PurchaseOrderDetails = () => {
         if (!expedienteResponse.ok || expedienteData?.success === false) {
           throw new Error(
             expedienteData?.message ||
-              t("Unable to send the purchase order PDF to expedients.")
+            t("Unable to send the purchase order PDF to expedients.")
           );
         }
 
@@ -1046,7 +1046,7 @@ const PurchaseOrderDetails = () => {
     } catch (generateError: any) {
       setActionError(
         generateError?.message ||
-          t("Unable to update purchase order status.")
+        t("Unable to update purchase order status.")
       );
 
       if (statusUpdated) {
@@ -1201,7 +1201,7 @@ const PurchaseOrderDetails = () => {
       } catch (fetchError: any) {
         setError(
           fetchError?.message ||
-            t("An error occurred while loading purchase order details.")
+          t("An error occurred while loading purchase order details.")
         );
       } finally {
         setLoading(false);
@@ -1266,7 +1266,7 @@ const PurchaseOrderDetails = () => {
                       />
                     </InputGroup>
 
-                    <div className="purchase-order-toolbar__field purchase-order-filter-control purchase-order-filter-control--status">
+                    <div className="purchase-order-filter-control purchase-order-filter-control--status">
                       <span className="purchase-order-toolbar__label">
                         {t("Status")}
                       </span>
@@ -1288,7 +1288,7 @@ const PurchaseOrderDetails = () => {
                       </Input>
                     </div>
 
-                    <div className="purchase-order-toolbar__field purchase-order-filter-control purchase-order-filter-control--signer">
+                    <div className="purchase-order-filter-control purchase-order-filter-control--signer">
                       <span className="purchase-order-toolbar__label">
                         {t("Signer Person")}
                       </span>
@@ -1381,13 +1381,13 @@ const PurchaseOrderDetails = () => {
                             purchaseOrder.currency,
                             t,
                             purchaseOrder.currencyLabel ||
-                              currencyLookup[purchaseOrder.currency]
+                            currencyLookup[purchaseOrder.currency]
                           );
                           const purchaseState = getPurchaseStateMeta(
                             purchaseOrder.purchaseState,
                             t,
                             purchaseOrder.purchaseStateLabel ||
-                              purchaseStateLookup[purchaseOrder.purchaseState]
+                            purchaseStateLookup[purchaseOrder.purchaseState]
                           );
                           const supplierLabel =
                             purchaseOrder.supplierLabel ||
@@ -1471,7 +1471,7 @@ const PurchaseOrderDetails = () => {
                                   <TableActionsMenu
                                     disabled={
                                       generatingOrderId ===
-                                        purchaseOrder.purchaseOrderID ||
+                                      purchaseOrder.purchaseOrderID ||
                                       isActionBlocked
                                     }
                                     items={[
@@ -1557,19 +1557,17 @@ const PurchaseOrderDetails = () => {
                   key={option.value}
                   type="button"
                   onClick={() => setSelectedState(option.value)}
-                  className={`d-flex align-items-center gap-3 rounded-3 border p-2 text-start bg-transparent w-100 transition-all ${
-                    isSelected
+                  className={`d-flex align-items-center gap-3 rounded-3 border p-2 text-start bg-transparent w-100 transition-all ${isSelected
                       ? `border-${option.colorClass} bg-${option.colorClass}-subtle`
                       : "border-light"
-                  }`}
+                    }`}
                   style={{ cursor: "pointer" }}
                 >
                   <div
-                    className={`d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${
-                      isSelected
+                    className={`d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${isSelected
                         ? `bg-${option.colorClass} text-white`
                         : `text-${option.colorClass} bg-${option.colorClass}-subtle`
-                    }`}
+                      }`}
                     style={{ width: 36, height: 36 }}
                   >
                     <i className={`${option.icon} fs-5`} />
@@ -1627,9 +1625,9 @@ const PurchaseOrderDetails = () => {
         fileName={
           invoicePreviewDocument
             ? t("Series {{serial}} - Number {{number}}", {
-                serial: invoicePreviewDocument.documentserial,
-                number: invoicePreviewDocument.documentnumber,
-              })
+              serial: invoicePreviewDocument.documentserial,
+              number: invoicePreviewDocument.documentnumber,
+            })
             : ""
         }
         previewUrl={getDocumentPreviewUrl(invoicePreviewDocument)}
