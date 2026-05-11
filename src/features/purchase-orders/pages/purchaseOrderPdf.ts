@@ -688,13 +688,13 @@ export const generatePurchaseOrderPdf = async ({
   doc.rect(signatureStartX, footerTop, signatureSectionWidth, signatureHeight);
   doc.line(
     signatureStartX + signatureColumnWidth,
-    footerTop,
+    footerTop + 6,
     signatureStartX + signatureColumnWidth,
     footerTop + signatureHeight
   );
   doc.line(
     signatureStartX + signatureColumnWidth * 2,
-    footerTop,
+    footerTop + 6,
     signatureStartX + signatureColumnWidth * 2,
     footerTop + signatureHeight
   );
