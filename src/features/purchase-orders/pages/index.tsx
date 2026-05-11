@@ -210,6 +210,11 @@ const getDocumentPreviewUrl = (document?: Document | null) => {
   return sourceUrl ? getPreviewUrl(sourceUrl) : "";
 };
 
+const parseAmountNumber = (value: unknown) => {
+  const parsedValue = Number.parseFloat(String(value ?? "").trim());
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
 const buildExpedientDocumentsPayload = (
   createdBy: number,
   includeInvoiceFile: boolean
@@ -527,8 +532,20 @@ const PurchaseOrderDetails = () => {
       maximumFractionDigits: 2,
     });
 
-  const getOrderTotal = (details: PurchaseOrderDetail[]) =>
+  const getOrderDetailsTotal = (details: PurchaseOrderDetail[]) =>
     details.reduce((sum, detail) => sum + Number(detail.total || 0), 0);
+
+  const getPurchaseOrderDisplayTotal = (purchaseOrder: PurchaseOrder) => {
+    const relatedDocument =
+      documentsByAssociatedNo[purchaseOrder.documentAssociatedNo] ?? null;
+    const relatedDocumentTotal = parseAmountNumber(relatedDocument?.totalamount);
+
+    if (relatedDocumentTotal !== null) {
+      return relatedDocumentTotal;
+    }
+
+    return getOrderDetailsTotal(purchaseOrder.details);
+  };
 
   const itemsPerPage = 10;
   const purchaseStateFilterOptions = useMemo(() => {
@@ -827,7 +844,7 @@ const PurchaseOrderDetails = () => {
           creatorLabel,
           moment(purchaseOrder.createAt).format("DD/MM/YYYY"),
           purchaseOrder.details.length,
-          getOrderTotal(purchaseOrder.details),
+          getPurchaseOrderDisplayTotal(purchaseOrder),
         ]);
 
         row.eachCell((cell, columnNumber) => {
@@ -1447,7 +1464,7 @@ const PurchaseOrderDetails = () => {
                               </td>
                               <td className="text-end fw-semibold">
                                 {formatAmount(
-                                  getOrderTotal(purchaseOrder.details)
+                                  getPurchaseOrderDisplayTotal(purchaseOrder)
                                 )}
                               </td>
                               <td
