@@ -102,6 +102,11 @@ const formatAmount = (value: number | string, numberLocale: string) =>
     maximumFractionDigits: 2,
   });
 
+const parseAmountNumber = (value: unknown) => {
+  const parsedValue = Number.parseFloat(String(value ?? "").trim());
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
 const getDocumentTypeLabel = (
   documentAssociatedType: number,
   relatedDocument?: Document | null,
@@ -287,12 +292,28 @@ export const generatePurchaseOrderPdf = async ({
     ? documentDate.format("DD/MM/YYYY")
     : "-";
 
-  const documentSubtotal = purchaseOrder.details.reduce(
+  const detailsTotal = purchaseOrder.details.reduce(
     (sum, detail) => sum + Number(detail.total || 0),
     0
   );
-  const documentTax = documentSubtotal * 0.18;
-  const documentTotal = documentSubtotal + documentTax;
+  const relatedDocumentSubtotal = parseAmountNumber(relatedDocument?.amount);
+  const relatedDocumentTax = parseAmountNumber(relatedDocument?.taxamount);
+  const relatedDocumentTotal = parseAmountNumber(relatedDocument?.totalamount);
+
+  const documentSubtotal =
+    relatedDocumentSubtotal !== null
+      ? relatedDocumentSubtotal
+      : relatedDocumentTotal !== null && relatedDocumentTax !== null
+        ? Math.max(relatedDocumentTotal - relatedDocumentTax, 0)
+        : detailsTotal;
+  const documentTax =
+    relatedDocumentTax !== null
+      ? relatedDocumentTax
+      : relatedDocumentTotal !== null
+        ? Math.max(relatedDocumentTotal - documentSubtotal, 0)
+        : 0;
+  const documentTotal =
+    relatedDocumentTotal !== null ? relatedDocumentTotal : detailsTotal;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);

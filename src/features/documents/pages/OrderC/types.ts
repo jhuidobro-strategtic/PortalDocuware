@@ -21,6 +21,7 @@ export interface OrderCDetailFormValues {
   descriptionItem: string;
   quantity: string;
   unitPrice: string;
+  storedTotal?: string;
 }
 
 export interface SunatSearchValues {
@@ -83,6 +84,8 @@ export interface SunatInvoiceItem {
   cantidad?: number | string;
   valor_unitario?: number | string;
   precio_unitario?: number | string;
+  valor_venta?: number | string;
+  impuesto_valor?: number | string;
 }
 
 export interface SunatInvoicePayload {

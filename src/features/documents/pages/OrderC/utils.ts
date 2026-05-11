@@ -234,6 +234,12 @@ export const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
         item.valor_unitario ?? item.precio_unitario,
         ""
       ),
+      storedTotal:
+        item.valor_venta !== undefined || item.impuesto_valor !== undefined
+          ? formatDecimalValue(
+              Number(item.valor_venta ?? 0) + Number(item.impuesto_valor ?? 0)
+            )
+          : undefined,
     }))
     .filter((item) => item.descriptionItem || item.unitPrice);
 
@@ -277,6 +283,16 @@ export const getDetailTotal = (detail: OrderCDetailFormValues) => {
   }
 
   return (quantity * unitPrice).toFixed(2);
+};
+
+export const getDetailStoredTotal = (detail: OrderCDetailFormValues) => {
+  const parsedStoredTotal = Number.parseFloat(String(detail.storedTotal ?? ""));
+
+  if (Number.isFinite(parsedStoredTotal)) {
+    return parsedStoredTotal.toFixed(2);
+  }
+
+  return getDetailTotal(detail);
 };
 
 export const buildSummaryFromDetails = (
@@ -338,7 +354,7 @@ export const buildPurchaseOrderPayload = (
     descriptionItem: detail.descriptionItem.trim(),
     quantity: Number(detail.quantity),
     unitPrice: Number(detail.unitPrice).toFixed(2),
-    total: getDetailTotal(detail),
+    total: getDetailStoredTotal(detail),
   })),
 });
 
