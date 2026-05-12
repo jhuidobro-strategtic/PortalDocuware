@@ -39,7 +39,29 @@ type ImportSummary = {
   details_created?: number;
 };
 
+type ExtractDocumentsResultPayload = {
+  message?: string;
+  items?: unknown[];
+  import_summary?: ImportSummary | null;
+};
+
+type ExtractDocumentsJobData = {
+  job_id?: string;
+  status?: string;
+  message?: string;
+  result?: ExtractDocumentsResultPayload | null;
+};
+
+type ExtractDocumentsJobResponse = {
+  success?: boolean;
+  message?: string;
+  data?: ExtractDocumentsJobData | null;
+};
+
 const APPROVED_PURCHASE_STATE_ID = 12;
+const EXTRACT_POLL_INTERVAL_MS = 3000;
+const EXTRACT_MAX_POLLS = 40;
+const EXTRACT_MAX_TRANSIENT_JOB_ERRORS = 8;
 
 const normalizeAssociatedNo = (value: string) => value.trim().toUpperCase();
 
@@ -88,6 +110,26 @@ const buildImportSummaryMessage = (
         </div>
       </div>
     </div>
+  );
+};
+
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+
+const isTransientExtractJobError = (
+  responseStatus: number,
+  payload: ExtractDocumentsJobResponse | null
+) => {
+  const normalizedMessage = String(payload?.message ?? "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    responseStatus === 404 ||
+    normalizedMessage.includes("trabajo sunat no encontrado") ||
+    normalizedMessage.includes("job not found")
   );
 };
 
@@ -382,33 +424,132 @@ const DocumentList: React.FC = () => {
     const queryParams = new URLSearchParams({
       fecha_inicio: moment(startDate).format("YYYY-MM-DD"),
       fecha_fin: moment(endDate).format("YYYY-MM-DD"),
+      async: "true",
     });
 
     try {
       const response = await fetch(
-        `${buildApiUrl("apisunat/GetDocumentosSunat/")}?${queryParams.toString()}`
+        `${buildApiUrl("apisunat/GetDocumentosSunat/")}?${queryParams.toString()}`,
+        {
+          cache: "no-store",
+        }
       );
-      const payload = await response.json().catch(() => null);
+      const payload = (await response.json().catch(() => null)) as
+        | ExtractDocumentsJobResponse
+        | null;
 
-      if (response.ok && payload?.success) {
+      if (!response.ok || !payload?.success || !payload?.data?.job_id) {
+        addNotification(
+          "danger",
+          payload?.message || t("Unexpected server response")
+        );
+        return false;
+      }
+
+      const resolveCompletedJob = async (
+        jobPayload: ExtractDocumentsJobResponse
+      ) => {
+        const jobData = jobPayload.data;
+        const jobResult = jobData?.result;
+        const importSummary = jobResult?.import_summary ?? null;
+        const resultItems = Array.isArray(jobResult?.items)
+          ? jobResult.items
+          : [];
+
         const successMessage = buildImportSummaryMessage(
-          payload.message || t("Documents extracted successfully"),
-          payload?.data?.import_summary,
+          jobResult?.message ||
+            jobData?.message ||
+            jobPayload.message ||
+            t("Documents extracted successfully"),
+          importSummary,
           t
         );
 
-        addNotification(
-          "success",
-          successMessage
-        );
+        addNotification("success", successMessage);
+
+        if (resultItems.length === 0 && !importSummary) {
+          await fetchInitialData(false);
+          setCurrentPage(1);
+          return true;
+        }
+
         await fetchInitialData(false);
         setCurrentPage(1);
         return true;
+      };
+
+      const initialStatus = String(payload.data.status ?? "")
+        .trim()
+        .toLowerCase();
+
+      if (initialStatus === "completed") {
+        return resolveCompletedJob(payload);
+      }
+
+      if (["failed", "error", "cancelled", "canceled"].includes(initialStatus)) {
+        addNotification(
+          "danger",
+          payload.data.message || payload.message || t("Unexpected server response")
+        );
+        return false;
+      }
+
+      const jobId = payload.data.job_id;
+      let transientJobErrors = 0;
+
+      for (let attempt = 0; attempt < EXTRACT_MAX_POLLS; attempt += 1) {
+        await wait(EXTRACT_POLL_INTERVAL_MS);
+
+        const jobResponse = await fetch(
+          buildApiUrl(`apisunat/GetDocumentosSunat/jobs/${jobId}/`),
+          {
+            cache: "no-store",
+          }
+        );
+        const jobPayload = (await jobResponse.json().catch(() => null)) as
+          | ExtractDocumentsJobResponse
+          | null;
+
+        if (!jobResponse.ok || !jobPayload?.success || !jobPayload?.data) {
+          if (
+            isTransientExtractJobError(jobResponse.status, jobPayload) &&
+            transientJobErrors < EXTRACT_MAX_TRANSIENT_JOB_ERRORS
+          ) {
+            transientJobErrors += 1;
+            continue;
+          }
+
+          addNotification(
+            "danger",
+            jobPayload?.message || t("Unexpected server response")
+          );
+          return false;
+        }
+
+        transientJobErrors = 0;
+
+        const jobStatus = String(jobPayload.data.status ?? "")
+          .trim()
+          .toLowerCase();
+
+        if (jobStatus === "completed") {
+          return resolveCompletedJob(jobPayload);
+        }
+
+        if (["failed", "error", "cancelled", "canceled"].includes(jobStatus)) {
+          addNotification(
+            "danger",
+            jobPayload.data.message ||
+              jobPayload.message ||
+              t("Unexpected server response")
+          );
+          return false;
+        }
       }
 
       addNotification(
-        "danger",
-        payload?.message || t("Unexpected server response")
+        "warning",
+        t("The extraction is still processing. Please try again in a few moments.")
       );
       return false;
     } catch (extractError) {
