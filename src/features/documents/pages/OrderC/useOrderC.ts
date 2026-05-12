@@ -23,6 +23,7 @@ import {
   withCurrencyFlags,
   createInitialValues,
   createInitialSunatSearchValues,
+  normalizeSunatDocumentNumber,
   normalizeSupplierNumber,
   getDocumentTypeId,
   getDocumentAssociatedNo,
@@ -243,7 +244,11 @@ export const useOrderC = () => {
   };
 
   const handleSunatSearchValueChange = (field: keyof SunatSearchValues, value: string) => {
-    setSunatSearchValues((prev) => ({ ...prev, [field]: value }));
+    setSunatSearchValues((prev) => ({
+      ...prev,
+      [field]:
+        field === "numero" ? normalizeSunatDocumentNumber(value) : value,
+    }));
   };
 
   const handleRemoveFloatingAlert = (alertId: string | number) => {
@@ -309,7 +314,9 @@ export const useOrderC = () => {
       const associatedDocumentNo =
         [
           payload.detalle?.serie || sunatSearchValues.serie,
-          payload.detalle?.numero || sunatSearchValues.numero,
+          normalizeSunatDocumentNumber(
+            payload.detalle?.numero || sunatSearchValues.numero
+          ),
         ].filter(Boolean).join("-") || getDocumentAssociatedNo(document);
 
       setValues((prev) => ({
@@ -322,7 +329,9 @@ export const useOrderC = () => {
       setSunatSearchValues((prev) => ({
         ...prev,
         serie: payload.detalle?.serie || prev.serie,
-        numero: payload.detalle?.numero || prev.numero,
+        numero: normalizeSunatDocumentNumber(
+          payload.detalle?.numero || prev.numero
+        ),
       }));
       setDetails(detailRows);
       setSummaryValues(getSummaryFromSunatPayload(payload, detailRows));

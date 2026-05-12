@@ -1,6 +1,16 @@
 import { Document } from '../List/types';
 import { SelectOption, SunatInvoicePayload, SunatInvoiceItem, OrderCDetailFormValues, OrderCSummaryValues, OrderCFormValues, OrderCFieldName, OrderCFieldConfig, SunatSearchValues } from './types';
 
+export const normalizeSunatDocumentNumber = (value: unknown) => {
+  const trimmedValue = String(value ?? "").trim();
+
+  if (!/^\d+$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return trimmedValue.replace(/^0+(?=\d)/, "");
+};
+
 export const getCurrencyMeta = (currencyValue: unknown, currencyLabel?: string) => {
   const normalizedValue = String(currencyValue ?? "").trim().toUpperCase();
 
@@ -181,7 +191,10 @@ export const getDocumentAssociatedNo = (document: Document | null) => {
     return "";
   }
 
-  const parts = [document.documentserial, document.documentnumber].filter(Boolean);
+  const parts = [
+    document.documentserial,
+    normalizeSunatDocumentNumber(document.documentnumber),
+  ].filter(Boolean);
   return parts.join("-");
 };
 
@@ -195,7 +208,7 @@ export const createInitialSunatSearchValues = (
 ): SunatSearchValues => ({
   tipoComprobante: getSunatDocumentType(document),
   serie: document?.documentserial ?? "",
-  numero: document?.documentnumber ? document.documentnumber.replace(/^0+/, "") : "",
+  numero: normalizeSunatDocumentNumber(document?.documentnumber),
 });
 
 export const mapSunatCurrencyToOrderCurrency = (currencyCode: unknown) => {
