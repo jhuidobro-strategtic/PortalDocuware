@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Button,
   Col,
@@ -47,6 +47,22 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
   const [extractStartDate, setExtractStartDate] = useState<Date[]>([]);
   const [extractEndDate, setExtractEndDate] = useState<Date[]>([]);
   const [extractSubmitting, setExtractSubmitting] = useState(false);
+  const [extractElapsedSeconds, setExtractElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!extractSubmitting) {
+      setExtractElapsedSeconds(0);
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setExtractElapsedSeconds((currentSeconds) => currentSeconds + 1);
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [extractSubmitting]);
 
   const toggleExtractModal = () => {
     setExtractModalOpen((prev) => !prev);
@@ -59,6 +75,7 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
     }
 
     setExtractSubmitting(true);
+    setExtractElapsedSeconds(0);
 
     try {
       const shouldClose = await onExtract({
@@ -202,7 +219,13 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
             className="d-inline-flex align-items-center gap-2"
           >
             {extractSubmitting && <Spinner size="sm" />}
-            <span>{extractSubmitting ? t("Processing...") : t("Confirm")}</span>
+            <span>
+              {extractSubmitting
+                ? t("Processing... {{seconds}}s", {
+                    seconds: extractElapsedSeconds,
+                  })
+                : t("Confirm")}
+            </span>
           </Button>
         </ModalFooter>
       </Modal>
