@@ -1,17 +1,17 @@
 import React, { lazy } from "react";
 import { Navigate } from "react-router-dom";
 
-const Login = lazy(() => import("../features/auth/pages/Login"));
-const Logout = lazy(() => import("../features/auth/pages/Logout"));
-const UserProfile = lazy(() => import("../features/auth/pages/user-profile"));
-const Documents = lazy(() => import("../features/documents/pages/List"));
-const DocumentsEdit = lazy(() => import("../features/documents/pages/Edit"));
-const DocumentOrderC = lazy(() => import("../features/documents/pages/OrderC"));
-const DocumentDetails = lazy(() => import("../features/documents/pages/Details"));
-const DocumentProgramacion = lazy(() => import("../features/documents/pages/Programacion"));
-const PurchaseOrderDetails = lazy(() => import("../features/purchase-orders/pages"));
-const Suppliers = lazy(() => import("../features/suppliers/pages"));
-const Expedients = lazy(() => import("../features/expedients/pages"));
+const Login = lazy(() => import("../features/auth/views/Login"));
+const Logout = lazy(() => import("../features/auth/views/Logout"));
+const UserProfile = lazy(() => import("../features/auth/views/user-profile"));
+const Documents = lazy(() => import("../features/documents/views/List"));
+const DocumentsEdit = lazy(() => import("../features/documents/views/Edit"));
+const DocumentOrderC = lazy(() => import("../features/documents/views/OrderC"));
+const DocumentDetails = lazy(() => import("../features/documents/views/Details"));
+const DocumentProgramacion = lazy(() => import("../features/documents/views/Programacion"));
+const PurchaseOrderDetails = lazy(() => import("../features/purchase-orders/views"));
+const Suppliers = lazy(() => import("../features/suppliers/views"));
+const Expedients = lazy(() => import("../features/expedients/views"));
 
 const authProtectedRoutes = [
   { path: "/", component: <Navigate to="/documents" replace /> },

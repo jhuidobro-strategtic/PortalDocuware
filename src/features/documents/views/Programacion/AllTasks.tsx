@@ -1,0 +1,323 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
+import moment from "moment";
+import { useTranslation } from "react-i18next";
+import FloatingAlerts from "../../../../components/common/FloatingAlerts";
+import DocumentFilters from "../../components/ProgramacionFilters";
+import DocumentTable from "../../components/ProgramacionTable";
+import ProgramacionFormModal from "../../components/ProgramacionFormModal";
+import Notifications from "../../components/ProgramacionNotifications";
+import { buildApiUrl } from "../../../../helpers/api-url";
+import {
+  Vehiculo,
+  Conductor,
+  Programacion,
+  NuevaProgramacion,
+  Notification,
+} from "../../types/programacion.types";
+import { intelligentSearch } from "../../../../helpers/search-utils";
+
+const initialProgramacion: NuevaProgramacion = {
+  programacionfecha: moment().format("YYYY-MM-DD"),
+  idvehiculo: null,
+  idconductor: null,
+};
+
+const ProgramacionDiaria: React.FC = () => {
+  const { t } = useTranslation();
+  const [programaciones, setProgramaciones] = useState<Programacion[]>([]);
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [conductores, setConductores] = useState<Conductor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [registroModal, setRegistroModal] = useState(false);
+  const [nuevaProgramacion, setNuevaProgramacion] = useState<NuevaProgramacion>(
+    initialProgramacion
+  );
+
+  const [editModal, setEditModal] = useState(false);
+  const [editProgramacion, setEditProgramacion] = useState<Programacion | null>(
+    null
+  );
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const addNotification = (type: Notification["type"], message: string) => {
+    const id = Date.now();
+    setNotifications((prev) => [...prev, { id, type, message }]);
+  };
+
+  const removeNotification = (id: number) =>
+    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
+
+  const fetchProgramaciones = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(buildApiUrl("programacion-diaria"));
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setProgramaciones(data);
+      } else {
+        throw new Error(t("Error fetching schedules"));
+      }
+    } catch (err: any) {
+      setError(err.message);
+      addNotification("danger", err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  const fetchVehiculos = async () => {
+    try {
+      const res = await fetch(buildApiUrl("vehiculos"));
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setVehiculos(data);
+      }
+    } catch (error) {
+      console.error("Error loading vehiculos:", error);
+    }
+  };
+
+  const fetchConductores = async () => {
+    try {
+      const res = await fetch(buildApiUrl("conductores"));
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setConductores(data);
+      }
+    } catch (error) {
+      console.error("Error loading conductores:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProgramaciones();
+    fetchVehiculos();
+    fetchConductores();
+  }, [fetchProgramaciones]);
+
+  const handleRegistrar = async () => {
+    if (
+      !nuevaProgramacion.programacionfecha ||
+      !nuevaProgramacion.idvehiculo ||
+      !nuevaProgramacion.idconductor
+    ) {
+      addNotification("danger", t("Complete all fields"));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        buildApiUrl("programacion-diaria/"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(nuevaProgramacion),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok || data.success) {
+        addNotification("success", t("Scheduling registered successfully"));
+        setRegistroModal(false);
+        fetchProgramaciones();
+        setNuevaProgramacion(initialProgramacion);
+      } else {
+        addNotification(
+          "danger",
+          data.message || t("Error registering scheduling")
+        );
+      }
+    } catch (error) {
+      console.error("Error registering:", error);
+      addNotification("danger", t("Error in the registration process"));
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editProgramacion) return;
+
+    if (
+      !editProgramacion.programacionfecha ||
+      !editProgramacion.vehiculo.idvehiculo ||
+      !editProgramacion.conductor.idconductor
+    ) {
+      addNotification("danger", t("Complete all fields"));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        buildApiUrl("programacion-diaria/"),
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            programacionid: editProgramacion.programacionid,
+            programacionfecha: editProgramacion.programacionfecha,
+            idvehiculo: editProgramacion.vehiculo.idvehiculo,
+            idconductor: editProgramacion.conductor.idconductor,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok || data.success) {
+        addNotification("success", t("Scheduling updated successfully"));
+        setEditModal(false);
+        fetchProgramaciones();
+      } else {
+        addNotification(
+          "danger",
+          data.message || t("Error updating scheduling")
+        );
+      }
+    } catch (error) {
+      console.error("Error updating:", error);
+      addNotification("danger", t("Error in the update process"));
+    }
+  };
+
+  const handleSearchTermChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const filteredProgramaciones = programaciones.filter((prog) =>
+    intelligentSearch(prog, searchTerm)
+  );
+
+  if (loading) {
+    return (
+      <Container fluid>
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: "400px" }}
+        >
+          <Spinner color="primary" />
+        </div>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container fluid>
+        <FloatingAlerts
+          alerts={[{ id: "programacion-error", type: "danger", message: error }]}
+        />
+      </Container>
+    );
+  }
+
+  return (
+    <Container fluid>
+      <Notifications
+        notifications={notifications}
+        onRemove={removeNotification}
+      />
+
+      <Row>
+        <Col lg={12}>
+          <Card>
+            <CardBody>
+              <DocumentFilters
+                searchTerm={searchTerm}
+                onSearchTermChange={handleSearchTermChange}
+                onCreate={() => setRegistroModal(true)}
+              />
+
+              <DocumentTable
+                programaciones={filteredProgramaciones}
+                onEdit={(prog) => {
+                  setEditProgramacion(prog);
+                  setEditModal(true);
+                }}
+              />
+            </CardBody>
+          </Card>
+        </Col>
+      </Row>
+
+      <ProgramacionFormModal
+        isOpen={registroModal}
+        toggle={() => setRegistroModal((prev) => !prev)}
+        title="New Daily Scheduling"
+        date={nuevaProgramacion.programacionfecha}
+        onDateChange={(value) =>
+          setNuevaProgramacion((prev) => ({ ...prev, programacionfecha: value }))
+        }
+        vehicleId={nuevaProgramacion.idvehiculo}
+        conductorId={nuevaProgramacion.idconductor}
+        onVehicleChange={(value) =>
+          setNuevaProgramacion((prev) => ({ ...prev, idvehiculo: value }))
+        }
+        onConductorChange={(value) =>
+          setNuevaProgramacion((prev) => ({ ...prev, idconductor: value }))
+        }
+        vehicles={vehiculos}
+        conductores={conductores}
+        submitLabel="Register"
+        onSubmit={handleRegistrar}
+      />
+
+      {editProgramacion && (
+        <ProgramacionFormModal
+          isOpen={editModal}
+          toggle={() => setEditModal((prev) => !prev)}
+          title="Edit Daily Scheduling"
+          date={editProgramacion.programacionfecha}
+          onDateChange={(value) =>
+            setEditProgramacion((prev) =>
+              prev ? { ...prev, programacionfecha: value } : prev
+            )
+          }
+          vehicleId={editProgramacion.vehiculo.idvehiculo}
+          conductorId={editProgramacion.conductor.idconductor}
+          onVehicleChange={(value) =>
+            setEditProgramacion((prev) => {
+              if (!prev || value === null) return prev;
+              const vehicleName =
+                vehiculos.find((v) => v.idvehiculo === value)?.no_vehiculo ??
+                prev.vehiculo.no_vehiculo;
+              return {
+                ...prev,
+                vehiculo: { idvehiculo: value, no_vehiculo: vehicleName },
+              };
+            })
+          }
+          onConductorChange={(value) =>
+            setEditProgramacion((prev) => {
+              if (!prev || value === null) return prev;
+              const conductorName =
+                conductores.find((c) => c.idconductor === value)?.conductor_nm ??
+                prev.conductor.conductor_nm;
+              return {
+                ...prev,
+                conductor: { idconductor: value, conductor_nm: conductorName },
+              };
+            })
+          }
+          vehicles={vehiculos}
+          conductores={conductores}
+          submitLabel="Update"
+          onSubmit={handleUpdate}
+        />
+      )}
+    </Container>
+  );
+};
+
+export default ProgramacionDiaria;
