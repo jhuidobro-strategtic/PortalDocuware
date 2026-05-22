@@ -1600,6 +1600,8 @@ const PurchaseOrderDetails = () => {
                   <AppPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
+                    totalItems={filteredPurchaseOrders.length}
+                    itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                   />
                 </div>

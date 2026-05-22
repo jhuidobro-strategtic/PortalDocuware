@@ -13,6 +13,8 @@ interface AppPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  totalItems?: number;
+  itemsPerPage?: number;
   className?: string;
 }
 
@@ -55,6 +57,8 @@ const AppPagination: React.FC<AppPaginationProps> = ({
   currentPage,
   totalPages,
   onPageChange,
+  totalItems,
+  itemsPerPage,
   className = "",
 }) => {
   const { t } = useTranslation();
@@ -68,16 +72,46 @@ const AppPagination: React.FC<AppPaginationProps> = ({
     return null;
   }
 
+  const hasResultsSummary =
+    typeof totalItems === "number" &&
+    Number.isFinite(totalItems) &&
+    typeof itemsPerPage === "number" &&
+    Number.isFinite(itemsPerPage) &&
+    itemsPerPage > 0;
+
+  const startItem = hasResultsSummary
+    ? Math.min((currentPage - 1) * itemsPerPage + 1, totalItems || 0)
+    : 0;
+  const endItem = hasResultsSummary
+    ? Math.min(currentPage * itemsPerPage, totalItems || 0)
+    : 0;
+
   return (
     <div className={`app-pagination-shell ${className}`.trim()}>
+      <div className="app-pagination-meta">
+        {hasResultsSummary
+          ? t("Showing {{start}} to {{end}} of {{total}} results", {
+              start: startItem,
+              end: endItem,
+              total: totalItems,
+            })
+          : t("Page {{current}} of {{total}}", {
+              current: currentPage,
+              total: totalPages,
+            })}
+      </div>
+
       <ReactstrapPagination
         aria-label={t("Pagination")}
         className="app-pagination-list mb-0"
       >
-        <PaginationItem disabled={currentPage === 1}>
+        <PaginationItem
+          disabled={currentPage === 1}
+          className="app-pagination-nav-item"
+        >
           <PaginationLink
-            previous
             href="#"
+            className="app-pagination-nav-link"
             aria-label={t("Previous")}
             onClick={(event) => {
               event.preventDefault();
@@ -85,7 +119,9 @@ const AppPagination: React.FC<AppPaginationProps> = ({
                 onPageChange(currentPage - 1);
               }
             }}
-          />
+          >
+            <span>{t("Previous")}</span>
+          </PaginationLink>
         </PaginationItem>
 
         {paginationTokens.map((token) =>
@@ -93,6 +129,9 @@ const AppPagination: React.FC<AppPaginationProps> = ({
             <PaginationItem key={token} active={currentPage === token}>
               <PaginationLink
                 href="#"
+                className="app-pagination-page-link"
+                aria-label={`${t("Page")} ${token}`}
+                aria-current={currentPage === token ? "page" : undefined}
                 onClick={(event) => {
                   event.preventDefault();
                   onPageChange(token);
@@ -102,22 +141,30 @@ const AppPagination: React.FC<AppPaginationProps> = ({
               </PaginationLink>
             </PaginationItem>
           ) : (
-            <PaginationItem key={token} disabled>
+            <PaginationItem
+              key={token}
+              disabled
+              className="app-pagination-ellipsis-item"
+            >
               <PaginationLink
                 href="#"
+                className="app-pagination-ellipsis-link"
                 onClick={(event) => event.preventDefault()}
                 aria-hidden="true"
               >
-                ...
+                <span className="app-pagination-ellipsis">...</span>
               </PaginationLink>
             </PaginationItem>
           )
         )}
 
-        <PaginationItem disabled={currentPage === totalPages}>
+        <PaginationItem
+          disabled={currentPage === totalPages}
+          className="app-pagination-nav-item"
+        >
           <PaginationLink
-            next
             href="#"
+            className="app-pagination-nav-link"
             aria-label={t("Next")}
             onClick={(event) => {
               event.preventDefault();
@@ -125,16 +172,11 @@ const AppPagination: React.FC<AppPaginationProps> = ({
                 onPageChange(currentPage + 1);
               }
             }}
-          />
+          >
+            <span>{t("Next")}</span>
+          </PaginationLink>
         </PaginationItem>
       </ReactstrapPagination>
-
-      <div className="app-pagination-meta">
-        {t("Page {{current}} of {{total}}", {
-          current: currentPage,
-          total: totalPages,
-        })}
-      </div>
     </div>
   );
 };

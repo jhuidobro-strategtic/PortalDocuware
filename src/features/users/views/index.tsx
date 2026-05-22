@@ -684,6 +684,8 @@ const UsersPage = () => {
                     <AppPagination
                       currentPage={currentPage}
                       totalPages={totalPages}
+                      totalItems={filteredUsers.length}
+                      itemsPerPage={ITEMS_PER_PAGE}
                       onPageChange={setCurrentPage}
                     />
                   </div>

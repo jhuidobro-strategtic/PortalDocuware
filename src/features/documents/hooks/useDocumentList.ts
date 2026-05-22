@@ -361,7 +361,7 @@ export const useDocumentList = () => {
     documents, loading, error, selectedDoc, rotation, searchTerm, statusFilter, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
     setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
-    paginatedDocuments, totalPages,
+    paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount: filteredDocuments.length,
     handleResize, handleDelete, confirmDelete, handleViewDocument, handleClosePreview, handleOpenOrderC,
     handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre
   };

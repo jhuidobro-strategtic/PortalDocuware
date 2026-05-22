@@ -697,6 +697,8 @@ const SuppliersPage = () => {
                     <AppPagination
                       currentPage={currentPage}
                       totalPages={totalPages}
+                      totalItems={filteredSuppliers.length}
+                      itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
                     />
                   </div>

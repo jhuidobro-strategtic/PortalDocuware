@@ -1172,6 +1172,8 @@ const Expedients = () => {
                     <AppPagination
                       currentPage={currentPage}
                       totalPages={totalPages}
+                      totalItems={filteredExpedients.length}
+                      itemsPerPage={ITEMS_PER_PAGE}
                       onPageChange={setCurrentPage}
                     />
                   </div>

@@ -337,6 +337,8 @@ const DocumentDetails: React.FC = () => {
                   <AppPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
+                    totalItems={filteredDocuments.length}
+                    itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                   />
                 </div>

@@ -25,6 +25,8 @@ interface DocumentTableProps {
   onDelete: (doc: Document) => void;
   currentPage: number;
   totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
   onPageChange: (page: number) => void;
 }
 
@@ -48,6 +50,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   onDelete,
   currentPage,
   totalPages,
+  totalItems,
+  itemsPerPage,
   onPageChange,
 }) => {
   const { t, i18n } = useTranslation();
@@ -340,6 +344,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           <AppPagination
             currentPage={currentPage}
             totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
             onPageChange={onPageChange}
           />
         </div>
