@@ -166,9 +166,11 @@ const UsersPage = () => {
   const [creatingUser, setCreatingUser] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
-  const [editPassword, setEditPassword] = useState("");
-  const [editPasswordError, setEditPasswordError] = useState("");
-  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [editFormValues, setEditFormValues] = useState<UserFormValues>(
+    createEmptyUserForm()
+  );
+  const [editFormErrors, setEditFormErrors] = useState<UserFormErrors>({});
+  const [updatingUser, setUpdatingUser] = useState(false);
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
   const [userPendingDisable, setUserPendingDisable] = useState<UserItem | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -335,66 +337,107 @@ const UsersPage = () => {
 
   const handleOpenEditModal = (user: UserItem) => {
     setEditingUser(user);
-    setEditPassword("");
-    setEditPasswordError("");
+    setEditFormValues({
+      username: user.userName,
+      fullname: user.fullName,
+      password: "",
+      profileId: String(user.profileID || ""),
+    });
+    setEditFormErrors({});
     setIsEditModalOpen(true);
   };
 
   const handleCloseEditModal = () => {
-    if (updatingPassword) {
+    if (updatingUser) {
       return;
     }
 
     setIsEditModalOpen(false);
     setEditingUser(null);
-    setEditPassword("");
-    setEditPasswordError("");
+    setEditFormValues(createEmptyUserForm());
+    setEditFormErrors({});
   };
 
-  const handleSubmitPasswordUpdate = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleEditFormValueChange = (field: UserFormField, value: string) => {
+    setEditFormValues((prev) => ({ ...prev, [field]: value }));
+    setEditFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validateEditForm = () => {
+    const nextErrors: UserFormErrors = {};
+
+    if (!editFormValues.username.trim()) {
+      nextErrors.username = t("Complete the {{field}} field.", {
+        field: t("Username"),
+      });
+    }
+
+    if (!editFormValues.fullname.trim()) {
+      nextErrors.fullname = t("Complete the {{field}} field.", {
+        field: t("Full Name"),
+      });
+    }
+
+    if (!editFormValues.profileId.trim()) {
+      nextErrors.profileId = t("Complete the {{field}} field.", {
+        field: t("Profile"),
+      });
+    }
+
+    return nextErrors;
+  };
+
+  const handleSubmitEdit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!editingUser) {
       return;
     }
 
-    if (!editPassword.trim()) {
-      setEditPasswordError(
-        t("Complete the {{field}} field.", { field: t("New Password") })
-      );
+    const nextErrors = validateEditForm();
+
+    if (Object.keys(nextErrors).length > 0) {
+      setEditFormErrors(nextErrors);
       return;
     }
 
     try {
-      setUpdatingPassword(true);
-      const response = await fetch(buildApiUrl("users/update-password/"), {
+      setUpdatingUser(true);
+      const payload: any = {
+        user_id: editingUser.userID,
+        username: editFormValues.username.trim(),
+        fullname: editFormValues.fullname.trim(),
+        profile_id: Number(editFormValues.profileId),
+      };
+
+      if (editFormValues.password.trim()) {
+        payload.password = editFormValues.password;
+      }
+
+      const response = await fetch(buildApiUrl("users/register/"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userid: editingUser.userID,
-          password: editPassword,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => null);
 
-      if (!response.ok || data?.success === false) {
-        throw new Error(data?.message || t("Could not update the user password."));
+      if (!response.ok || data?.success === false || data?.error) {
+        throw new Error(data?.message || data?.error || t("Could not update user."));
       }
 
+      await fetchUsers();
       setFeedback({
         type: "success",
-        message: data?.message || t("User password updated successfully."),
+        message: data?.message || t("User updated successfully."),
       });
       handleCloseEditModal();
     } catch (submitError: any) {
       setFeedback({
         type: "danger",
-        message: submitError?.message || t("Could not update the user password."),
+        message: submitError?.message || t("Could not update user."),
       });
     } finally {
-      setUpdatingPassword(false);
+      setUpdatingUser(false);
     }
   };
 
@@ -797,50 +840,80 @@ const UsersPage = () => {
         <Modal
           isOpen={isEditModalOpen}
           toggle={handleCloseEditModal}
+          size="lg"
           centered
         >
-          <Form onSubmit={handleSubmitPasswordUpdate}>
+          <Form onSubmit={handleSubmitEdit}>
             <ModalHeader toggle={handleCloseEditModal}>
               {t("Edit User")}
             </ModalHeader>
             <ModalBody className="p-4">
-              <div className="alert alert-info mb-4">
-                {t(
-                  "The backend currently allows updating the password from this view."
-                )}
-              </div>
-
               <Row className="g-4">
-                <Col md={12}>
+                <Col md={6}>
                   <Label className="form-label">{t("Username")}</Label>
-                  <Input value={editingUser?.userName || ""} readOnly className="bg-light" />
-                </Col>
-                <Col md={12}>
-                  <Label className="form-label">{t("Full Name")}</Label>
-                  <Input value={editingUser?.fullName || ""} readOnly className="bg-light" />
-                </Col>
-                <Col md={12}>
-                  <Label className="form-label">{t("Profile")}</Label>
                   <Input
-                    value={editingUser?.profile?.profileName || ""}
-                    readOnly
-                    className="bg-light"
+                    value={editFormValues.username}
+                    onChange={(event) =>
+                      handleEditFormValueChange("username", event.target.value)
+                    }
+                    invalid={Boolean(editFormErrors.username)}
+                    placeholder={t("Enter username or email")}
                   />
+                  {editFormErrors.username && (
+                    <FormFeedback>{editFormErrors.username}</FormFeedback>
+                  )}
                 </Col>
-                <Col md={12}>
-                  <Label className="form-label">{t("New Password")}</Label>
+                <Col md={6}>
+                  <Label className="form-label">{t("Full Name")}</Label>
+                  <Input
+                    value={editFormValues.fullname}
+                    onChange={(event) =>
+                      handleEditFormValueChange("fullname", event.target.value)
+                    }
+                    invalid={Boolean(editFormErrors.fullname)}
+                    placeholder={t("Enter full name")}
+                  />
+                  {editFormErrors.fullname && (
+                    <FormFeedback>{editFormErrors.fullname}</FormFeedback>
+                  )}
+                </Col>
+                <Col md={6}>
+                  <Label className="form-label">{t("Password")}</Label>
                   <Input
                     type="password"
-                    value={editPassword}
-                    onChange={(event) => {
-                      setEditPassword(event.target.value);
-                      setEditPasswordError("");
-                    }}
-                    invalid={Boolean(editPasswordError)}
-                    placeholder={t("Enter new password")}
+                    value={editFormValues.password}
+                    onChange={(event) =>
+                      handleEditFormValueChange("password", event.target.value)
+                    }
+                    invalid={Boolean(editFormErrors.password)}
+                    placeholder={t("Leave blank to keep current password")}
                   />
-                  {editPasswordError && (
-                    <FormFeedback>{editPasswordError}</FormFeedback>
+                  {editFormErrors.password && (
+                    <FormFeedback>{editFormErrors.password}</FormFeedback>
+                  )}
+                </Col>
+                <Col md={6}>
+                  <Label className="form-label">{t("Profile")}</Label>
+                  <Select
+                    options={profileOptions}
+                    value={
+                      profileOptions.find(
+                        (option) => option.value === editFormValues.profileId
+                      ) ?? null
+                    }
+                    onChange={(selected: SelectOption | null) =>
+                      handleEditFormValueChange(
+                        "profileId",
+                        selected ? selected.value : ""
+                      )
+                    }
+                    placeholder={t("Select profile")}
+                    classNamePrefix="select2-selection"
+                  />
+                  {editFormErrors.profileId && (
+                    <div className="text-danger small mt-1">
+                      {editFormErrors.profileId}
+                    </div>
                   )}
                 </Col>
               </Row>
@@ -849,8 +922,8 @@ const UsersPage = () => {
               <Button color="light" type="button" onClick={handleCloseEditModal}>
                 {t("Cancel")}
               </Button>
-              <Button color="primary" type="submit" disabled={updatingPassword}>
-                {updatingPassword ? (
+              <Button color="primary" type="submit" disabled={updatingUser}>
+                {updatingUser ? (
                   <>
                     <Spinner size="sm" className="me-1" />
                     {t("Saving...")}
