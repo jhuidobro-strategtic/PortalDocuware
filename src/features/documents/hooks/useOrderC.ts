@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Document } from "../types/list.types";
@@ -20,6 +20,7 @@ import {
   fetchCatalog,
   fetchSuppliers,
   fetchSigners,
+  createSupplierFromRuc,
   CATALOG_ENDPOINTS,
 } from "../services/orderC.service";
 
@@ -80,8 +81,28 @@ export const useOrderC = () => {
   const [supplierOptions, setSupplierOptions] = useState<SupplierOptionItem[]>([]);
   const [signerOptions, setSignerOptions] = useState<SelectOption[]>([]);
   const [loadingSigners, setLoadingSigners] = useState(false);
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
 
   const orderCFields = getOrderCFields(signerOptions);
+
+  const loadSuppliers = useCallback(
+    async (showFeedbackOnError = true) => {
+      try {
+        const nextSuppliers = await fetchSuppliers();
+        setSupplierOptions(nextSuppliers);
+        return nextSuppliers;
+      } catch (fetchError: any) {
+        if (showFeedbackOnError) {
+          setFeedback({
+            type: "danger",
+            message: fetchError?.message || t("Error loading suppliers"),
+          });
+        }
+        return [];
+      }
+    },
+    [t]
+  );
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -104,18 +125,8 @@ export const useOrderC = () => {
   }, []);
 
   useEffect(() => {
-    const loadSuppliers = async () => {
-      try {
-        setSupplierOptions(await fetchSuppliers());
-      } catch (fetchError: any) {
-        setFeedback({
-          type: "danger",
-          message: fetchError?.message || t("Error loading suppliers"),
-        });
-      }
-    };
     loadSuppliers();
-  }, [t]);
+  }, [loadSuppliers]);
 
   useEffect(() => {
     const loadSigners = async () => {
@@ -245,6 +256,104 @@ export const useOrderC = () => {
       return;
     }
     setValues((prev) => ({ ...prev, supplierID: selected.value }));
+  };
+
+  const handleCreateSupplier = async () => {
+    const normalizedRuc = normalizeSupplierNumber(values.suppliernumber);
+
+    if (normalizedRuc.length !== 11) {
+      setFeedback({
+        type: "danger",
+        message: t("Enter a valid RUC"),
+      });
+      return;
+    }
+
+    const existingSupplier =
+      supplierOptions.find(
+        (supplier) =>
+          normalizeSupplierNumber(supplier.supplierNo) === normalizedRuc
+      ) ?? null;
+
+    if (existingSupplier) {
+      setValues((prev) => ({
+        ...prev,
+        supplierID: String(existingSupplier.supplierID),
+        suppliernumber: existingSupplier.supplierNo || prev.suppliernumber,
+        suppliername: existingSupplier.supplierName || prev.suppliername,
+      }));
+      setFeedback({
+        type: "info",
+        message: t("The supplier already exists and was selected automatically."),
+      });
+      return;
+    }
+
+    const currentUserId = Number(sessionUser.id || 0);
+
+    if (!Number.isFinite(currentUserId) || currentUserId <= 0) {
+      setFeedback({
+        type: "danger",
+        message: t("Unable to identify the signed-in user to create the supplier."),
+      });
+      return;
+    }
+
+    try {
+      setCreatingSupplier(true);
+      setFeedback(null);
+
+      const createdSupplier = await createSupplierFromRuc(
+        normalizedRuc,
+        currentUserId
+      );
+      const nextSuppliers = await loadSuppliers(false);
+      const selectedSupplier =
+        nextSuppliers.find(
+          (supplier) =>
+            normalizeSupplierNumber(supplier.supplierNo) === normalizedRuc
+        ) ?? createdSupplier;
+
+      setValues((prev) => ({
+        ...prev,
+        supplierID: String(selectedSupplier.supplierID),
+        suppliernumber: selectedSupplier.supplierNo || prev.suppliernumber,
+        suppliername: selectedSupplier.supplierName || prev.suppliername,
+      }));
+      setFeedback({
+        type: "success",
+        message: t("The supplier was created and selected successfully."),
+      });
+    } catch (createError: any) {
+      const refreshedSuppliers = await loadSuppliers(false);
+      const persistedSupplier =
+        refreshedSuppliers.find(
+          (supplier) =>
+            normalizeSupplierNumber(supplier.supplierNo) === normalizedRuc
+        ) ?? null;
+
+      if (persistedSupplier) {
+        setValues((prev) => ({
+          ...prev,
+          supplierID: String(persistedSupplier.supplierID),
+          suppliernumber: persistedSupplier.supplierNo || prev.suppliernumber,
+          suppliername: persistedSupplier.supplierName || prev.suppliername,
+        }));
+        setFeedback({
+          type: "info",
+          message: t("The supplier already exists and was selected automatically."),
+        });
+        return;
+      }
+
+      setFeedback({
+        type: "danger",
+        message:
+          createError?.message || t("Unable to create the supplier automatically."),
+      });
+    } finally {
+      setCreatingSupplier(false);
+    }
   };
 
   const handleSunatSearchValueChange = (field: keyof SunatSearchValues, value: string) => {
@@ -481,12 +590,14 @@ export const useOrderC = () => {
     supplierOptions,
     signerOptions,
     loadingSigners,
+    creatingSupplier,
     orderCFields,
     numberLocale,
     t,
     navigate,
     handleChange,
     handleSupplierChange,
+    handleCreateSupplier,
     handleSunatSearchValueChange,
     handleRemoveFloatingAlert,
     isSunatSearchReady,

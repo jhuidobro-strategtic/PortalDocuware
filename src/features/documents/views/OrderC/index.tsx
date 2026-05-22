@@ -43,12 +43,14 @@ const DocumentOrderC = () => {
     catalogOptions,
     supplierOptions,
     loadingSigners,
+    creatingSupplier,
     orderCFields,
     numberLocale,
     t,
     navigate,
     handleChange,
     handleSupplierChange,
+    handleCreateSupplier,
     handleSunatSearchValueChange,
     handleRemoveFloatingAlert,
     isSunatSearchReady,
@@ -314,51 +316,95 @@ const DocumentOrderC = () => {
                             {t(field.labelKey)}
                           </Label>
                           {isSelect ? (
-                            <Select
-                              options={selectOptions}
-                              value={
-                                selectOptions.find(
-                                  (opt) =>
-                                    opt.value ===
-                                    (isCurrencySelect
-                                      ? getCurrencyMeta(values[field.name as keyof typeof values]).normalizedValue
-                                      : values[field.name as keyof typeof values])
-                                ) ?? null
-                              }
-                              onChange={(selected: SelectOption | null) =>
-                                isSupplierSelect
-                                  ? handleSupplierChange(selected)
-                                  : handleChange(
-                                      field.name,
-                                      selected ? selected.value : ""
-                                    )
-                              }
-                              placeholder={t(field.placeholderKey)}
-                              isClearable
-                              isLoading={
-                                (isSignerSelect || isRequesterSelect) &&
-                                loadingSigners
-                              }
-                              classNamePrefix="select2-selection"
-                              formatOptionLabel={
-                                isCurrencySelect
-                                  ? (option: SelectOption) => (
-                                      <span className="d-inline-flex align-items-center gap-2">
-                                        {option.flagUrl && (
-                                          <img
-                                            src={option.flagUrl}
-                                            alt={option.label}
-                                            width={20}
-                                            height={15}
-                                            className="rounded-1 flex-shrink-0"
-                                          />
-                                        )}
-                                        <span>{option.label}</span>
-                                      </span>
-                                    )
-                                  : undefined
-                              }
-                            />
+                            isSupplierSelect ? (
+                              <div className="d-flex flex-column flex-xl-row align-items-stretch gap-2">
+                                <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                                  <Select
+                                    options={selectOptions}
+                                    value={
+                                      selectOptions.find(
+                                        (opt) =>
+                                          opt.value ===
+                                          values[field.name as keyof typeof values]
+                                      ) ?? null
+                                    }
+                                    onChange={(selected: SelectOption | null) =>
+                                      handleSupplierChange(selected)
+                                    }
+                                    placeholder={t(field.placeholderKey)}
+                                    isClearable
+                                    classNamePrefix="select2-selection"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  color="primary"
+                                  outline
+                                  className="flex-shrink-0 px-3"
+                                  onClick={handleCreateSupplier}
+                                  disabled={
+                                    creatingSupplier ||
+                                    String(values.suppliernumber || "").replace(/\D/g, "").length !== 11
+                                  }
+                                >
+                                  {creatingSupplier ? (
+                                    <>
+                                      <Spinner size="sm" className="me-2" />
+                                      {t("Creating supplier...")}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="ri-user-add-line align-bottom me-1" />
+                                      {t("Create supplier")}
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            ) : (
+                              <Select
+                                options={selectOptions}
+                                value={
+                                  selectOptions.find(
+                                    (opt) =>
+                                      opt.value ===
+                                      (isCurrencySelect
+                                        ? getCurrencyMeta(values[field.name as keyof typeof values]).normalizedValue
+                                        : values[field.name as keyof typeof values])
+                                  ) ?? null
+                                }
+                                onChange={(selected: SelectOption | null) =>
+                                  handleChange(
+                                    field.name,
+                                    selected ? selected.value : ""
+                                  )
+                                }
+                                placeholder={t(field.placeholderKey)}
+                                isClearable
+                                isLoading={
+                                  (isSignerSelect || isRequesterSelect) &&
+                                  loadingSigners
+                                }
+                                classNamePrefix="select2-selection"
+                                formatOptionLabel={
+                                  isCurrencySelect
+                                    ? (option: SelectOption) => (
+                                        <span className="d-inline-flex align-items-center gap-2">
+                                          {option.flagUrl && (
+                                            <img
+                                              src={option.flagUrl}
+                                              alt={option.label}
+                                              width={20}
+                                              height={15}
+                                              className="rounded-1 flex-shrink-0"
+                                            />
+                                          )}
+                                          <span>{option.label}</span>
+                                        </span>
+                                      )
+                                    : undefined
+                                }
+                              />
+                            )
                           ) : (
                             <Input
                               type={field.type || "text"}

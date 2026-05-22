@@ -63,12 +63,17 @@ export interface SupplierApiItem {
   supplierid: number;
   supplierno?: string;
   suppliername?: string;
+  address?: string;
 }
 
 export interface SupplierOptionItem {
   supplierID: number;
   supplierNo: string;
   supplierName: string;
+}
+
+export interface SupplierCreationResult extends SupplierOptionItem {
+  address: string;
 }
 
 export interface SignerApiItem {
