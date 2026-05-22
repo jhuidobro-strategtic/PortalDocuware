@@ -343,6 +343,37 @@ const triggerPdfDownload = (blobUrl: string, fileName: string) => {
   document.body.removeChild(link);
 };
 
+const sanitizeFileNamePart = (value: unknown, fallback = "-") => {
+  const normalizedValue = String(value ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, " ")
+    .replace(/\s+/g, " ");
+
+  return normalizedValue || fallback;
+};
+
+const buildBulkExpedientPdfFileName = (expedient: Expedient) => {
+  const invoice = expedient.factura;
+  const invoiceDate = moment(invoice?.documentdate, ["YYYY-MM-DD", "YYYY/MM/DD"], true);
+  const formattedInvoiceDate = invoiceDate.isValid()
+    ? invoiceDate.format("DD-MM-YYYY")
+    : sanitizeFileNamePart(invoice?.documentdate, `Expediente-${expedient.expedienteid}`);
+
+  const fileNameParts = [
+    formattedInvoiceDate,
+    sanitizeFileNamePart(invoice?.suppliernumber),
+    sanitizeFileNamePart(invoice?.documentserial),
+    sanitizeFileNamePart(invoice?.documentnumber),
+    sanitizeFileNamePart(invoice?.suppliername),
+  ].filter(Boolean);
+
+  if (fileNameParts.length < 5) {
+    return `expediente-${expedient.expedienteid}-documentos.pdf`;
+  }
+
+  return `${fileNameParts.join("-")}.pdf`;
+};
+
 const getCurrentSessionUser = (): SessionUser => {
   try {
     const authUser = sessionStorage.getItem("authUser");
@@ -854,7 +885,7 @@ const Expedients = () => {
         type: "application/pdf",
       });
       const mergedBlobUrl = URL.createObjectURL(mergedBlob);
-      const fileName = `expediente-${selectedExpedient.expedienteid}-documentos.pdf`;
+      const fileName = buildBulkExpedientPdfFileName(selectedExpedient);
 
       triggerPdfDownload(mergedBlobUrl, fileName);
 
