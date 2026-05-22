@@ -136,6 +136,11 @@ interface SessionUser {
   token: string;
 }
 
+interface ExpedientDocumentPendingDelete {
+  expedientId: number;
+  expedientDocument: ExpedientDocument;
+}
+
 interface ExpedientUploadTypeOption {
   value: string;
   label: string;
@@ -445,6 +450,11 @@ const Expedients = () => {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [expedientToClose, setExpedientToClose] = useState<Expedient | null>(null);
   const [closingExpedient, setClosingExpedient] = useState(false);
+  const [documentPendingDelete, setDocumentPendingDelete] =
+    useState<ExpedientDocumentPendingDelete | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(
+    null
+  );
   const [locallyClosedExpedientIds, setLocallyClosedExpedientIds] = useState<
     Set<number>
   >(new Set());
@@ -516,6 +526,8 @@ const Expedients = () => {
     setPreviewLoading(false);
     setBulkDownloadError(null);
     setBulkDownloading(false);
+    setDocumentPendingDelete(null);
+    setDeletingDocumentId(null);
     resetUploadState();
     setPreviewBlobUrl((currentUrl) => {
       if (currentUrl) {
@@ -734,6 +746,60 @@ const Expedients = () => {
     setExpedientToClose(expedient);
   };
 
+  const handleOpenDeleteDocumentModal = (
+    expedientId: number,
+    expedientDocument: ExpedientDocument
+  ) => {
+    if (deletingDocumentId !== null) {
+      return;
+    }
+
+    setDocumentPendingDelete({
+      expedientId,
+      expedientDocument,
+    });
+  };
+
+  const handleCloseDeleteDocumentModal = () => {
+    if (deletingDocumentId !== null) {
+      return;
+    }
+
+    setDocumentPendingDelete(null);
+  };
+
+  const removeDeletedDocumentFromState = useCallback(
+    (expedientId: number, expedientDocumentId: number) => {
+      setExpedients((currentExpedients) =>
+        currentExpedients.map((expedient) =>
+          expedient.expedienteid === expedientId
+            ? {
+                ...expedient,
+                expediente_documentos: expedient.expediente_documentos.filter(
+                  (documentItem) =>
+                    documentItem.expedientedocid !== expedientDocumentId
+                ),
+              }
+            : expedient
+        )
+      );
+
+      setSelectedExpedient((currentSelected) =>
+        currentSelected?.expedienteid === expedientId
+          ? {
+              ...currentSelected,
+              expediente_documentos:
+                currentSelected.expediente_documentos.filter(
+                  (documentItem) =>
+                    documentItem.expedientedocid !== expedientDocumentId
+                ),
+            }
+          : currentSelected
+      );
+    },
+    []
+  );
+
   const handleCloseCloseExpedientModal = () => {
     if (closingExpedient) {
       return;
@@ -817,6 +883,74 @@ const Expedients = () => {
       pushFloatingAlert("danger", message);
     } finally {
       setClosingExpedient(false);
+    }
+  };
+
+  const handleConfirmDeleteDocument = async () => {
+    if (!documentPendingDelete || deletingDocumentId !== null) {
+      return;
+    }
+
+    const { expedientId, expedientDocument } = documentPendingDelete;
+
+    setDeletingDocumentId(expedientDocument.expedientedocid);
+
+    try {
+      const response = await fetch(
+        buildApiUrl(
+          `expedientes/documentos/${expedientDocument.expedientedocid}`
+        ),
+        {
+          method: "DELETE",
+          headers: sessionUser.token
+            ? {
+                Authorization: `Bearer ${sessionUser.token}`,
+              }
+            : undefined,
+        }
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.success === false) {
+        throw new Error(
+          payload?.message ||
+            t("Unable to delete the selected expedient document.")
+        );
+      }
+
+      if (
+        selectedPreviewDocument?.expedientedocid ===
+        expedientDocument.expedientedocid
+      ) {
+        setSelectedPreviewDocument(null);
+        setPreviewLoading(false);
+        setPreviewError(null);
+        setPreviewBlobUrl((currentUrl) => {
+          if (currentUrl) {
+            revokeObjectUrl(currentUrl);
+          }
+
+          return "";
+        });
+      }
+
+      removeDeletedDocumentFromState(
+        expedientId,
+        expedientDocument.expedientedocid
+      );
+      setDocumentPendingDelete(null);
+      pushFloatingAlert(
+        "success",
+        payload?.message || t("The registered document was deleted successfully.")
+      );
+    } catch (deleteError) {
+      const message =
+        deleteError instanceof Error
+          ? deleteError.message
+          : t("Unable to delete the selected expedient document.");
+      pushFloatingAlert("danger", message);
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -1434,6 +1568,27 @@ const Expedients = () => {
                                 <i className="ri-external-link-line" />
                                 {t("Open PDF")}
                               </a>
+                              <button
+                                type="button"
+                                className="expedient-document-delete-button"
+                                onClick={() =>
+                                  handleOpenDeleteDocumentModal(
+                                    selectedExpedient.expedienteid,
+                                    file
+                                  )
+                                }
+                                disabled={
+                                  deletingDocumentId === file.expedientedocid
+                                }
+                                aria-label={t("Delete")}
+                                title={t("Delete")}
+                              >
+                                {deletingDocumentId === file.expedientedocid ? (
+                                  <Spinner size="sm" />
+                                ) : (
+                                  <i className="ri-delete-bin-line" />
+                                )}
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1511,6 +1666,53 @@ const Expedients = () => {
           </div>
         </div>
       </aside>
+
+      <Modal
+        isOpen={!!documentPendingDelete}
+        toggle={deletingDocumentId !== null ? undefined : handleCloseDeleteDocumentModal}
+        backdrop={deletingDocumentId !== null ? "static" : true}
+        keyboard={deletingDocumentId === null}
+        centered
+      >
+        <ModalHeader
+          toggle={
+            deletingDocumentId !== null ? undefined : handleCloseDeleteDocumentModal
+          }
+        >
+          {t("Delete")}
+        </ModalHeader>
+        <ModalBody>
+          <p className="mb-2 fw-semibold">{t("Are you sure?")}</p>
+          <p className="text-muted mb-0">
+            {t("Are you sure you want to delete the registered document {{name}}?", {
+              name: documentPendingDelete?.expedientDocument.filename || "-",
+            })}
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="light"
+            onClick={handleCloseDeleteDocumentModal}
+            disabled={deletingDocumentId !== null}
+          >
+            {t("Cancel")}
+          </Button>
+          <Button
+            color="danger"
+            onClick={handleConfirmDeleteDocument}
+            disabled={deletingDocumentId !== null}
+          >
+            {deletingDocumentId !== null ? (
+              <>
+                <Spinner size="sm" className="me-2" />
+                {t("Processing...")}
+              </>
+            ) : (
+              t("Confirm")
+            )}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       <Modal
         isOpen={!!expedientToClose}

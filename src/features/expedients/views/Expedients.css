@@ -576,6 +576,39 @@
   white-space: nowrap;
 }
 
+.expedient-document-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #f4c7c3;
+  border-radius: 999px;
+  background: #fff1f1;
+  color: #d92d20;
+  font-size: 0.95rem;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.expedient-document-delete-button:hover,
+.expedient-document-delete-button:focus {
+  transform: translateY(-1px);
+  border-color: #ee9b95;
+  background: #ffe7e5;
+  box-shadow: 0 10px 22px rgba(217, 45, 32, 0.12);
+}
+
+.expedient-document-delete-button:disabled {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
 .expedient-drawer-empty {
   min-height: 280px;
   display: flex;
