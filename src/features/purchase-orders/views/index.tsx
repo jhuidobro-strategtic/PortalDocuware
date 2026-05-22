@@ -808,7 +808,7 @@ const PurchaseOrderDetails = () => {
 
       worksheet.mergeCells("E1:N2");
       const titleCell = worksheet.getCell("E1");
-      titleCell.value = "REPORTE DE ORDENES DE COMPRA";
+      titleCell.value = "REPORTE DE ÓRDENES DE COMPRA";
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
       titleCell.font = { size: 14, bold: true };
       titleCell.fill = {
@@ -832,7 +832,7 @@ const PurchaseOrderDetails = () => {
         "Documento Asociado",
         "Condición de Pago",
         "Moneda",
-        "Numero de Guia",
+        "Número de Guía",
         "Almacén",
         "Estado",
         "Persona Firmante",

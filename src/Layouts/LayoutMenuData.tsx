@@ -61,6 +61,18 @@ const Navdata = (t: (key: string) => string) => [
             },
         ],
     },
+    {
+        id: "user-management",
+        label: t("User Management"),
+        icon: "ri-user-settings-line",
+        subItems: [
+            {
+                id: "user-list",
+                label: t("Users"),
+                link: "/users",
+            },
+        ],
+    },
 ];
 
 export default Navdata;

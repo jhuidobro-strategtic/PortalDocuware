@@ -316,7 +316,7 @@ export const useDocumentList = () => {
         worksheet.getCell(cell).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D9E1F2" } };
       });
 
-      const headers = ["ID", "Serie", "Numero", "RUC", "Razón Social", "Tipo Documento", "Comprador", "Fecha Emisión", "Sub Total", "IGV", "Total", "Estado"];
+      const headers = ["ID", "Serie", "Número", "RUC", "Razón Social", "Tipo Documento", "Comprador", "Fecha Emisión", "Sub Total", "IGV", "Total", "Estado"];
 
       headers.forEach((header, index) => {
         const cell = worksheet.getCell(3, index + 1);
