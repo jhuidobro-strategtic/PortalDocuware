@@ -76,6 +76,11 @@ export interface SignerApiItem {
   userName?: string;
   fullName?: string;
   status?: boolean;
+  profileID?: number;
+  profile?: {
+    profileID?: number;
+    profileName?: string;
+  } | null;
 }
 
 export interface OrderCSummaryValues {

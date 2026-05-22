@@ -1,5 +1,11 @@
 import { buildApiUrl } from "../../../helpers/api-url";
-import { CatalogoItem, SelectOption, SupplierApiItem, SupplierOptionItem, SignerApiItem } from "../types/orderC.types";
+import {
+  CatalogoItem,
+  SelectOption,
+  SupplierApiItem,
+  SupplierOptionItem,
+  SignerApiItem,
+} from "../types/orderC.types";
 
 export const CATALOG_ENDPOINTS: Record<string, string> = {
   paymentCondition: "PAYMENT_CONDITION",

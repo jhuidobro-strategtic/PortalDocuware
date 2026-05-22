@@ -295,11 +295,14 @@ const DocumentOrderC = () => {
                     const isCurrencySelect = field.name === "currency";
                     const isSignerSelect =
                       field.name === "signedBy" || field.name === "signature2";
+                    const isRequesterSelect = field.name === "requiredby";
+                    const usesRawOptionLabels =
+                      isSignerSelect || isRequesterSelect;
                     const isSelect = !!field.options || isCatalogSelect || isSupplierSelect;
                     const selectOptions = field.options
                       ? field.options.map((opt: SelectOption) => ({
                           ...opt,
-                          label: isSignerSelect ? opt.label : t(opt.label),
+                          label: usesRawOptionLabels ? opt.label : t(opt.label),
                         }))
                       : isSupplierSelect
                       ? supplierSelectOptions
@@ -332,7 +335,10 @@ const DocumentOrderC = () => {
                               }
                               placeholder={t(field.placeholderKey)}
                               isClearable
-                              isLoading={isSignerSelect && loadingSigners}
+                              isLoading={
+                                (isSignerSelect || isRequesterSelect) &&
+                                loadingSigners
+                              }
                               classNamePrefix="select2-selection"
                               formatOptionLabel={
                                 isCurrencySelect
