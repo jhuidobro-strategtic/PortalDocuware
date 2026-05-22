@@ -14,13 +14,11 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
-  Pagination,
-  PaginationItem,
-  PaginationLink,
   Spinner,
   Table,
 } from "reactstrap";
 
+import AppPagination from "../../../components/common/Pagination";
 import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
@@ -1599,36 +1597,11 @@ const PurchaseOrderDetails = () => {
 
               {!loading && !error && totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-4">
-                  <Pagination>
-                    <PaginationItem disabled={currentPage === 1}>
-                      <PaginationLink
-                        previous
-                        onClick={() =>
-                          setCurrentPage((page) => Math.max(page - 1, 1))
-                        }
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, index) => (
-                      <PaginationItem
-                        key={index}
-                        active={currentPage === index + 1}
-                      >
-                        <PaginationLink onClick={() => setCurrentPage(index + 1)}>
-                          {index + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem disabled={currentPage === totalPages}>
-                      <PaginationLink
-                        next
-                        onClick={() =>
-                          setCurrentPage((page) =>
-                            Math.min(page + 1, totalPages)
-                          )
-                        }
-                      />
-                    </PaginationItem>
-                  </Pagination>
+                  <AppPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </CardBody>

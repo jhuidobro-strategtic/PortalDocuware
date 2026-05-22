@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  Pagination,
-  PaginationItem,
-  PaginationLink,
-  Table,
-} from "reactstrap";
+import { Table } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import ResizableHeader from "./ResizableHeader";
@@ -13,6 +8,7 @@ import {
   CurrencyBadge,
   DocumentStatusBadge,
 } from "../../../components/common/RecordBadges";
+import AppPagination from "../../../components/common/Pagination";
 import { getNumberLocale } from "../../../common/locale";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 
@@ -341,29 +337,11 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
 
       {totalPages > 1 && (
         <div className="d-flex justify-content-center mt-3">
-          <Pagination>
-            <PaginationItem disabled={currentPage === 1}>
-              <PaginationLink
-                previous
-                onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <PaginationItem key={i} active={currentPage === i + 1}>
-                <PaginationLink onClick={() => onPageChange(i + 1)}>
-                  {i + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem disabled={currentPage === totalPages}>
-              <PaginationLink
-                next
-                onClick={() =>
-                  onPageChange(Math.min(currentPage + 1, totalPages))
-                }
-              />
-            </PaginationItem>
-          </Pagination>
+          <AppPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+          />
         </div>
       )}
     </>

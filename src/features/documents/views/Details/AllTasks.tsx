@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, CardBody, Spinner, Pagination,
-  PaginationItem, PaginationLink } from "reactstrap";
+import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import LogoDocuware from "../../../../assets/images/LogoDocuware.png";
 import FloatingAlerts from "../../../../components/common/FloatingAlerts";
+import AppPagination from "../../../../components/common/Pagination";
 import { buildApiUrl } from "../../../../helpers/api-url";
 import DocumentFilters from "../../components/DetailsFilters";
 import DocumentTable from "../../components/DetailsDocumentTable";
@@ -334,31 +334,11 @@ const DocumentDetails: React.FC = () => {
 
               {totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-3">
-                  <Pagination>
-                    <PaginationItem disabled={currentPage === 1}>
-                      <PaginationLink
-                        previous
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(p - 1, 1))
-                        }
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                      <PaginationItem key={i} active={currentPage === i + 1}>
-                        <PaginationLink onClick={() => setCurrentPage(i + 1)}>
-                          {i + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem disabled={currentPage === totalPages}>
-                      <PaginationLink
-                        next
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(p + 1, totalPages))
-                        }
-                      />
-                    </PaginationItem>
-                  </Pagination>
+                  <AppPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </CardBody>
