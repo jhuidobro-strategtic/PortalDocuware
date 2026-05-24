@@ -351,15 +351,6 @@ const AddExpensePage = () => {
   >([]);
   const [createDetailsError, setCreateDetailsError] = useState("");
 
-  const tripOptions = useMemo<SelectOption[]>(
-    () =>
-      tripOptionsData.map((trip) => ({
-        value: String(trip.idTrip),
-        label: buildTripOptionLabel(trip),
-      })),
-    [tripOptionsData]
-  );
-
   const requesterOptions = useMemo<SelectOption[]>(
     () =>
       users.map((user) => ({
@@ -382,8 +373,9 @@ const AddExpensePage = () => {
   );
 
   const selectedTrip =
-    tripOptions.find((option) => option.value === createFormValues.tripId) ??
-    null;
+    tripOptionsData.find(
+      (trip) => String(trip.idTrip) === createFormValues.tripId
+    ) ?? null;
   const selectedRequester =
     requesterOptions.find(
       (option) => option.value === createFormValues.requesterId
@@ -558,12 +550,7 @@ const AddExpensePage = () => {
         throw new Error(data?.message || t("Error creating expense request"));
       }
 
-      setCreateFormValues(createExpenseRequestForm(requesterId, lockedTripId));
-      setFeedback({
-        type: "success",
-        message:
-          data?.message || t("Expense request registered successfully."),
-      });
+      navigate("/travel-expenses/requests", { replace: true });
     } catch (createError: any) {
       setFeedback({
         type: "danger",
@@ -591,7 +578,9 @@ const AddExpensePage = () => {
               <div className="flex-grow-1">
                 <h5 className="mb-1">{t("Add Expense")}</h5>
                 {selectedTrip && (
-                  <p className="text-muted mb-0">{selectedTrip.label}</p>
+                  <p className="text-muted mb-0">
+                    {buildTripOptionLabel(selectedTrip)}
+                  </p>
                 )}
               </div>
 
@@ -613,39 +602,13 @@ const AddExpensePage = () => {
                 </div>
               )}
 
-              <Row className="g-3">
-                <Col md={6}>
-                  <Label className="form-label">
-                    {t("Trip")} <span className="text-danger">*</span>
-                  </Label>
-                  <Select
-                    value={selectedTrip}
-                    options={tripOptions}
-                    onChange={(selected: SelectOption | null) =>
-                      setCreateFormValues((prev) => ({
-                        ...prev,
-                        tripId: selected?.value ?? "",
-                      }))
-                    }
-                    placeholder={t("Select trip")}
-                    isClearable={!lockedTripId}
-                    isSearchable
-                    isDisabled={
-                      creatingExpenseRequest ||
-                      loadingCatalogs ||
-                      Boolean(lockedTripId)
-                    }
-                    noOptionsMessage={() => t("No results")}
-                    styles={selectStyles}
-                    menuPortalTarget={menuPortalTarget}
-                  />
-                  {createFormErrors.tripId && (
-                    <div className="invalid-feedback d-block">
-                      {createFormErrors.tripId}
-                    </div>
-                  )}
-                </Col>
+              {createFormErrors.tripId && (
+                <div className="alert alert-danger py-2 mb-3">
+                  {createFormErrors.tripId}
+                </div>
+              )}
 
+              <Row className="g-3">
                 <Col md={6}>
                   <Label className="form-label">
                     {t("Request Number")} <span className="text-danger">*</span>
