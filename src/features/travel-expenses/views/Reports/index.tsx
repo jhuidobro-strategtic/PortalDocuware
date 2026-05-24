@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
+  Button,
   Card,
   CardBody,
   Col,
@@ -66,11 +67,19 @@ interface ChartTooltipState {
   left: number;
 }
 
+interface ChartScaleTick {
+  value: number;
+  percent: number;
+}
+
 const CHART_BAR_COLORS = {
   detailed: "#3b82f6",
   active: "#22c55e",
   inactive: "#f97316",
 } as const;
+
+const CHART_HEIGHT = 240;
+const CHART_SCALE_SEGMENTS = 4;
 
 const getAuthHeaders = (): Record<string, string> => {
   try {
@@ -276,6 +285,7 @@ const ReportsPage = () => {
   const [loadingReports, setLoadingReports] = useState(true);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [selectedRequestFilter, setSelectedRequestFilter] = useState("all");
+  const [selectedConceptFilter, setSelectedConceptFilter] = useState("all");
   const [chartTooltip, setChartTooltip] = useState<ChartTooltipState | null>(
     null
   );
@@ -342,6 +352,38 @@ const ReportsPage = () => {
     return Math.max(...values, 0);
   }, [reportSummary.conceptSummaries]);
 
+  const chartScaleTicks = useMemo<ChartScaleTick[]>(() => {
+    if (maxChartValue <= 0) {
+      return Array.from({ length: CHART_SCALE_SEGMENTS + 1 }, (_, index) => ({
+        value: 0,
+        percent: (index / CHART_SCALE_SEGMENTS) * 100,
+      }));
+    }
+
+    return Array.from({ length: CHART_SCALE_SEGMENTS + 1 }, (_, index) => ({
+      value: (maxChartValue / CHART_SCALE_SEGMENTS) * index,
+      percent: (index / CHART_SCALE_SEGMENTS) * 100,
+    }));
+  }, [maxChartValue]);
+
+  const selectedConceptSummary = useMemo(
+    () =>
+      selectedConceptFilter === "all"
+        ? null
+        : reportSummary.conceptSummaries.find(
+            (summary) => String(summary.conceptId) === selectedConceptFilter
+          ) || null,
+    [reportSummary.conceptSummaries, selectedConceptFilter]
+  );
+
+  const tableConceptSummaries = useMemo(
+    () =>
+      selectedConceptSummary
+        ? [selectedConceptSummary]
+        : reportSummary.conceptSummaries,
+    [reportSummary.conceptSummaries, selectedConceptSummary]
+  );
+
   const differenceMeta = useMemo(() => {
     if (reportSummary.difference > 0) {
       return {
@@ -362,6 +404,17 @@ const ReportsPage = () => {
       subtitle: t("Balanced"),
     };
   }, [reportSummary.difference, t]);
+
+  useEffect(() => {
+    if (
+      selectedConceptFilter !== "all" &&
+      !reportSummary.conceptSummaries.some(
+        (summary) => String(summary.conceptId) === selectedConceptFilter
+      )
+    ) {
+      setSelectedConceptFilter("all");
+    }
+  }, [reportSummary.conceptSummaries, selectedConceptFilter]);
 
   const floatingAlerts: FloatingAlertItem[] = [];
 
@@ -405,6 +458,12 @@ const ReportsPage = () => {
 
   const handleChartTooltipLeave = () => {
     setChartTooltip(null);
+  };
+
+  const handleConceptFilterToggle = (conceptId: string) => {
+    setSelectedConceptFilter((currentValue) =>
+      currentValue === conceptId ? "all" : conceptId
+    );
   };
 
   return (
@@ -537,82 +596,182 @@ const ReportsPage = () => {
                             {formatCurrency(chartTooltip.summary.inactive)}
                           </span>
                         </div>
+                        <div className="d-flex justify-content-between align-items-center gap-3 small mt-2 pt-2 border-top">
+                          <span className="text-muted">{t("Share")}</span>
+                          <span className="fw-semibold text-dark">
+                            {formatPercent(chartTooltip.summary.share)}%
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center gap-3 small mt-1">
+                          <span className="text-muted">{t("Difference")}</span>
+                          <span
+                            className={`fw-semibold ${
+                              chartTooltip.summary.active -
+                                chartTooltip.summary.inactive >=
+                              0
+                                ? "text-success"
+                                : "text-warning"
+                            }`}
+                          >
+                            {formatCurrency(
+                              chartTooltip.summary.active -
+                                chartTooltip.summary.inactive
+                            )}
+                          </span>
+                        </div>
                       </motion.div>
                     )}
 
-                    <motion.div
-                      key={selectedRequestFilter}
-                      className="d-flex align-items-end gap-3 overflow-auto pb-3"
-                      initial="hidden"
-                      animate="visible"
-                      style={{ minHeight: "320px" }}
-                    >
-                      {reportSummary.conceptSummaries.map((summary, summaryIndex) => (
-                        <motion.div
-                          key={String(summary.conceptId)}
-                          className="d-flex flex-column align-items-center flex-shrink-0"
-                          initial={{ opacity: 0, y: 22 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration: 0.35,
-                            delay: summaryIndex * 0.06,
-                          }}
-                          whileHover={{ y: -4 }}
-                          onMouseEnter={(event) =>
-                            handleChartTooltipMove(summary, event)
-                          }
-                          onMouseMove={(event) =>
-                            handleChartTooltipMove(summary, event)
-                          }
-                          onMouseLeave={handleChartTooltipLeave}
-                          style={{ minWidth: "92px" }}
-                        >
+                    <div className="d-flex gap-3 align-items-stretch">
+                      <div
+                        className="position-relative flex-shrink-0"
+                        style={{ width: "72px", height: `${CHART_HEIGHT}px` }}
+                      >
+                        {chartScaleTicks.map((tick, tickIndex) => (
                           <div
-                            className="d-flex align-items-end gap-1"
-                            style={{ height: "240px" }}
+                            key={`tick-label-${tickIndex}`}
+                            className="position-absolute end-0 translate-middle-y pe-2 text-muted small"
+                            style={{ top: `${100 - tick.percent}%` }}
                           >
-                            <AnimatedChartBar
-                              value={summary.detailed}
-                              color={CHART_BAR_COLORS.detailed}
-                              heightPercent={
-                                maxChartValue > 0
-                                  ? (summary.detailed / maxChartValue) * 100
-                                  : 0
-                              }
-                              delay={summaryIndex * 0.08}
-                            />
-                            <AnimatedChartBar
-                              value={summary.active}
-                              color={CHART_BAR_COLORS.active}
-                              heightPercent={
-                                maxChartValue > 0
-                                  ? (summary.active / maxChartValue) * 100
-                                  : 0
-                              }
-                              delay={summaryIndex * 0.08 + 0.05}
-                            />
-                            <AnimatedChartBar
-                              value={summary.inactive}
-                              color={CHART_BAR_COLORS.inactive}
-                              heightPercent={
-                                maxChartValue > 0
-                                  ? (summary.inactive / maxChartValue) * 100
-                                  : 0
-                              }
-                              delay={summaryIndex * 0.08 + 0.1}
-                            />
+                            {formatCurrency(tick.value)}
                           </div>
+                        ))}
+                      </div>
+
+                      <div className="position-relative flex-grow-1 overflow-auto pb-3">
+                        <div
+                          className="position-relative"
+                          style={{
+                            minWidth: "fit-content",
+                            height: `${CHART_HEIGHT}px`,
+                          }}
+                        >
+                          {chartScaleTicks.map((tick, tickIndex) => (
+                            <div
+                              key={`tick-line-${tickIndex}`}
+                              className="position-absolute start-0 end-0"
+                              style={{
+                                top: `${100 - tick.percent}%`,
+                                borderTop:
+                                  "1px dashed rgba(148, 163, 184, 0.35)",
+                              }}
+                            />
+                          ))}
+
                           <motion.div
-                            className="text-muted small text-center mt-3"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: summaryIndex * 0.06 + 0.2 }}
+                            key={selectedRequestFilter}
+                            className="d-flex align-items-end gap-3 h-100"
+                            initial="hidden"
+                            animate="visible"
                           >
-                            {truncateLabel(summary.conceptLabel)}
+                            {reportSummary.conceptSummaries.map(
+                              (summary, summaryIndex) => {
+                                const conceptId = String(summary.conceptId);
+                                const isSelected =
+                                  selectedConceptFilter === "all" ||
+                                  selectedConceptFilter === conceptId;
+
+                                return (
+                                  <motion.div
+                                    key={conceptId}
+                                    className="d-flex flex-column align-items-center flex-shrink-0"
+                                    initial={{ opacity: 0, y: 22 }}
+                                    animate={{
+                                      opacity: isSelected ? 1 : 0.45,
+                                      y: 0,
+                                      scale: isSelected ? 1 : 0.98,
+                                    }}
+                                    transition={{
+                                      duration: 0.35,
+                                      delay: summaryIndex * 0.06,
+                                    }}
+                                    whileHover={{ y: -4 }}
+                                    onMouseEnter={(event) =>
+                                      handleChartTooltipMove(summary, event)
+                                    }
+                                    onMouseMove={(event) =>
+                                      handleChartTooltipMove(summary, event)
+                                    }
+                                    onMouseLeave={handleChartTooltipLeave}
+                                    onClick={() =>
+                                      handleConceptFilterToggle(conceptId)
+                                    }
+                                    onKeyDown={(event) => {
+                                      if (
+                                        event.key === "Enter" ||
+                                        event.key === " "
+                                      ) {
+                                        event.preventDefault();
+                                        handleConceptFilterToggle(conceptId);
+                                      }
+                                    }}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-pressed={
+                                      selectedConceptFilter === conceptId
+                                    }
+                                    style={{ minWidth: "92px", cursor: "pointer" }}
+                                  >
+                                    <div
+                                      className="d-flex align-items-end gap-1"
+                                      style={{ height: `${CHART_HEIGHT}px` }}
+                                    >
+                                      <AnimatedChartBar
+                                        value={summary.detailed}
+                                        color={CHART_BAR_COLORS.detailed}
+                                        heightPercent={
+                                          maxChartValue > 0
+                                            ? (summary.detailed / maxChartValue) *
+                                              100
+                                            : 0
+                                        }
+                                        delay={summaryIndex * 0.08}
+                                      />
+                                      <AnimatedChartBar
+                                        value={summary.active}
+                                        color={CHART_BAR_COLORS.active}
+                                        heightPercent={
+                                          maxChartValue > 0
+                                            ? (summary.active / maxChartValue) *
+                                              100
+                                            : 0
+                                        }
+                                        delay={summaryIndex * 0.08 + 0.05}
+                                      />
+                                      <AnimatedChartBar
+                                        value={summary.inactive}
+                                        color={CHART_BAR_COLORS.inactive}
+                                        heightPercent={
+                                          maxChartValue > 0
+                                            ? (summary.inactive / maxChartValue) *
+                                              100
+                                            : 0
+                                        }
+                                        delay={summaryIndex * 0.08 + 0.1}
+                                      />
+                                    </div>
+                                    <motion.div
+                                      className={`small text-center mt-3 ${
+                                        selectedConceptFilter === conceptId
+                                          ? "text-dark fw-semibold"
+                                          : "text-muted"
+                                      }`}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      transition={{
+                                        delay: summaryIndex * 0.06 + 0.2,
+                                      }}
+                                    >
+                                      {truncateLabel(summary.conceptLabel)}
+                                    </motion.div>
+                                  </motion.div>
+                                );
+                              }
+                            )}
                           </motion.div>
-                        </motion.div>
-                      ))}
-                    </motion.div>
+                        </div>
+                      </div>
+                    </div>
 
                     <div className="d-flex flex-wrap justify-content-center gap-3 mt-3">
                       <div className="d-inline-flex align-items-center gap-2">
@@ -649,6 +808,28 @@ const ReportsPage = () => {
                         <span className="small text-muted">{t("Inactive")}</span>
                       </div>
                     </div>
+
+                    <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3">
+                      <span className="small text-muted">
+                        {t("Click a concept to filter the table.")}
+                      </span>
+                      {selectedConceptSummary && (
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <span className="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                            {t("Filtered by concept: {{concept}}", {
+                              concept: selectedConceptSummary.conceptLabel,
+                            })}
+                          </span>
+                          <Button
+                            color="light"
+                            size="sm"
+                            onClick={() => setSelectedConceptFilter("all")}
+                          >
+                            {t("All concepts")}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardBody>
@@ -658,7 +839,7 @@ const ReportsPage = () => {
               <CardBody className="p-4">
                 <h5 className="mb-4">{t("Detail by Concept")}</h5>
 
-                {reportSummary.conceptSummaries.length === 0 ? (
+                {tableConceptSummaries.length === 0 ? (
                   <div className="text-center text-muted py-4">
                     {t("No report data available for the selected filter.")}
                   </div>
@@ -675,7 +856,7 @@ const ReportsPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {reportSummary.conceptSummaries.map((summary) => (
+                        {tableConceptSummaries.map((summary) => (
                           <tr key={String(summary.conceptId)}>
                             <td className="fw-semibold">
                               {summary.conceptLabel}
