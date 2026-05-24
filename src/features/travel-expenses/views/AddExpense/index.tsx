@@ -609,7 +609,7 @@ const AddExpensePage = () => {
               )}
 
               <Row className="g-3">
-                <Col md={6}>
+                <Col md={4}>
                   <Label className="form-label">
                     {t("Request Number")} <span className="text-danger">*</span>
                   </Label>
@@ -628,7 +628,7 @@ const AddExpensePage = () => {
                   <FormFeedback>{createFormErrors.requestNumber}</FormFeedback>
                 </Col>
 
-                <Col md={6}>
+                <Col md={4}>
                   <Label className="form-label">
                     {t("Requested by")} <span className="text-danger">*</span>
                   </Label>
@@ -656,7 +656,7 @@ const AddExpensePage = () => {
                   )}
                 </Col>
 
-                <Col md={6}>
+                <Col md={4}>
                   <Label className="form-label">
                     {t("Total Budget")} <span className="text-danger">*</span>
                   </Label>
