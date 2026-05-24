@@ -98,7 +98,6 @@ interface ExpenseRequestFormValues {
   requesterId: string;
   reason: string;
   totalBudget: string;
-  status: boolean;
   details: ExpenseRequestFormDetailValues[];
 }
 
@@ -154,8 +153,13 @@ const createEmptyExpenseRequestForm = (
   requesterId,
   reason: "",
   totalBudget: "",
-  status: true,
   details: [createEmptyExpenseRequestDetailForm()],
+});
+
+const createDefaultExpenseRequestForm = (
+  requesterId = ""
+): ExpenseRequestFormValues => ({
+  ...createEmptyExpenseRequestForm(requesterId),
 });
 
 const getCurrentSessionUser = (): SessionUser => {
@@ -439,7 +443,7 @@ const buildExpenseRequestPayload = (
   requester_name: Number(values.requesterId),
   reason: values.reason.trim(),
   total_budget: values.totalBudget.trim(),
-  status: values.status,
+  status: true,
   created_by: createdBy,
   details: values.details.map((detail) => ({
     id_concept: Number(detail.conceptId),
@@ -468,7 +472,7 @@ const RequestsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createFormValues, setCreateFormValues] =
     useState<ExpenseRequestFormValues>(
-      createEmptyExpenseRequestForm(
+      createDefaultExpenseRequestForm(
         sessionUser.id !== null ? String(sessionUser.id) : ""
       )
     );
@@ -678,7 +682,7 @@ const RequestsPage = () => {
 
   const handleOpenCreateModal = () => {
     setCreateFormValues(
-      createEmptyExpenseRequestForm(
+      createDefaultExpenseRequestForm(
         sessionUser.id !== null ? String(sessionUser.id) : ""
       )
     );
@@ -702,7 +706,7 @@ const RequestsPage = () => {
     }
 
     setCreateFormValues(
-      createEmptyExpenseRequestForm(
+      createDefaultExpenseRequestForm(
         sessionUser.id !== null ? String(sessionUser.id) : ""
       )
     );
@@ -784,7 +788,7 @@ const RequestsPage = () => {
       setCurrentPage(1);
       setIsCreateModalOpen(false);
       setCreateFormValues(
-        createEmptyExpenseRequestForm(
+        createDefaultExpenseRequestForm(
           sessionUser.id !== null ? String(sessionUser.id) : ""
         )
       );
@@ -859,21 +863,18 @@ const RequestsPage = () => {
                         <th style={{ width: "170px" }}>{t("Request Number")}</th>
                         <th style={{ minWidth: "280px" }}>{t("Reason")}</th>
                         <th style={{ width: "160px" }}>{t("Requested by")}</th>
-                        <th style={{ width: "140px" }}>{t("Status")}</th>
                         <th style={{ width: "130px" }}>{t("Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedRequests.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-4">
+                          <td colSpan={4} className="text-center py-4">
                             {t("No expense requests were found.")}
                           </td>
                         </tr>
                       ) : (
                         paginatedRequests.map((request) => {
-                          const statusMeta = getStatusMeta(request.status, t);
-
                           return (
                             <tr key={request.idRequest}>
                               <td className="fw-semibold">
@@ -886,12 +887,6 @@ const RequestsPage = () => {
                                 {request.reason || "-"}
                               </td>
                               <td>{getRequesterLabel(request)}</td>
-                              <td>
-                                <span className={statusMeta.className}>
-                                  <i className={statusMeta.icon} />
-                                  <span>{statusMeta.label}</span>
-                                </span>
-                              </td>
                               <td>
                                 <Button
                                   color="light"
@@ -1025,31 +1020,6 @@ const RequestsPage = () => {
                     {createFormErrors.requesterId}
                   </div>
                 )}
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label d-block">{t("Status")}</Label>
-                <div className="form-check form-switch mt-2">
-                  <Input
-                    id="expense-request-status"
-                    type="switch"
-                    role="switch"
-                    checked={createFormValues.status}
-                    onChange={(event) =>
-                      setCreateFormValues((prev) => ({
-                        ...prev,
-                        status: event.target.checked,
-                      }))
-                    }
-                    disabled={creatingExpenseRequest}
-                  />
-                  <Label
-                    className="form-check-label"
-                    htmlFor="expense-request-status"
-                  >
-                    {createFormValues.status ? t("Active") : t("Inactive")}
-                  </Label>
-                </div>
               </Col>
 
               <Col md={6}>
