@@ -12,6 +12,10 @@ const DocumentProgramacion = lazy(() => import("../features/documents/views/Prog
 const PurchaseOrderDetails = lazy(() => import("../features/purchase-orders/views"));
 const Suppliers = lazy(() => import("../features/suppliers/views"));
 const Expedients = lazy(() => import("../features/expedients/views"));
+const TravelTrips = lazy(() => import("../features/travel-expenses/views/Trips"));
+const TravelRequests = lazy(() => import("../features/travel-expenses/views/Requests"));
+const TravelMySchedule = lazy(() => import("../features/travel-expenses/views/MySchedule"));
+const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports"));
 const Users = lazy(() => import("../features/users/views"));
 
 const authProtectedRoutes = [
@@ -26,6 +30,10 @@ const authProtectedRoutes = [
   { path: "/purchase-order-details", component: <PurchaseOrderDetails /> },
   { path: "/suppliers", component: <Suppliers /> },
   { path: "/expedientes", component: <Expedients /> },
+  { path: "/travel-expenses/trips", component: <TravelTrips /> },
+  { path: "/travel-expenses/requests", component: <TravelRequests /> },
+  { path: "/travel-expenses/my-schedule", component: <TravelMySchedule /> },
+  { path: "/travel-expenses/reports", component: <TravelReports /> },
   { path: "/users", component: <Users /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Navigate to="/documents" replace /> },

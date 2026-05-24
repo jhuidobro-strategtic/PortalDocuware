@@ -62,6 +62,33 @@ const Navdata = (t: (key: string) => string) => [
         ],
     },
     {
+        id: "travel-expenses",
+        label: t("Travel Expenses"),
+        icon: "ri-road-map-line",
+        subItems: [
+            {
+                id: "travel-expenses-trips",
+                label: t("Trips"),
+                link: "/travel-expenses/trips",
+            },
+            {
+                id: "travel-expenses-requests",
+                label: t("Requests"),
+                link: "/travel-expenses/requests",
+            },
+            {
+                id: "travel-expenses-my-schedule",
+                label: t("My Schedule"),
+                link: "/travel-expenses/my-schedule",
+            },
+            {
+                id: "travel-expenses-reports",
+                label: t("Reports"),
+                link: "/travel-expenses/reports",
+            },
+        ],
+    },
+    {
         id: "user-management",
         label: t("User Management"),
         icon: "ri-user-settings-line",
