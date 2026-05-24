@@ -28,6 +28,7 @@ import BreadCrumb from "../../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../../components/common/FloatingAlerts";
+import TableActionsMenu from "../../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../../helpers/api-url";
 
 interface TripReference {
@@ -129,6 +130,22 @@ const createEmptyTripForm = (): TripFormValues => ({
   returnDate: "",
   notes: "",
   status: true,
+});
+
+const mapTripToFormValues = (trip: TripItem): TripFormValues => ({
+  tripNumber: trip.tripNumber,
+  vehicleId: trip.vehicle ? String(trip.vehicle.id) : "",
+  driverId: trip.driver ? String(trip.driver.id) : "",
+  origin: trip.origin ? String(trip.origin.id) : "",
+  destination: trip.destination ? String(trip.destination.id) : "",
+  departureDate: moment(trip.departureDate, moment.ISO_8601, true).isValid()
+    ? moment(trip.departureDate).format(DATE_TIME_INPUT_FORMAT)
+    : "",
+  returnDate: moment(trip.returnDate, moment.ISO_8601, true).isValid()
+    ? moment(trip.returnDate).format(DATE_TIME_INPUT_FORMAT)
+    : "",
+  notes: trip.notes,
+  status: trip.status,
 });
 
 const getCurrentSessionUser = (): SessionUser => {
@@ -330,6 +347,15 @@ const buildTripPayload = (values: TripFormValues, createdBy: number) => ({
   created_by: createdBy,
 });
 
+const buildTripUpdatePayload = (
+  values: TripFormValues,
+  userId: number,
+  tripId: number
+) => ({
+  ...buildTripPayload(values, userId),
+  id_trip: tripId,
+});
+
 const TripsPage = () => {
   const { t } = useTranslation();
   const sessionUser = getCurrentSessionUser();
@@ -348,6 +374,13 @@ const TripsPage = () => {
   );
   const [createFormErrors, setCreateFormErrors] = useState<TripFormErrors>({});
   const [creatingTrip, setCreatingTrip] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<TripItem | null>(null);
+  const [editFormValues, setEditFormValues] = useState<TripFormValues>(
+    createEmptyTripForm()
+  );
+  const [editFormErrors, setEditFormErrors] = useState<TripFormErrors>({});
+  const [updatingTrip, setUpdatingTrip] = useState(false);
 
   const vehicleOptions = useMemo<SelectOption[]>(
     () =>
@@ -388,6 +421,19 @@ const TripsPage = () => {
   const selectedDestination =
     destinationOptions.find(
       (option) => option.value === createFormValues.destination
+    ) ?? null;
+  const selectedEditVehicle =
+    vehicleOptions.find((option) => option.value === editFormValues.vehicleId) ??
+    null;
+  const selectedEditDriver =
+    driverOptions.find((option) => option.value === editFormValues.driverId) ??
+    null;
+  const selectedEditOrigin =
+    destinationOptions.find((option) => option.value === editFormValues.origin) ??
+    null;
+  const selectedEditDestination =
+    destinationOptions.find(
+      (option) => option.value === editFormValues.destination
     ) ?? null;
 
   const fetchTrips = useCallback(async () => {
@@ -550,6 +596,32 @@ const TripsPage = () => {
     setIsCreateModalOpen(false);
   };
 
+  const handleOpenEditModal = (trip: TripItem) => {
+    setEditingTrip(trip);
+    setEditFormValues(mapTripToFormValues(trip));
+    setEditFormErrors({});
+    setIsEditModalOpen(true);
+
+    if (
+      vehicles.length === 0 ||
+      drivers.length === 0 ||
+      destinations.length === 0
+    ) {
+      void fetchTripCatalogs();
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    if (updatingTrip) {
+      return;
+    }
+
+    setEditingTrip(null);
+    setEditFormValues(createEmptyTripForm());
+    setEditFormErrors({});
+    setIsEditModalOpen(false);
+  };
+
   const handleCreateTrip = async (
     event?: React.FormEvent<HTMLFormElement>
   ) => {
@@ -600,6 +672,64 @@ const TripsPage = () => {
       });
     } finally {
       setCreatingTrip(false);
+    }
+  };
+
+  const handleEditTrip = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    const validationErrors = validateTripForm(editFormValues, t);
+
+    if (Object.keys(validationErrors).length > 0) {
+      setEditFormErrors(validationErrors);
+      return;
+    }
+
+    if (sessionUser.id === null) {
+      setFeedback({
+        type: "danger",
+        message: t("Unable to identify the signed-in user to update this trip."),
+      });
+      return;
+    }
+
+    if (!editingTrip) {
+      return;
+    }
+
+    try {
+      setUpdatingTrip(true);
+      setEditFormErrors({});
+
+      const response = await fetch(buildApiUrl("trips/"), {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(
+          buildTripUpdatePayload(editFormValues, sessionUser.id, editingTrip.idTrip)
+        ),
+      });
+      const responseText = await response.text();
+      const data = responseText ? JSON.parse(responseText) : null;
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.message || t("Error updating trip"));
+      }
+
+      await fetchTrips();
+      setIsEditModalOpen(false);
+      setEditingTrip(null);
+      setEditFormValues(createEmptyTripForm());
+      setFeedback({
+        type: "success",
+        message: data?.message || t("Trip updated successfully."),
+      });
+    } catch (updateError: any) {
+      setFeedback({
+        type: "danger",
+        message: updateError?.message || t("Error updating trip"),
+      });
+    } finally {
+      setUpdatingTrip(false);
     }
   };
 
@@ -665,12 +795,15 @@ const TripsPage = () => {
                         <th style={{ width: "170px" }}>{t("Return Date")}</th>
                         <th style={{ minWidth: "240px" }}>{t("Notes")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
+                        <th style={{ width: "120px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedTrips.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="text-center py-4">
+                          <td colSpan={11} className="text-center py-4">
                             {t("No trips were found.")}
                           </td>
                         </tr>
@@ -701,6 +834,19 @@ const TripsPage = () => {
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
                                 </span>
+                              </td>
+                              <td className="text-center">
+                                <TableActionsMenu
+                                  items={[
+                                    {
+                                      id: `edit-trip-${trip.idTrip}`,
+                                      label: t("Edit"),
+                                      icon: "ri-edit-line",
+                                      tone: "neutral",
+                                      onClick: () => handleOpenEditModal(trip),
+                                    },
+                                  ]}
+                                />
                               </td>
                             </tr>
                           );
@@ -967,6 +1113,256 @@ const TripsPage = () => {
               {creatingTrip && <Spinner size="sm" className="me-2" />}
               <i className="ri-save-line align-bottom me-1" />
               {t("Register")}
+            </Button>
+          </ModalFooter>
+        </Form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        toggle={updatingTrip ? undefined : handleCloseEditModal}
+        centered
+        size="lg"
+        backdrop={updatingTrip ? "static" : true}
+        keyboard={!updatingTrip}
+      >
+        <ModalHeader toggle={updatingTrip ? undefined : handleCloseEditModal}>
+          {t("Edit Trip")}
+        </ModalHeader>
+
+        <Form onSubmit={handleEditTrip}>
+          <ModalBody className="p-4">
+            {loadingTripCatalogs && (
+              <div className="d-flex align-items-center gap-2 text-muted mb-3">
+                <Spinner size="sm" />
+                <span>{t("Loading...")}</span>
+              </div>
+            )}
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Trip Number")} <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  value={editFormValues.tripNumber}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      tripNumber: event.target.value,
+                    }))
+                  }
+                  invalid={Boolean(editFormErrors.tripNumber)}
+                  placeholder="VJ-26-0002"
+                  disabled={updatingTrip}
+                />
+                <FormFeedback>{editFormErrors.tripNumber}</FormFeedback>
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label d-block">{t("Status")}</Label>
+                <div className="form-check form-switch mt-2">
+                  <Input
+                    id="edit-trip-status"
+                    type="switch"
+                    role="switch"
+                    checked={editFormValues.status}
+                    onChange={(event) =>
+                      setEditFormValues((prev) => ({
+                        ...prev,
+                        status: event.target.checked,
+                      }))
+                    }
+                    disabled={updatingTrip}
+                  />
+                  <Label className="form-check-label" htmlFor="edit-trip-status">
+                    {editFormValues.status ? t("Active") : t("Inactive")}
+                  </Label>
+                </div>
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Vehicle")} <span className="text-danger">*</span>
+                </Label>
+                <Select
+                  value={selectedEditVehicle}
+                  options={vehicleOptions}
+                  onChange={(selected: SelectOption | null) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      vehicleId: selected?.value ?? "",
+                    }))
+                  }
+                  placeholder={t("Select a vehicle")}
+                  isClearable
+                  isSearchable
+                  isDisabled={updatingTrip || loadingTripCatalogs}
+                  noOptionsMessage={() => t("No results")}
+                  styles={selectStyles}
+                  menuPortalTarget={document.body}
+                />
+                {editFormErrors.vehicleId && (
+                  <div className="invalid-feedback d-block">
+                    {editFormErrors.vehicleId}
+                  </div>
+                )}
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Driver")} <span className="text-danger">*</span>
+                </Label>
+                <Select
+                  value={selectedEditDriver}
+                  options={driverOptions}
+                  onChange={(selected: SelectOption | null) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      driverId: selected?.value ?? "",
+                    }))
+                  }
+                  placeholder={t("Select a driver")}
+                  isClearable
+                  isSearchable
+                  isDisabled={updatingTrip || loadingTripCatalogs}
+                  noOptionsMessage={() => t("No results")}
+                  styles={selectStyles}
+                  menuPortalTarget={document.body}
+                />
+                {editFormErrors.driverId && (
+                  <div className="invalid-feedback d-block">
+                    {editFormErrors.driverId}
+                  </div>
+                )}
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Origin")} <span className="text-danger">*</span>
+                </Label>
+                <Select
+                  value={selectedEditOrigin}
+                  options={destinationOptions}
+                  onChange={(selected: SelectOption | null) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      origin: selected?.value ?? "",
+                    }))
+                  }
+                  placeholder={t("Select origin")}
+                  isClearable
+                  isSearchable
+                  isDisabled={updatingTrip || loadingTripCatalogs}
+                  noOptionsMessage={() => t("No results")}
+                  styles={selectStyles}
+                  menuPortalTarget={document.body}
+                />
+                {editFormErrors.origin && (
+                  <div className="invalid-feedback d-block">
+                    {editFormErrors.origin}
+                  </div>
+                )}
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Destination")} <span className="text-danger">*</span>
+                </Label>
+                <Select
+                  value={selectedEditDestination}
+                  options={destinationOptions}
+                  onChange={(selected: SelectOption | null) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      destination: selected?.value ?? "",
+                    }))
+                  }
+                  placeholder={t("Select destination")}
+                  isClearable
+                  isSearchable
+                  isDisabled={updatingTrip || loadingTripCatalogs}
+                  noOptionsMessage={() => t("No results")}
+                  styles={selectStyles}
+                  menuPortalTarget={document.body}
+                />
+                {editFormErrors.destination && (
+                  <div className="invalid-feedback d-block">
+                    {editFormErrors.destination}
+                  </div>
+                )}
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Departure Date")} <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={editFormValues.departureDate}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      departureDate: event.target.value,
+                    }))
+                  }
+                  invalid={Boolean(editFormErrors.departureDate)}
+                  disabled={updatingTrip}
+                />
+                <FormFeedback>{editFormErrors.departureDate}</FormFeedback>
+              </Col>
+
+              <Col md={6}>
+                <Label className="form-label">
+                  {t("Return Date")} <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={editFormValues.returnDate}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      returnDate: event.target.value,
+                    }))
+                  }
+                  invalid={Boolean(editFormErrors.returnDate)}
+                  disabled={updatingTrip}
+                />
+                <FormFeedback>{editFormErrors.returnDate}</FormFeedback>
+              </Col>
+
+              <Col xs={12}>
+                <Label className="form-label">{t("Notes")}</Label>
+                <Input
+                  type="textarea"
+                  rows={3}
+                  value={editFormValues.notes}
+                  onChange={(event) =>
+                    setEditFormValues((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                  placeholder={t("Enter notes...")}
+                  disabled={updatingTrip}
+                />
+              </Col>
+            </Row>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button
+              color="light"
+              type="button"
+              onClick={handleCloseEditModal}
+              disabled={updatingTrip}
+            >
+              {t("Cancel")}
+            </Button>
+            <Button color="primary" type="submit" disabled={updatingTrip}>
+              {updatingTrip && <Spinner size="sm" className="me-2" />}
+              <i className="ri-save-line align-bottom me-1" />
+              {t("Update")}
             </Button>
           </ModalFooter>
         </Form>
