@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -59,6 +59,11 @@ interface ReportSummary {
   inactiveBudget: number;
   difference: number;
   conceptSummaries: ConceptSummary[];
+}
+
+interface ChartTooltipState {
+  summary: ConceptSummary;
+  left: number;
 }
 
 const CHART_BAR_COLORS = {
@@ -222,14 +227,12 @@ const ReportMetricCard: React.FC<{
 };
 
 const AnimatedChartBar: React.FC<{
-  label: string;
   value: number;
   color: string;
   heightPercent: number;
   delay: number;
-}> = ({ label, value, color, heightPercent, delay }) => (
+}> = ({ value, color, heightPercent, delay }) => (
   <motion.div
-    title={`${label}: ${formatCurrency(value)}`}
     className="rounded-top"
     initial={{
       height: 0,
@@ -268,10 +271,14 @@ const AnimatedChartBar: React.FC<{
 
 const ReportsPage = () => {
   const { t } = useTranslation();
+  const chartWrapperRef = useRef<HTMLDivElement | null>(null);
   const [requests, setRequests] = useState<ExpenseRequestItem[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [selectedRequestFilter, setSelectedRequestFilter] = useState("all");
+  const [chartTooltip, setChartTooltip] = useState<ChartTooltipState | null>(
+    null
+  );
 
   const fetchExpenseRequests = useCallback(async () => {
     try {
@@ -306,6 +313,10 @@ const ReportsPage = () => {
   useEffect(() => {
     void fetchExpenseRequests();
   }, [fetchExpenseRequests]);
+
+  useEffect(() => {
+    setChartTooltip(null);
+  }, [selectedRequestFilter]);
 
   const filteredRequests = useMemo(() => {
     if (selectedRequestFilter === "all") {
@@ -368,6 +379,32 @@ const ReportsPage = () => {
     if (alertId === "expense-reports-feedback") {
       setFeedback(null);
     }
+  };
+
+  const handleChartTooltipMove = (
+    summary: ConceptSummary,
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    if (!chartWrapperRef.current) {
+      return;
+    }
+
+    const wrapperRect = chartWrapperRef.current.getBoundingClientRect();
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const nextLeft = targetRect.left - wrapperRect.left + targetRect.width / 2;
+    const clampedLeft = Math.min(
+      Math.max(nextLeft, 120),
+      Math.max(wrapperRect.width - 120, 120)
+    );
+
+    setChartTooltip({
+      summary,
+      left: clampedLeft,
+    });
+  };
+
+  const handleChartTooltipLeave = () => {
+    setChartTooltip(null);
   };
 
   return (
@@ -463,7 +500,46 @@ const ReportsPage = () => {
                     {t("No concept data available for the selected filter.")}
                   </div>
                 ) : (
-                  <>
+                  <div ref={chartWrapperRef} className="position-relative pt-5">
+                    {chartTooltip && (
+                      <motion.div
+                        key={String(chartTooltip.summary.conceptId)}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ duration: 0.18 }}
+                        className="position-absolute top-0 translate-middle-x bg-white border rounded-3 shadow-sm p-3"
+                        style={{
+                          left: chartTooltip.left,
+                          zIndex: 3,
+                          minWidth: "220px",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <div className="fw-semibold text-dark mb-2">
+                          {chartTooltip.summary.conceptLabel}
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center gap-3 small mb-1">
+                          <span className="text-primary">{t("Detailed")}</span>
+                          <span className="fw-semibold text-dark">
+                            {formatCurrency(chartTooltip.summary.detailed)}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center gap-3 small mb-1">
+                          <span className="text-success">{t("Active")}</span>
+                          <span className="fw-semibold text-dark">
+                            {formatCurrency(chartTooltip.summary.active)}
+                          </span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center gap-3 small">
+                          <span className="text-warning">{t("Inactive")}</span>
+                          <span className="fw-semibold text-dark">
+                            {formatCurrency(chartTooltip.summary.inactive)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
                     <motion.div
                       key={selectedRequestFilter}
                       className="d-flex align-items-end gap-3 overflow-auto pb-3"
@@ -482,6 +558,13 @@ const ReportsPage = () => {
                             delay: summaryIndex * 0.06,
                           }}
                           whileHover={{ y: -4 }}
+                          onMouseEnter={(event) =>
+                            handleChartTooltipMove(summary, event)
+                          }
+                          onMouseMove={(event) =>
+                            handleChartTooltipMove(summary, event)
+                          }
+                          onMouseLeave={handleChartTooltipLeave}
                           style={{ minWidth: "92px" }}
                         >
                           <div
@@ -489,7 +572,6 @@ const ReportsPage = () => {
                             style={{ height: "240px" }}
                           >
                             <AnimatedChartBar
-                              label={summary.conceptLabel}
                               value={summary.detailed}
                               color={CHART_BAR_COLORS.detailed}
                               heightPercent={
@@ -500,7 +582,6 @@ const ReportsPage = () => {
                               delay={summaryIndex * 0.08}
                             />
                             <AnimatedChartBar
-                              label={summary.conceptLabel}
                               value={summary.active}
                               color={CHART_BAR_COLORS.active}
                               heightPercent={
@@ -511,7 +592,6 @@ const ReportsPage = () => {
                               delay={summaryIndex * 0.08 + 0.05}
                             />
                             <AnimatedChartBar
-                              label={summary.conceptLabel}
                               value={summary.inactive}
                               color={CHART_BAR_COLORS.inactive}
                               heightPercent={
@@ -524,7 +604,6 @@ const ReportsPage = () => {
                           </div>
                           <motion.div
                             className="text-muted small text-center mt-3"
-                            title={summary.conceptLabel}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: summaryIndex * 0.06 + 0.2 }}
@@ -570,7 +649,7 @@ const ReportsPage = () => {
                         <span className="small text-muted">{t("Inactive")}</span>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardBody>
             </Card>
