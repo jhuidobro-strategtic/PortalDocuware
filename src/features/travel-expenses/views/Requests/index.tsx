@@ -1,24 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
-import Select from "react-select";
 import { useTranslation } from "react-i18next";
 import {
   Button,
   Card,
   CardBody,
-  Col,
   Container,
-  Form,
-  FormFeedback,
   Input,
   InputGroup,
   InputGroupText,
-  Label,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
-  Row,
   Spinner,
   Table,
 } from "reactstrap";
@@ -82,107 +76,7 @@ interface UserApiItem {
   fullName?: string;
 }
 
-interface SessionUser {
-  id: number | null;
-}
-
-interface ExpenseRequestFormDetailValues {
-  conceptId: string;
-  budgetedAmount: string;
-  notes: string;
-}
-
-interface ExpenseRequestFormValues {
-  tripId: string;
-  requestNumber: string;
-  requesterId: string;
-  reason: string;
-  totalBudget: string;
-  details: ExpenseRequestFormDetailValues[];
-}
-
-type ExpenseRequestFormField =
-  | "tripId"
-  | "requestNumber"
-  | "requesterId"
-  | "reason"
-  | "totalBudget";
-
-type ExpenseRequestFormErrors = Partial<
-  Record<ExpenseRequestFormField, string>
->;
-
-type ExpenseRequestDetailFormErrors = Partial<
-  Record<"conceptId" | "budgetedAmount", string>
->;
-
-interface SelectOption {
-  value: string;
-  label: string;
-}
-
 const ITEMS_PER_PAGE = 10;
-
-const selectStyles = {
-  control: (base: Record<string, unknown>) => ({
-    ...base,
-    minHeight: "38px",
-  }),
-  menu: (base: Record<string, unknown>) => ({
-    ...base,
-    zIndex: 9999,
-  }),
-  menuPortal: (base: Record<string, unknown>) => ({
-    ...base,
-    zIndex: 9999,
-  }),
-};
-
-const createEmptyExpenseRequestDetailForm =
-  (): ExpenseRequestFormDetailValues => ({
-    conceptId: "",
-    budgetedAmount: "",
-    notes: "",
-  });
-
-const createEmptyExpenseRequestForm = (
-  requesterId = ""
-): ExpenseRequestFormValues => ({
-  tripId: "",
-  requestNumber: "",
-  requesterId,
-  reason: "",
-  totalBudget: "",
-  details: [createEmptyExpenseRequestDetailForm()],
-});
-
-const createDefaultExpenseRequestForm = (
-  requesterId = ""
-): ExpenseRequestFormValues => ({
-  ...createEmptyExpenseRequestForm(requesterId),
-});
-
-const getCurrentSessionUser = (): SessionUser => {
-  try {
-    const authUser = sessionStorage.getItem("authUser");
-
-    if (!authUser) {
-      return { id: null };
-    }
-
-    const parsedUser = JSON.parse(authUser);
-    const sessionData = parsedUser?.data || {};
-    const parsedId = Number(
-      sessionData?.userID ?? sessionData?.id ?? sessionData?.profileID ?? ""
-    );
-
-    return {
-      id: Number.isFinite(parsedId) ? parsedId : null,
-    };
-  } catch {
-    return { id: null };
-  }
-};
 
 const getAuthHeaders = (): Record<string, string> => {
   try {
@@ -351,178 +245,18 @@ const formatAmount = (value: string) => {
   }).format(parsedValue);
 };
 
-const buildTripOptionLabel = (trip: ExpenseRequestTrip) =>
-  [
-    trip.tripNumber || `#${trip.idTrip}`,
-    `${trip.origin?.label || "-"} -> ${trip.destination?.label || "-"}`,
-  ].join(" - ");
-
-const validateExpenseRequestForm = (
-  values: ExpenseRequestFormValues,
-  t: (key: string, options?: Record<string, unknown>) => string
-) => {
-  const formErrors: ExpenseRequestFormErrors = {};
-  const detailErrors: ExpenseRequestDetailFormErrors[] = values.details.map(
-    () => ({})
-  );
-  let detailsError = "";
-
-  if (!values.tripId.trim()) {
-    formErrors.tripId = t("Complete the {{field}} field.", {
-      field: t("Trip"),
-    });
-  }
-
-  if (!values.requestNumber.trim()) {
-    formErrors.requestNumber = t("Complete the {{field}} field.", {
-      field: t("Request Number"),
-    });
-  }
-
-  if (!values.requesterId.trim()) {
-    formErrors.requesterId = t("Complete the {{field}} field.", {
-      field: t("Requested by"),
-    });
-  }
-
-  if (!values.reason.trim()) {
-    formErrors.reason = t("Complete the {{field}} field.", {
-      field: t("Reason"),
-    });
-  }
-
-  if (
-    !values.totalBudget.trim() ||
-    !Number.isFinite(Number(values.totalBudget)) ||
-    Number(values.totalBudget) <= 0
-  ) {
-    formErrors.totalBudget = t("Complete the {{field}} field.", {
-      field: t("Total Budget"),
-    });
-  }
-
-  if (values.details.length === 0) {
-    detailsError = t("At least one expense detail is required.");
-  }
-
-  values.details.forEach((detail, index) => {
-    if (!detail.conceptId.trim()) {
-      detailErrors[index].conceptId = t("Complete the {{field}} field.", {
-        field: t("Concept"),
-      });
-    }
-
-    if (
-      !detail.budgetedAmount.trim() ||
-      !Number.isFinite(Number(detail.budgetedAmount)) ||
-      Number(detail.budgetedAmount) <= 0
-    ) {
-      detailErrors[index].budgetedAmount = t("Complete the {{field}} field.", {
-        field: t("Budget"),
-      });
-    }
-  });
-
-  return {
-    formErrors,
-    detailErrors,
-    detailsError,
-    hasErrors:
-      Object.keys(formErrors).length > 0 ||
-      detailErrors.some((detail) => Object.keys(detail).length > 0) ||
-      detailsError !== "",
-  };
-};
-
-const buildExpenseRequestPayload = (
-  values: ExpenseRequestFormValues,
-  createdBy: number
-) => ({
-  id_trip: Number(values.tripId),
-  request_number: values.requestNumber.trim(),
-  requester_name: Number(values.requesterId),
-  reason: values.reason.trim(),
-  total_budget: values.totalBudget.trim(),
-  status: true,
-  created_by: createdBy,
-  details: values.details.map((detail) => ({
-    id_concept: Number(detail.conceptId),
-    budgeted_amount: detail.budgetedAmount.trim(),
-    notes: detail.notes.trim(),
-    created_by: createdBy,
-  })),
-});
-
 const RequestsPage = () => {
   const { t } = useTranslation();
-  const sessionUser = getCurrentSessionUser();
   const [requests, setRequests] = useState<ExpenseRequestItem[]>([]);
   const [users, setUsers] = useState<UserApiItem[]>([]);
-  const [tripOptionsData, setTripOptionsData] = useState<ExpenseRequestTrip[]>(
-    []
-  );
-  const [concepts, setConcepts] = useState<ExpenseConceptReference[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRequest, setSelectedRequest] =
     useState<ExpenseRequestItem | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createFormValues, setCreateFormValues] =
-    useState<ExpenseRequestFormValues>(
-      createDefaultExpenseRequestForm(
-        sessionUser.id !== null ? String(sessionUser.id) : ""
-      )
-    );
-  const [createFormErrors, setCreateFormErrors] =
-    useState<ExpenseRequestFormErrors>({});
-  const [createDetailErrors, setCreateDetailErrors] = useState<
-    ExpenseRequestDetailFormErrors[]
-  >([]);
-  const [createDetailsError, setCreateDetailsError] = useState("");
-  const [creatingExpenseRequest, setCreatingExpenseRequest] = useState(false);
 
   const userLookup = useMemo(() => mapUserLookup(users), [users]);
-
-  const tripOptions = useMemo<SelectOption[]>(
-    () =>
-      tripOptionsData.map((trip) => ({
-        value: String(trip.idTrip),
-        label: buildTripOptionLabel(trip),
-      })),
-    [tripOptionsData]
-  );
-
-  const requesterOptions = useMemo<SelectOption[]>(
-    () =>
-      users.map((user) => ({
-        value: String(user.userID),
-        label:
-          String(user.fullName ?? "").trim() ||
-          String(user.userName ?? "").trim() ||
-          String(user.userID),
-      })),
-    [users]
-  );
-
-  const conceptOptions = useMemo<SelectOption[]>(
-    () =>
-      concepts.map((concept) => ({
-        value: String(concept.id),
-        label: concept.label,
-      })),
-    [concepts]
-  );
-
-  const selectedTrip =
-    tripOptions.find((option) => option.value === createFormValues.tripId) ??
-    null;
-  const selectedRequester =
-    requesterOptions.find(
-      (option) => option.value === createFormValues.requesterId
-    ) ?? null;
 
   const fetchExpenseRequests = useCallback(async () => {
     try {
@@ -550,70 +284,27 @@ const RequestsPage = () => {
     }
   }, [t]);
 
-  const fetchRequestCatalogs = useCallback(async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      setLoadingCatalogs(true);
+      const response = await fetch(buildApiUrl("users/"), {
+        cache: "no-store",
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json().catch(() => null);
 
-      const [tripsResponse, usersResponse, conceptsResponse] = await Promise.all([
-        fetch(buildApiUrl("trips/"), {
-          cache: "no-store",
-          headers: getAuthHeaders(),
-        }),
-        fetch(buildApiUrl("users/"), {
-          cache: "no-store",
-          headers: getAuthHeaders(),
-        }),
-        fetch(buildApiUrl("concepts/"), {
-          cache: "no-store",
-          headers: getAuthHeaders(),
-        }),
-      ]);
-
-      const [tripsData, usersData, conceptsData] = await Promise.all([
-        tripsResponse.json().catch(() => null),
-        usersResponse.json().catch(() => null),
-        conceptsResponse.json().catch(() => null),
-      ]);
-
-      if (!tripsResponse.ok || !tripsData?.success || !Array.isArray(tripsData?.data)) {
-        throw new Error(tripsData?.message || t("Error loading expense request catalogs"));
-      }
-
-      if (!usersResponse.ok || !usersData?.success || !Array.isArray(usersData?.data)) {
-        throw new Error(usersData?.message || t("Error loading expense request catalogs"));
-      }
-
-      if (
-        !conceptsResponse.ok ||
-        !conceptsData?.success ||
-        !Array.isArray(conceptsData?.data)
-      ) {
+      if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
         throw new Error(
-          conceptsData?.message || t("Error loading expense request catalogs")
+          data?.message || t("Error loading expense request catalogs")
         );
       }
 
-      setTripOptionsData(
-        (tripsData.data as any[])
-          .map(mapExpenseRequestTrip)
-          .filter((trip): trip is ExpenseRequestTrip => trip !== null)
-      );
-      setUsers(usersData.data as UserApiItem[]);
-      setConcepts(
-        (conceptsData.data as any[])
-          .map(mapExpenseConceptReference)
-          .filter(
-            (concept): concept is ExpenseConceptReference => concept !== null
-          )
-      );
-    } catch (catalogError: any) {
+      setUsers(data.data as UserApiItem[]);
+    } catch (usersError: any) {
       setFeedback({
         type: "danger",
         message:
-          catalogError?.message || t("Error loading expense request catalogs"),
+          usersError?.message || t("Error loading expense request catalogs"),
       });
-    } finally {
-      setLoadingCatalogs(false);
     }
   }, [t]);
 
@@ -622,9 +313,8 @@ const RequestsPage = () => {
   }, [t]);
 
   useEffect(() => {
-    void fetchExpenseRequests();
-    void fetchRequestCatalogs();
-  }, [fetchExpenseRequests, fetchRequestCatalogs]);
+    void Promise.all([fetchExpenseRequests(), fetchUsers()]);
+  }, [fetchExpenseRequests, fetchUsers]);
 
   const filteredRequests = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
@@ -672,141 +362,12 @@ const RequestsPage = () => {
     }
   };
 
-  const handleOpenRequestModal = (request: ExpenseRequestItem) => {
-    setSelectedRequest(request);
-  };
-
-  const handleCloseRequestModal = () => {
-    setSelectedRequest(null);
-  };
-
-  const handleOpenCreateModal = () => {
-    setCreateFormValues(
-      createDefaultExpenseRequestForm(
-        sessionUser.id !== null ? String(sessionUser.id) : ""
-      )
-    );
-    setCreateFormErrors({});
-    setCreateDetailErrors([]);
-    setCreateDetailsError("");
-    setIsCreateModalOpen(true);
-
-    if (
-      tripOptionsData.length === 0 ||
-      users.length === 0 ||
-      concepts.length === 0
-    ) {
-      void fetchRequestCatalogs();
-    }
-  };
-
-  const handleCloseCreateModal = () => {
-    if (creatingExpenseRequest) {
-      return;
-    }
-
-    setCreateFormValues(
-      createDefaultExpenseRequestForm(
-        sessionUser.id !== null ? String(sessionUser.id) : ""
-      )
-    );
-    setCreateFormErrors({});
-    setCreateDetailErrors([]);
-    setCreateDetailsError("");
-    setIsCreateModalOpen(false);
-  };
-
-  const handleAddDetail = () => {
-    setCreateFormValues((prev) => ({
-      ...prev,
-      details: [...prev.details, createEmptyExpenseRequestDetailForm()],
-    }));
-    setCreateDetailErrors((prev) => [...prev, {}]);
-  };
-
-  const handleRemoveDetail = (detailIndex: number) => {
-    setCreateFormValues((prev) => ({
-      ...prev,
-      details: prev.details.filter((_, index) => index !== detailIndex),
-    }));
-    setCreateDetailErrors((prev) =>
-      prev.filter((_, index) => index !== detailIndex)
-    );
-  };
-
   const getRequesterLabel = (request: ExpenseRequestItem) =>
     (request.requesterId !== null
       ? userLookup[request.requesterId]
       : undefined) ||
     request.requesterName ||
     "-";
-
-  const handleCreateExpenseRequest = async (
-    event?: React.FormEvent<HTMLFormElement>
-  ) => {
-    event?.preventDefault();
-
-    const validation = validateExpenseRequestForm(createFormValues, t);
-
-    if (validation.hasErrors) {
-      setCreateFormErrors(validation.formErrors);
-      setCreateDetailErrors(validation.detailErrors);
-      setCreateDetailsError(validation.detailsError);
-      return;
-    }
-
-    if (sessionUser.id === null) {
-      setFeedback({
-        type: "danger",
-        message: t(
-          "Unable to identify the signed-in user to create this expense request."
-        ),
-      });
-      return;
-    }
-
-    try {
-      setCreatingExpenseRequest(true);
-      setCreateFormErrors({});
-      setCreateDetailErrors([]);
-      setCreateDetailsError("");
-
-      const response = await fetch(buildApiUrl("expense-requests/"), {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(
-          buildExpenseRequestPayload(createFormValues, sessionUser.id)
-        ),
-      });
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.message || t("Error creating expense request"));
-      }
-
-      await fetchExpenseRequests();
-      setCurrentPage(1);
-      setIsCreateModalOpen(false);
-      setCreateFormValues(
-        createDefaultExpenseRequestForm(
-          sessionUser.id !== null ? String(sessionUser.id) : ""
-        )
-      );
-      setFeedback({
-        type: "success",
-        message:
-          data?.message || t("Expense request registered successfully."),
-      });
-    } catch (createError: any) {
-      setFeedback({
-        type: "danger",
-        message:
-          createError?.message || t("Error creating expense request"),
-      });
-    } finally {
-      setCreatingExpenseRequest(false);
-    }
-  };
 
   return (
     <div className="page-content">
@@ -828,26 +389,19 @@ const RequestsPage = () => {
                 </p>
               </div>
 
-              <div className="d-flex flex-column flex-sm-row gap-2 flex-shrink-0">
-                <Button color="primary" onClick={handleOpenCreateModal}>
-                  <i className="ri-add-line align-bottom me-1" />
-                  {t("New Expense")}
-                </Button>
-
-                <InputGroup style={{ width: "320px", maxWidth: "100%" }}>
-                  <InputGroupText>
-                    <i className="ri-search-line" />
-                  </InputGroupText>
-                  <Input
-                    value={searchTerm}
-                    onChange={(event) => {
-                      setSearchTerm(event.target.value);
-                      setCurrentPage(1);
-                    }}
-                    placeholder={t("Search requests...")}
-                  />
-                </InputGroup>
-              </div>
+              <InputGroup style={{ width: "320px", maxWidth: "100%" }}>
+                <InputGroupText>
+                  <i className="ri-search-line" />
+                </InputGroupText>
+                <Input
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder={t("Search requests...")}
+                />
+              </InputGroup>
             </div>
 
             {loadingRequests ? (
@@ -874,33 +428,31 @@ const RequestsPage = () => {
                           </td>
                         </tr>
                       ) : (
-                        paginatedRequests.map((request) => {
-                          return (
-                            <tr key={request.idRequest}>
-                              <td className="fw-semibold">
-                                {request.requestNumber || "-"}
-                              </td>
-                              <td
-                                className="text-wrap"
-                                style={{ whiteSpace: "normal" }}
+                        paginatedRequests.map((request) => (
+                          <tr key={request.idRequest}>
+                            <td className="fw-semibold">
+                              {request.requestNumber || "-"}
+                            </td>
+                            <td
+                              className="text-wrap"
+                              style={{ whiteSpace: "normal" }}
+                            >
+                              {request.reason || "-"}
+                            </td>
+                            <td>{getRequesterLabel(request)}</td>
+                            <td>
+                              <Button
+                                color="light"
+                                size="sm"
+                                className="d-inline-flex align-items-center gap-1"
+                                onClick={() => setSelectedRequest(request)}
                               >
-                                {request.reason || "-"}
-                              </td>
-                              <td>{getRequesterLabel(request)}</td>
-                              <td>
-                                <Button
-                                  color="light"
-                                  size="sm"
-                                  className="d-inline-flex align-items-center gap-1"
-                                  onClick={() => handleOpenRequestModal(request)}
-                                >
-                                  <i className="ri-eye-line" />
-                                  <span>{t("View")}</span>
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })
+                                <i className="ri-eye-line" />
+                                <span>{t("View")}</span>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </Table>
@@ -924,316 +476,12 @@ const RequestsPage = () => {
       </Container>
 
       <Modal
-        isOpen={isCreateModalOpen}
-        toggle={creatingExpenseRequest ? undefined : handleCloseCreateModal}
-        centered
-        size="xl"
-        backdrop={creatingExpenseRequest ? "static" : true}
-        keyboard={!creatingExpenseRequest}
-      >
-        <ModalHeader
-          toggle={creatingExpenseRequest ? undefined : handleCloseCreateModal}
-        >
-          {t("New Expense")}
-        </ModalHeader>
-
-        <Form onSubmit={handleCreateExpenseRequest}>
-          <ModalBody className="p-4">
-            {loadingCatalogs && (
-              <div className="d-flex align-items-center gap-2 text-muted mb-3">
-                <Spinner size="sm" />
-                <span>{t("Loading...")}</span>
-              </div>
-            )}
-
-            <Row className="g-3">
-              <Col md={6}>
-                <Label className="form-label">
-                  {t("Trip")} <span className="text-danger">*</span>
-                </Label>
-                <Select
-                  value={selectedTrip}
-                  options={tripOptions}
-                  onChange={(selected: SelectOption | null) =>
-                    setCreateFormValues((prev) => ({
-                      ...prev,
-                      tripId: selected?.value ?? "",
-                    }))
-                  }
-                  placeholder={t("Select trip")}
-                  isClearable
-                  isSearchable
-                  isDisabled={creatingExpenseRequest || loadingCatalogs}
-                  noOptionsMessage={() => t("No results")}
-                  styles={selectStyles}
-                  menuPortalTarget={document.body}
-                />
-                {createFormErrors.tripId && (
-                  <div className="invalid-feedback d-block">
-                    {createFormErrors.tripId}
-                  </div>
-                )}
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label">
-                  {t("Request Number")} <span className="text-danger">*</span>
-                </Label>
-                <Input
-                  value={createFormValues.requestNumber}
-                  onChange={(event) =>
-                    setCreateFormValues((prev) => ({
-                      ...prev,
-                      requestNumber: event.target.value,
-                    }))
-                  }
-                  invalid={Boolean(createFormErrors.requestNumber)}
-                  placeholder="SV-2026-002"
-                  disabled={creatingExpenseRequest}
-                />
-                <FormFeedback>{createFormErrors.requestNumber}</FormFeedback>
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label">
-                  {t("Requested by")} <span className="text-danger">*</span>
-                </Label>
-                <Select
-                  value={selectedRequester}
-                  options={requesterOptions}
-                  onChange={(selected: SelectOption | null) =>
-                    setCreateFormValues((prev) => ({
-                      ...prev,
-                      requesterId: selected?.value ?? "",
-                    }))
-                  }
-                  placeholder={t("Select requester")}
-                  isClearable
-                  isSearchable
-                  isDisabled={creatingExpenseRequest || loadingCatalogs}
-                  noOptionsMessage={() => t("No results")}
-                  styles={selectStyles}
-                  menuPortalTarget={document.body}
-                />
-                {createFormErrors.requesterId && (
-                  <div className="invalid-feedback d-block">
-                    {createFormErrors.requesterId}
-                  </div>
-                )}
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label">
-                  {t("Total Budget")} <span className="text-danger">*</span>
-                </Label>
-                <Input
-                  value={createFormValues.totalBudget}
-                  onChange={(event) =>
-                    setCreateFormValues((prev) => ({
-                      ...prev,
-                      totalBudget: event.target.value,
-                    }))
-                  }
-                  invalid={Boolean(createFormErrors.totalBudget)}
-                  placeholder="270.000"
-                  disabled={creatingExpenseRequest}
-                />
-                <FormFeedback>{createFormErrors.totalBudget}</FormFeedback>
-              </Col>
-
-              <Col xs={12}>
-                <Label className="form-label">
-                  {t("Reason")} <span className="text-danger">*</span>
-                </Label>
-                <Input
-                  type="textarea"
-                  rows={3}
-                  value={createFormValues.reason}
-                  onChange={(event) =>
-                    setCreateFormValues((prev) => ({
-                      ...prev,
-                      reason: event.target.value,
-                    }))
-                  }
-                  invalid={Boolean(createFormErrors.reason)}
-                  placeholder={t("Enter notes...")}
-                  disabled={creatingExpenseRequest}
-                />
-                <FormFeedback>{createFormErrors.reason}</FormFeedback>
-              </Col>
-            </Row>
-
-            <div className="d-flex justify-content-between align-items-center mt-4 mb-3">
-              <h6 className="mb-0">{t("Expense Details")}</h6>
-              <Button
-                color="light"
-                type="button"
-                className="d-inline-flex align-items-center gap-1"
-                onClick={handleAddDetail}
-                disabled={creatingExpenseRequest}
-              >
-                <i className="ri-add-line" />
-                <span>{t("Add Detail")}</span>
-              </Button>
-            </div>
-
-            {createDetailsError && (
-              <div className="alert alert-danger py-2 mb-3">
-                {createDetailsError}
-              </div>
-            )}
-
-            <div className="d-flex flex-column gap-3">
-              {createFormValues.details.map((detail, detailIndex) => {
-                const detailError = createDetailErrors[detailIndex] || {};
-                const selectedConcept =
-                  conceptOptions.find(
-                    (option) => option.value === detail.conceptId
-                  ) ?? null;
-
-                return (
-                  <div
-                    key={`expense-detail-${detailIndex}`}
-                    className="border rounded-3 p-3"
-                  >
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <span className="fw-semibold">
-                        {t("Detail {{index}}", { index: detailIndex + 1 })}
-                      </span>
-                      <Button
-                        color="danger"
-                        type="button"
-                        size="sm"
-                        outline
-                        onClick={() => handleRemoveDetail(detailIndex)}
-                        disabled={
-                          creatingExpenseRequest ||
-                          createFormValues.details.length === 1
-                        }
-                      >
-                        {t("Remove")}
-                      </Button>
-                    </div>
-
-                    <Row className="g-3">
-                      <Col md={4}>
-                        <Label className="form-label">
-                          {t("Concept")} <span className="text-danger">*</span>
-                        </Label>
-                        <Select
-                          value={selectedConcept}
-                          options={conceptOptions}
-                          onChange={(selected: SelectOption | null) =>
-                            setCreateFormValues((prev) => ({
-                              ...prev,
-                              details: prev.details.map((currentDetail, index) =>
-                                index === detailIndex
-                                  ? {
-                                      ...currentDetail,
-                                      conceptId: selected?.value ?? "",
-                                    }
-                                  : currentDetail
-                              ),
-                            }))
-                          }
-                          placeholder={t("Select concept")}
-                          isClearable
-                          isSearchable
-                          isDisabled={creatingExpenseRequest || loadingCatalogs}
-                          noOptionsMessage={() => t("No results")}
-                          styles={selectStyles}
-                          menuPortalTarget={document.body}
-                        />
-                        {detailError.conceptId && (
-                          <div className="invalid-feedback d-block">
-                            {detailError.conceptId}
-                          </div>
-                        )}
-                      </Col>
-
-                      <Col md={3}>
-                        <Label className="form-label">
-                          {t("Budget")} <span className="text-danger">*</span>
-                        </Label>
-                        <Input
-                          value={detail.budgetedAmount}
-                          onChange={(event) =>
-                            setCreateFormValues((prev) => ({
-                              ...prev,
-                              details: prev.details.map((currentDetail, index) =>
-                                index === detailIndex
-                                  ? {
-                                      ...currentDetail,
-                                      budgetedAmount: event.target.value,
-                                    }
-                                  : currentDetail
-                              ),
-                            }))
-                          }
-                          invalid={Boolean(detailError.budgetedAmount)}
-                          placeholder="150.000"
-                          disabled={creatingExpenseRequest}
-                        />
-                        <FormFeedback>{detailError.budgetedAmount}</FormFeedback>
-                      </Col>
-
-                      <Col md={5}>
-                        <Label className="form-label">{t("Notes")}</Label>
-                        <Input
-                          value={detail.notes}
-                          onChange={(event) =>
-                            setCreateFormValues((prev) => ({
-                              ...prev,
-                              details: prev.details.map((currentDetail, index) =>
-                                index === detailIndex
-                                  ? {
-                                      ...currentDetail,
-                                      notes: event.target.value,
-                                    }
-                                  : currentDetail
-                              ),
-                            }))
-                          }
-                          placeholder={t("Enter notes...")}
-                          disabled={creatingExpenseRequest}
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-                );
-              })}
-            </div>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button
-              color="light"
-              type="button"
-              onClick={handleCloseCreateModal}
-              disabled={creatingExpenseRequest}
-            >
-              {t("Cancel")}
-            </Button>
-            <Button
-              color="primary"
-              type="submit"
-              disabled={creatingExpenseRequest}
-            >
-              {creatingExpenseRequest && <Spinner size="sm" className="me-2" />}
-              <i className="ri-save-line align-bottom me-1" />
-              {t("Register")}
-            </Button>
-          </ModalFooter>
-        </Form>
-      </Modal>
-
-      <Modal
         isOpen={selectedRequest !== null}
-        toggle={handleCloseRequestModal}
+        toggle={() => setSelectedRequest(null)}
         centered
         size="lg"
       >
-        <ModalHeader toggle={handleCloseRequestModal}>
+        <ModalHeader toggle={() => setSelectedRequest(null)}>
           {selectedRequest?.requestNumber || t("Request Details")}
         </ModalHeader>
         <ModalBody className="p-4">
@@ -1337,7 +585,7 @@ const RequestsPage = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="light" onClick={handleCloseRequestModal}>
+          <Button color="light" onClick={() => setSelectedRequest(null)}>
             {t("Close")}
           </Button>
         </ModalFooter>

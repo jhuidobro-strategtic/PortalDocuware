@@ -13,6 +13,7 @@ const PurchaseOrderDetails = lazy(() => import("../features/purchase-orders/view
 const Suppliers = lazy(() => import("../features/suppliers/views"));
 const Expedients = lazy(() => import("../features/expedients/views"));
 const TravelTrips = lazy(() => import("../features/travel-expenses/views/Trips"));
+const TravelAddExpense = lazy(() => import("../features/travel-expenses/views/AddExpense"));
 const TravelRequests = lazy(() => import("../features/travel-expenses/views/Requests"));
 const TravelMySchedule = lazy(() => import("../features/travel-expenses/views/MySchedule"));
 const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports"));
@@ -31,6 +32,7 @@ const authProtectedRoutes = [
   { path: "/suppliers", component: <Suppliers /> },
   { path: "/expedientes", component: <Expedients /> },
   { path: "/travel-expenses/trips", component: <TravelTrips /> },
+  { path: "/travel-expenses/trips/:tripId/add-expense", component: <TravelAddExpense /> },
   { path: "/travel-expenses/requests", component: <TravelRequests /> },
   { path: "/travel-expenses/my-schedule", component: <TravelMySchedule /> },
   { path: "/travel-expenses/reports", component: <TravelReports /> },

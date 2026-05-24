@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import Select from "react-select";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -358,6 +359,7 @@ const buildTripUpdatePayload = (
 
 const TripsPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const sessionUser = getCurrentSessionUser();
   const [trips, setTrips] = useState<TripItem[]>([]);
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
@@ -844,6 +846,16 @@ const TripsPage = () => {
                                       icon: "ri-edit-line",
                                       tone: "neutral",
                                       onClick: () => handleOpenEditModal(trip),
+                                    },
+                                    {
+                                      id: `add-expense-${trip.idTrip}`,
+                                      label: t("Add Expense"),
+                                      icon: "ri-money-dollar-circle-line",
+                                      tone: "success",
+                                      onClick: () =>
+                                        navigate(
+                                          `/travel-expenses/trips/${trip.idTrip}/add-expense`
+                                        ),
                                     },
                                   ]}
                                 />
