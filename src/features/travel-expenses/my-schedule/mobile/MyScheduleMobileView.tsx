@@ -78,23 +78,41 @@ export const MyScheduleMobileView = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18 }}
         >
-          <article className="my-schedule-app__mobile-summary-card">
-            <span>{t("Trips")}</span>
-            <strong>{summary.totalTrips}</strong>
-          </article>
-          <article className="my-schedule-app__mobile-summary-card">
-            <span>{t("Active")}</span>
-            <strong>{summary.activeTrips}</strong>
-          </article>
-          <article className="my-schedule-app__mobile-summary-card">
-            <span>{t("Inactive")}</span>
-            <strong>{summary.inactiveTrips}</strong>
-          </article>
-          <article className="my-schedule-app__mobile-summary-card">
-            <span>{t("Departure Date")}</span>
-            <strong>
-              {summary.nextTrip ? formatDateTime(summary.nextTrip.departureDate) : "-"}
-            </strong>
+          <div className="my-schedule-app__mobile-summary-stats">
+            <article className="my-schedule-app__mobile-summary-card">
+              <div className="my-schedule-app__mobile-summary-icon">
+                <i className="ri-road-map-line" aria-hidden="true" />
+              </div>
+              <span>{t("Trips")}</span>
+              <strong>{summary.totalTrips}</strong>
+            </article>
+            <article className="my-schedule-app__mobile-summary-card">
+              <div className="my-schedule-app__mobile-summary-icon my-schedule-app__mobile-summary-icon--success">
+                <i className="ri-checkbox-circle-line" aria-hidden="true" />
+              </div>
+              <span>{t("Active")}</span>
+              <strong>{summary.activeTrips}</strong>
+            </article>
+            <article className="my-schedule-app__mobile-summary-card">
+              <div className="my-schedule-app__mobile-summary-icon my-schedule-app__mobile-summary-icon--danger">
+                <i className="ri-close-circle-line" aria-hidden="true" />
+              </div>
+              <span>{t("Inactive")}</span>
+              <strong>{summary.inactiveTrips}</strong>
+            </article>
+          </div>
+
+          <article className="my-schedule-app__mobile-summary-feature">
+            <div className="my-schedule-app__mobile-summary-feature-icon">
+              <i className="ri-calendar-event-line" aria-hidden="true" />
+            </div>
+            <div className="my-schedule-app__mobile-summary-feature-copy">
+              <span>{t("Departure Date")}</span>
+              <strong>
+                {summary.nextTrip ? formatDateTime(summary.nextTrip.departureDate) : "-"}
+              </strong>
+              <small>{summary.nextTrip?.tripNumber || "-"}</small>
+            </div>
           </article>
         </motion.section>
 
