@@ -344,7 +344,7 @@ const buildTripPayload = (values: TripFormValues, createdBy: number) => ({
   departure_date: moment(values.departureDate, DATE_TIME_INPUT_FORMAT, true).toISOString(),
   return_date: moment(values.returnDate, DATE_TIME_INPUT_FORMAT, true).toISOString(),
   notes: values.notes.trim(),
-  status: values.status,
+  status: true,
   created_by: createdBy,
 });
 
@@ -849,7 +849,7 @@ const TripsPage = () => {
                                     },
                                     {
                                       id: `add-expense-${trip.idTrip}`,
-                                      label: t("Add Expense"),
+                                      label: t("Generate Expense Request"),
                                       icon: "ri-money-dollar-circle-line",
                                       tone: "success",
                                       onClick: () =>
@@ -924,28 +924,6 @@ const TripsPage = () => {
                   disabled={creatingTrip}
                 />
                 <FormFeedback>{createFormErrors.tripNumber}</FormFeedback>
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label d-block">{t("Status")}</Label>
-                <div className="form-check form-switch mt-2">
-                  <Input
-                    id="trip-status"
-                    type="switch"
-                    role="switch"
-                    checked={createFormValues.status}
-                    onChange={(event) =>
-                      setCreateFormValues((prev) => ({
-                        ...prev,
-                        status: event.target.checked,
-                      }))
-                    }
-                    disabled={creatingTrip}
-                  />
-                  <Label className="form-check-label" htmlFor="trip-status">
-                    {createFormValues.status ? t("Active") : t("Inactive")}
-                  </Label>
-                </div>
               </Col>
 
               <Col md={6}>
@@ -1169,28 +1147,6 @@ const TripsPage = () => {
                   disabled={updatingTrip}
                 />
                 <FormFeedback>{editFormErrors.tripNumber}</FormFeedback>
-              </Col>
-
-              <Col md={6}>
-                <Label className="form-label d-block">{t("Status")}</Label>
-                <div className="form-check form-switch mt-2">
-                  <Input
-                    id="edit-trip-status"
-                    type="switch"
-                    role="switch"
-                    checked={editFormValues.status}
-                    onChange={(event) =>
-                      setEditFormValues((prev) => ({
-                        ...prev,
-                        status: event.target.checked,
-                      }))
-                    }
-                    disabled={updatingTrip}
-                  />
-                  <Label className="form-check-label" htmlFor="edit-trip-status">
-                    {editFormValues.status ? t("Active") : t("Inactive")}
-                  </Label>
-                </div>
               </Col>
 
               <Col md={6}>
