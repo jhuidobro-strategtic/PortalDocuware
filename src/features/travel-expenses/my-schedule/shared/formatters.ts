@@ -21,6 +21,12 @@ export const formatAmount = (value: string) => {
   }).format(parsedValue);
 };
 
+export const getTripBudgetTotal = (trip: ScheduleTrip) =>
+  trip.expenseRequests.reduce((total, request) => {
+    const amount = Number(request.totalBudget);
+    return Number.isFinite(amount) ? total + amount : total;
+  }, 0);
+
 export const matchesSearchValue = (value: unknown, term: string): boolean => {
   if (value === null || value === undefined) {
     return false;

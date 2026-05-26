@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../../components/common/FloatingAlerts";
-import { formatAmount, formatDateTime } from "../shared/formatters";
+import { formatAmount } from "../shared/formatters";
 import { FeedbackState, ScheduleTrip } from "../shared/types";
 import { MobileSectionCard } from "./components/MobileSectionCard";
 import { MobileStatusPill } from "./components/MobileStatusPill";
@@ -85,46 +85,6 @@ export const MyScheduleDetailMobileView = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <MobileSectionCard title={t("Trip")}>
-                <div className="my-schedule-app__mobile-facts-grid">
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Vehicle")}</span>
-                    <strong>{trip.vehicle?.label || "-"}</strong>
-                  </article>
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Driver")}</span>
-                    <strong>{trip.driver?.label || "-"}</strong>
-                  </article>
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Departure Date")}</span>
-                    <strong>{formatDateTime(trip.departureDate)}</strong>
-                  </article>
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Return Date")}</span>
-                    <strong>{formatDateTime(trip.returnDate)}</strong>
-                  </article>
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Created")}</span>
-                    <strong>{formatDateTime(trip.createdAt)}</strong>
-                  </article>
-                  <article className="my-schedule-app__mobile-fact">
-                    <span>{t("Updated")}</span>
-                    <strong>{formatDateTime(trip.updatedAt)}</strong>
-                  </article>
-                </div>
-
-                <div className="my-schedule-app__mobile-notes">
-                  <span>{t("Notes")}</span>
-                  <p>{trip.notes || "-"}</p>
-                </div>
-              </MobileSectionCard>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18, delay: 0.04 }}
-            >
               <MobileSectionCard
                 title={t("Expense Requests")}
                 subtitle={`${trip.expenseRequests.length} ${t("Requests")}`}
@@ -140,40 +100,9 @@ export const MyScheduleDetailMobileView = ({
                         key={request.idRequest}
                         className="my-schedule-app__mobile-request-card"
                       >
-                        <div className="my-schedule-app__mobile-request-top">
-                          <div>
-                            <p className="my-schedule-app__mobile-eyebrow">
-                              {request.requestNumber || "-"}
-                            </p>
-                            <h3 className="my-schedule-app__mobile-request-title">
-                              {request.reason || "-"}
-                            </h3>
-                          </div>
-                          <span className="my-schedule-app__mobile-request-status">
-                            {request.statusLabel || "-"}
-                          </span>
-                        </div>
-
-                        <div className="my-schedule-app__mobile-request-metadata">
-                          <div>
-                            <span>{t("Requested by")}</span>
-                            <strong>{getRequesterLabel(request.requesterId)}</strong>
-                          </div>
-                          <div>
-                            <span>{t("Total Budget")}</span>
-                            <strong>{formatAmount(request.totalBudget)}</strong>
-                          </div>
-                        </div>
-
-                        <div className="my-schedule-app__mobile-request-metadata">
-                          <div>
-                            <span>{t("Created")}</span>
-                            <strong>{formatDateTime(request.createdAt)}</strong>
-                          </div>
-                          <div>
-                            <span>{t("Updated")}</span>
-                            <strong>{formatDateTime(request.updatedAt)}</strong>
-                          </div>
+                        <div className="my-schedule-app__mobile-request-total">
+                          <span>{t("Total Budget")}</span>
+                          <strong>{formatAmount(request.totalBudget)}</strong>
                         </div>
 
                         <div className="my-schedule-app__mobile-detail-rows">
@@ -189,7 +118,6 @@ export const MyScheduleDetailMobileView = ({
                               >
                                 <div>
                                   <strong>{detail.conceptLabel || "-"}</strong>
-                                  <span>{detail.notes || "-"}</span>
                                 </div>
                                 <strong>{formatAmount(detail.budgetedAmount)}</strong>
                               </div>

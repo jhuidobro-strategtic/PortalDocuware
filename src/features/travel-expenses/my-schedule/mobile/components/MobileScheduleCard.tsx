@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { ScheduleTrip } from "../../shared/types";
-import { formatDateTime } from "../../shared/formatters";
+import { formatAmount, formatDateTime, getTripBudgetTotal } from "../../shared/formatters";
 import { MobileStatusPill } from "./MobileStatusPill";
 
 interface MobileScheduleCardProps {
@@ -17,6 +17,9 @@ export const MobileScheduleCard = ({
   onViewTrip,
 }: MobileScheduleCardProps) => {
   const { t } = useTranslation();
+  const totalBudget = getTripBudgetTotal(trip);
+  const budgetLabel =
+    trip.expenseRequests.length > 0 ? formatAmount(String(totalBudget)) : "-";
 
   return (
     <motion.article
@@ -29,35 +32,24 @@ export const MobileScheduleCard = ({
       <div className="my-schedule-app__mobile-card-top">
         <div>
           <p className="my-schedule-app__mobile-eyebrow">{trip.tripNumber || "-"}</p>
-          <h3 className="my-schedule-app__mobile-card-title">
-            {trip.origin?.label || "-"} <span>&rarr;</span> {trip.destination?.label || "-"}
-          </h3>
         </div>
         <MobileStatusPill status={trip.status} />
       </div>
 
-      <div className="my-schedule-app__mobile-card-grid">
-        <div className="my-schedule-app__mobile-metric">
-          <span>{t("Departure Date")}</span>
-          <strong>{formatDateTime(trip.departureDate)}</strong>
-        </div>
-        <div className="my-schedule-app__mobile-metric">
-          <span>{t("Return Date")}</span>
-          <strong>{formatDateTime(trip.returnDate)}</strong>
-        </div>
-        <div className="my-schedule-app__mobile-metric">
-          <span>{t("Vehicle")}</span>
-          <strong>{trip.vehicle?.label || "-"}</strong>
-        </div>
-        <div className="my-schedule-app__mobile-metric">
-          <span>{t("Driver")}</span>
-          <strong>{trip.driver?.label || "-"}</strong>
-        </div>
+      <div className="my-schedule-app__mobile-card-content">
+        <h3 className="my-schedule-app__mobile-card-title">
+          {trip.origin?.label || "-"} <span>&rarr;</span> {trip.destination?.label || "-"}
+        </h3>
+
+        <p className="my-schedule-app__mobile-card-meta">
+          {t("Departure Date")}: {formatDateTime(trip.departureDate)}
+        </p>
       </div>
 
-      {trip.notes ? (
-        <p className="my-schedule-app__mobile-card-notes">{trip.notes}</p>
-      ) : null}
+      <div className="my-schedule-app__mobile-budget">
+        <span>{t("Total Budget")}</span>
+        <strong>{budgetLabel}</strong>
+      </div>
 
       <button
         type="button"

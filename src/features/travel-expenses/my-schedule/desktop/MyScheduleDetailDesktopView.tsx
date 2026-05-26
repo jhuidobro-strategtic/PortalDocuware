@@ -4,9 +4,7 @@ import {
   Button,
   Card,
   CardBody,
-  Col,
   Container,
-  Row,
   Spinner,
   Table,
 } from "reactstrap";
@@ -15,7 +13,7 @@ import BreadCrumb from "../../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../../components/common/FloatingAlerts";
-import { formatAmount, formatDateTime, getStatusMeta } from "../shared/formatters";
+import { formatAmount, formatDateTime } from "../shared/formatters";
 import { FeedbackState, ScheduleTrip } from "../shared/types";
 
 interface MyScheduleDetailDesktopViewProps {
@@ -86,73 +84,6 @@ export const MyScheduleDetailDesktopView = ({
               </div>
             ) : trip ? (
               <div className="d-flex flex-column gap-4">
-                <Card className="border shadow-sm mb-0">
-                  <CardBody>
-                    <h6 className="mb-3">{t("Trip")}</h6>
-                    <Row className="g-3">
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Trip Number")}</div>
-                        <div className="fw-semibold">{trip.tripNumber || "-"}</div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Vehicle")}</div>
-                        <div className="fw-semibold">{trip.vehicle?.label || "-"}</div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Driver")}</div>
-                        <div className="fw-semibold">{trip.driver?.label || "-"}</div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Origin")}</div>
-                        <div className="fw-semibold">{trip.origin?.label || "-"}</div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Destination")}</div>
-                        <div className="fw-semibold">
-                          {trip.destination?.label || "-"}
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Status")}</div>
-                        <div>
-                          <span className={getStatusMeta(trip.status, t).className}>
-                            <i className={getStatusMeta(trip.status, t).icon} />
-                            <span>{getStatusMeta(trip.status, t).label}</span>
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Departure Date")}</div>
-                        <div className="fw-semibold">
-                          {formatDateTime(trip.departureDate)}
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Return Date")}</div>
-                        <div className="fw-semibold">
-                          {formatDateTime(trip.returnDate)}
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Created")}</div>
-                        <div className="fw-semibold">
-                          {formatDateTime(trip.createdAt)}
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="text-muted small">{t("Updated")}</div>
-                        <div className="fw-semibold">
-                          {formatDateTime(trip.updatedAt)}
-                        </div>
-                      </Col>
-                      <Col md={12}>
-                        <div className="text-muted small">{t("Notes")}</div>
-                        <div className="fw-semibold">{trip.notes || "-"}</div>
-                      </Col>
-                    </Row>
-                  </CardBody>
-                </Card>
-
                 <Card className="border shadow-sm mb-0">
                   <CardBody>
                     <h6 className="mb-3">{t("Expense Requests")}</h6>

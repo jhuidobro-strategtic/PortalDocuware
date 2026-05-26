@@ -17,18 +17,58 @@ export const fetchScheduleTrips = async (
       ? "trips/"
       : `trips/?driver_id=${encodeURIComponent(String(sessionUser.id))}`;
 
-  const response = await fetch(buildApiUrl(tripsPath), {
-    cache: "no-store",
-    headers: getAuthHeaders(),
-    signal,
-  });
-  const data = await response.json().catch(() => null);
+  const [tripsResponse, requestsResponse] = await Promise.all([
+    fetch(buildApiUrl(tripsPath), {
+      cache: "no-store",
+      headers: getAuthHeaders(),
+      signal,
+    }),
+    fetch(buildApiUrl("expense-requests/"), {
+      cache: "no-store",
+      headers: getAuthHeaders(),
+      signal,
+    }),
+  ]);
+  const [tripsData, requestsData] = await Promise.all([
+    tripsResponse.json().catch(() => null),
+    requestsResponse.json().catch(() => null),
+  ]);
 
-  if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
-    throw new Error(data?.message || t("Error loading schedule"));
+  if (!tripsResponse.ok || !tripsData?.success || !Array.isArray(tripsData?.data)) {
+    throw new Error(tripsData?.message || t("Error loading schedule"));
   }
 
-  return (data.data as any[]).map(mapApiTrip);
+  const requestsByTripId =
+    requestsResponse.ok && requestsData?.success && Array.isArray(requestsData?.data)
+      ? (requestsData.data as any[]).reduce<Record<number, ReturnType<typeof mapExpenseRequest>[]>>(
+          (acc, request) => {
+            const tripId = Number(request.id_trip ?? request.trip?.id_trip ?? 0);
+
+            if (!tripId) {
+              return acc;
+            }
+
+            if (!acc[tripId]) {
+              acc[tripId] = [];
+            }
+
+            acc[tripId].push(mapExpenseRequest(request));
+            return acc;
+          },
+          {}
+        )
+      : {};
+
+  return (tripsData.data as any[]).map((item) => {
+    const trip = mapApiTrip(item);
+
+    return {
+      ...trip,
+      expenseRequests:
+        requestsByTripId[trip.idTrip] ??
+        trip.expenseRequests,
+    };
+  });
 };
 
 export const fetchScheduleDetail = async (
