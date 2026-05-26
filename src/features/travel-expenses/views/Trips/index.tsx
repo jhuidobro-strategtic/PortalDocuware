@@ -57,8 +57,10 @@ interface VehicleItem {
 }
 
 interface DriverItem {
-  idconductor: number;
-  conductor_nm: string;
+  userID: number;
+  userName?: string;
+  fullName?: string;
+  profileID?: number;
 }
 
 interface DestinationItem {
@@ -235,11 +237,49 @@ const mapTripReference = (
   };
 };
 
+const mapApiDriver = (item: any): DriverItem => ({
+  userID: Number(item.userID ?? item.userid ?? item.id ?? 0),
+  userName: String(item.userName ?? item.username ?? "").trim(),
+  fullName: String(item.fullName ?? item.fullname ?? "").trim(),
+  profileID: Number(
+    item.profileID ??
+      item.profile_id ??
+      item.profile?.profileID ??
+      item.profile?.profile_id ??
+      0
+  ),
+});
+
+const mapDriverReference = (item: any): TripReference | null => {
+  if (!item) {
+    return null;
+  }
+
+  const id = Number(item.idconductor ?? item.userID ?? item.userid ?? item.id ?? 0);
+  const label = String(
+    item.conductor_nm ??
+      item.fullName ??
+      item.fullname ??
+      item.userName ??
+      item.username ??
+      ""
+  ).trim();
+
+  if (!id && !label) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+  };
+};
+
 const mapApiTrip = (item: any): TripItem => ({
   idTrip: Number(item.id_trip ?? 0),
   tripNumber: String(item.trip_number ?? "").trim(),
   vehicle: mapTripReference(item.vehicle, "idvehiculo", "no_vehiculo"),
-  driver: mapTripReference(item.driver, "idconductor", "conductor_nm"),
+  driver: mapDriverReference(item.driver),
   origin: mapTripReference(item.origin_data, "idorigen", "nombre_origen"),
   destination: mapTripReference(
     item.destination_data,
@@ -396,8 +436,11 @@ const TripsPage = () => {
   const driverOptions = useMemo<SelectOption[]>(
     () =>
       drivers.map((driver) => ({
-        value: String(driver.idconductor),
-        label: driver.conductor_nm,
+        value: String(driver.userID),
+        label:
+          String(driver.fullName ?? "").trim() ||
+          String(driver.userName ?? "").trim() ||
+          String(driver.userID),
       })),
     [drivers]
   );
@@ -474,7 +517,7 @@ const TripsPage = () => {
           cache: "no-store",
           headers: getAuthHeaders(),
         }),
-        fetch(buildApiUrl("conductores/"), {
+        fetch(buildApiUrl("users/"), {
           cache: "no-store",
           headers: getAuthHeaders(),
         }),
@@ -494,7 +537,7 @@ const TripsPage = () => {
         throw new Error(t("Error loading trip catalogs"));
       }
 
-      if (!driversResponse.ok || !Array.isArray(driversData)) {
+      if (!driversResponse.ok || !driversData?.success || !Array.isArray(driversData?.data)) {
         throw new Error(t("Error loading trip catalogs"));
       }
 
@@ -509,7 +552,11 @@ const TripsPage = () => {
       }
 
       setVehicles(vehiclesData as VehicleItem[]);
-      setDrivers(driversData as DriverItem[]);
+      setDrivers(
+        (driversData.data as any[])
+          .map(mapApiDriver)
+          .filter((driver) => driver.profileID === 4)
+      );
       setDestinations(destinationsData.data as DestinationItem[]);
     } catch (fetchError: any) {
       setFeedback({
