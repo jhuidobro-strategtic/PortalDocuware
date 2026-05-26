@@ -1,10 +1,21 @@
 .my-schedule-app {
+  --schedule-primary: var(--vz-primary, #3577f1);
+  --schedule-indigo: #405189;
+  --schedule-success: var(--vz-success, #0ab39c);
+  --schedule-warning: var(--vz-warning, #f7b84b);
+  --schedule-danger: var(--vz-danger, #f06548);
+  --schedule-border: #e9ebec;
+  --schedule-text: #212529;
+  --schedule-muted: #878a99;
+  --schedule-shadow: rgba(15, 34, 58, 0.12);
+
   &__mobile-shell {
     max-width: 100%;
     padding: 12px 16px calc(28px + env(safe-area-inset-bottom, 0px));
     background:
-      radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 28%),
-      linear-gradient(180deg, #f5f7fb 0%, #eef3f8 100%);
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.26), transparent 22%),
+      radial-gradient(circle at top right, rgba(53, 119, 241, 0.14), transparent 28%),
+      linear-gradient(180deg, #eef4ff 0%, #f3f6f9 38%, #f8fbff 62%, #ffffff 100%);
     min-height: calc(100vh - 70px);
   }
 
@@ -20,10 +31,13 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 18px 16px 16px;
-    margin: -12px -16px 16px;
-    background: rgba(245, 247, 251, 0.88);
-    backdrop-filter: blur(16px);
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 18px;
+    margin: -12px -16px 18px;
+    background: linear-gradient(135deg, var(--schedule-primary) 0%, var(--schedule-indigo) 100%);
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    box-shadow: 0 18px 36px rgba(53, 119, 241, 0.18);
+    backdrop-filter: blur(18px);
   }
 
   &__mobile-detail-hero {
@@ -41,7 +55,7 @@
   &__mobile-kicker,
   &__mobile-eyebrow {
     margin: 0;
-    color: #64748b;
+    color: rgba(255, 255, 255, 0.76);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -50,15 +64,16 @@
 
   &__mobile-headline {
     margin: 4px 0 0;
-    color: #0f172a;
+    color: #fffdf9;
     font-size: 1.5rem;
     font-weight: 700;
     line-height: 1.1;
+    text-shadow: 0 4px 14px rgba(110, 46, 16, 0.15);
   }
 
   &__mobile-subheadline {
     margin: 6px 0 0;
-    color: #64748b;
+    color: rgba(255, 250, 244, 0.84);
     font-size: 0.92rem;
     line-height: 1.45;
   }
@@ -69,10 +84,11 @@
     gap: 10px;
     height: 52px;
     padding: 0 16px;
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
-    color: #64748b;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 30px rgba(15, 34, 58, 0.12);
+    color: var(--schedule-primary);
   }
 
   &__mobile-search {
@@ -80,15 +96,24 @@
     border: 0;
     background: transparent;
     font-size: 0.95rem;
-    color: #0f172a;
+    color: var(--schedule-text);
     outline: none;
   }
 
   &__mobile-summary {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
     gap: 12px;
     margin-bottom: 18px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  &__mobile-summary::-webkit-scrollbar {
+    display: none;
   }
 
   &__mobile-summary-card,
@@ -98,15 +123,17 @@
     flex-direction: column;
     gap: 6px;
     padding: 14px 16px;
-    border-radius: 22px;
-    background: #ffffff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    border: 1px solid var(--schedule-border);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 14px 30px var(--schedule-shadow);
+    scroll-snap-align: start;
   }
 
   &__mobile-summary-card span,
   &__mobile-fact span,
   &__mobile-metric span {
-    color: #64748b;
+    color: var(--schedule-muted);
     font-size: 0.75rem;
     font-weight: 600;
   }
@@ -114,10 +141,26 @@
   &__mobile-summary-card strong,
   &__mobile-fact strong,
   &__mobile-metric strong {
-    color: #0f172a;
+    color: var(--schedule-text);
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.35;
+  }
+
+  &__mobile-summary-card:nth-child(1) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(53, 119, 241, 0.08));
+  }
+
+  &__mobile-summary-card:nth-child(2) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(10, 179, 156, 0.1));
+  }
+
+  &__mobile-summary-card:nth-child(3) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 101, 72, 0.1));
+  }
+
+  &__mobile-summary-card:nth-child(4) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 184, 75, 0.14));
   }
 
   &__mobile-list,
@@ -131,13 +174,26 @@
   &__mobile-card,
   &__mobile-section,
   &__mobile-request-card {
-    border-radius: 26px;
-    background: #ffffff;
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 42px var(--schedule-shadow);
   }
 
   &__mobile-card {
-    padding: 18px;
+    padding: 20px;
+    border: 1px solid var(--schedule-border);
+  }
+
+  &__mobile-card--active {
+    background:
+      radial-gradient(circle at top right, rgba(10, 179, 156, 0.12), transparent 26%),
+      rgba(255, 255, 255, 0.98);
+  }
+
+  &__mobile-card--inactive {
+    background:
+      radial-gradient(circle at top right, rgba(240, 101, 72, 0.12), transparent 26%),
+      rgba(255, 255, 255, 0.98);
   }
 
   &__mobile-card-top,
@@ -148,12 +204,34 @@
     gap: 12px;
   }
 
+  &__mobile-trip-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__mobile-trip-chip-label {
+    color: var(--schedule-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  &__mobile-trip-chip-value {
+    margin: 0;
+    color: var(--schedule-text);
+    font-size: 1.28rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
   &__mobile-card-title,
   &__mobile-request-title,
   &__mobile-section-title {
     margin: 4px 0 0;
-    color: #0f172a;
-    font-size: 1rem;
+    color: var(--schedule-text);
+    font-size: 1.05rem;
     font-weight: 700;
     line-height: 1.35;
   }
@@ -162,15 +240,93 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 14px;
   }
 
-  &__mobile-card-meta {
-    margin: 0;
-    color: #475569;
-    font-size: 0.9rem;
-    font-weight: 500;
-    line-height: 1.45;
+  &__mobile-route-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--schedule-border);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(53, 119, 241, 0.04));
+  }
+
+  &__mobile-route-stop {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__mobile-route-stop span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--schedule-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__mobile-route-stop strong {
+    display: block;
+    color: var(--schedule-text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  &__mobile-route-connector {
+    position: relative;
+    width: 32px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+
+  &__mobile-route-connector::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--schedule-primary), var(--schedule-success));
+    transform: translateY(-50%);
+  }
+
+  &__mobile-route-connector span {
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--schedule-primary);
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 4px rgba(53, 119, 241, 0.14);
+  }
+
+  &__mobile-card-meta-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    color: var(--schedule-muted);
+    font-size: 0.88rem;
+    font-weight: 600;
+    flex-wrap: wrap;
+  }
+
+  &__mobile-card-meta-row i {
+    color: var(--schedule-primary);
+    font-size: 1rem;
+  }
+
+  &__mobile-card-meta-row strong {
+    color: var(--schedule-text);
+    font-size: 0.92rem;
+    font-weight: 700;
   }
 
   &__mobile-card-grid,
@@ -194,7 +350,7 @@
   &__mobile-empty p,
   &__mobile-detail-row span {
     margin: 0;
-    color: #64748b;
+    color: var(--schedule-muted);
     font-size: 0.88rem;
     line-height: 1.45;
   }
@@ -209,10 +365,28 @@
     align-items: flex-end;
     gap: 4px;
     margin-top: 16px;
+    margin-left: auto;
+    width: fit-content;
+    min-width: 158px;
+    padding: 12px 14px;
+    border: 1px solid rgba(10, 179, 156, 0.24);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(10, 179, 156, 0.08));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  &__mobile-budget.has-budget {
+    border-color: rgba(10, 179, 156, 0.24);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(10, 179, 156, 0.08));
+  }
+
+  &__mobile-budget.is-empty {
+    border-color: rgba(247, 184, 75, 0.34);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 184, 75, 0.12));
   }
 
   &__mobile-budget span {
-    color: #64748b;
+    color: var(--schedule-success);
     font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -220,10 +394,23 @@
   }
 
   &__mobile-budget strong {
-    color: #0f172a;
-    font-size: 1rem;
+    color: var(--schedule-success);
+    font-size: 1.08rem;
     font-weight: 800;
     line-height: 1.2;
+  }
+
+  &__mobile-budget.is-empty span,
+  &__mobile-budget.is-empty strong {
+    color: #b9851b;
+  }
+
+  &__mobile-card-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
   }
 
   &__mobile-primary-button,
@@ -238,15 +425,18 @@
     justify-content: center;
     align-items: center;
     gap: 10px;
-    width: 100%;
-    height: 50px;
+    width: auto;
+    min-width: 136px;
+    height: 46px;
     margin-top: 16px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    margin-left: auto;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--schedule-indigo) 0%, var(--schedule-primary) 100%);
     color: #ffffff;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    box-shadow: 0 14px 28px rgba(53, 119, 241, 0.22);
   }
 
   &__mobile-primary-button:active,
@@ -258,21 +448,22 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 34px;
-    padding: 0 12px;
+    min-height: 36px;
+    padding: 0 13px;
     border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
     font-size: 0.8rem;
     font-weight: 700;
     white-space: nowrap;
   }
 
   &__mobile-pill--success {
-    background: rgba(34, 197, 94, 0.12);
-    color: #15803d;
+    background: linear-gradient(180deg, rgba(235, 255, 241, 0.98), rgba(214, 250, 226, 0.98));
+    color: var(--schedule-success);
   }
 
   &__mobile-pill--danger {
-    background: rgba(239, 68, 68, 0.12);
+    background: linear-gradient(180deg, rgba(255, 241, 241, 0.98), rgba(255, 226, 226, 0.98));
     color: #b91c1c;
   }
 
@@ -283,9 +474,9 @@
     justify-content: center;
     gap: 10px;
     padding: 32px 24px;
-    border-radius: 26px;
-    background: #ffffff;
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 42px var(--schedule-shadow);
     text-align: center;
   }
 
@@ -297,7 +488,7 @@
 
   &__mobile-empty h2 {
     margin: 0;
-    color: #0f172a;
+    color: var(--schedule-text);
     font-size: 1rem;
     font-weight: 700;
   }
@@ -308,9 +499,9 @@
     align-items: center;
     width: 56px;
     height: 56px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
-    color: #334155;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(53, 119, 241, 0.12), rgba(64, 81, 137, 0.16));
+    color: var(--schedule-primary);
     font-size: 1.4rem;
   }
 
@@ -322,15 +513,17 @@
 
   &__mobile-skeleton-card {
     height: 210px;
-    border-radius: 26px;
-    background: linear-gradient(90deg, #ffffff 25%, #eef2f7 50%, #ffffff 75%);
+    border-radius: 30px;
+    background: linear-gradient(90deg, #ffffff 25%, #eff2f7 50%, #ffffff 75%);
     background-size: 200% 100%;
     animation: my-schedule-mobile-shimmer 1.4s linear infinite;
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 16px 36px rgba(15, 34, 58, 0.08);
   }
 
   &__mobile-section {
-    padding: 18px;
+    padding: 20px;
+    border: 1px solid var(--schedule-border);
+    background: rgba(255, 255, 255, 0.94);
   }
 
   &__mobile-section-header {
@@ -343,6 +536,7 @@
 
   &__mobile-section-subtitle {
     margin-top: 4px;
+    color: var(--schedule-muted);
   }
 
   &__mobile-notes {
@@ -362,7 +556,7 @@
 
   &__mobile-notes p {
     margin-top: 6px;
-    color: #0f172a;
+    color: var(--schedule-text);
   }
 
   &__mobile-back {
@@ -372,18 +566,18 @@
     align-items: center;
     width: 44px;
     height: 44px;
-    border-radius: 16px;
-    background: #ffffff;
-    color: #0f172a;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--schedule-indigo);
     font-size: 1.1rem;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 28px rgba(15, 34, 58, 0.14);
   }
 
   &__mobile-request-card {
     padding: 18px;
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    box-shadow: none;
-    background: #f8fafc;
+    border: 1px solid var(--schedule-border);
+    box-shadow: 0 12px 26px rgba(15, 34, 58, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(53, 119, 241, 0.03));
   }
 
   &__mobile-request-total {
@@ -391,25 +585,41 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.08));
-    border: 1px solid rgba(37, 99, 235, 0.12);
+    padding: 16px 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(10, 179, 156, 0.1));
+    border: 1px solid rgba(10, 179, 156, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   &__mobile-request-total span {
-    color: #1e3a8a;
-    font-size: 0.78rem;
+    color: var(--schedule-success);
+    font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
   }
 
   &__mobile-request-total strong {
-    color: #0f172a;
-    font-size: 1.2rem;
+    color: var(--schedule-text);
+    font-size: 1.25rem;
     font-weight: 800;
     line-height: 1.1;
+  }
+
+  &__mobile-request-total-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--schedule-primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(15, 34, 58, 0.12);
   }
 
   &__mobile-request-status {
@@ -434,7 +644,7 @@
   &__mobile-request-metadata strong,
   &__mobile-detail-row strong {
     display: block;
-    color: #0f172a;
+    color: var(--schedule-text);
     font-size: 0.9rem;
     font-weight: 700;
     line-height: 1.4;
@@ -443,39 +653,77 @@
   &__mobile-detail-rows {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 12px;
+    margin-top: 16px;
   }
 
   &__mobile-detail-row {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 16px 18px;
+    border: 1px solid var(--schedule-border);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  &__mobile-detail-main {
+    display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 16px 18px;
-    border-radius: 18px;
-    background: #ffffff;
-  }
-
-  &__mobile-detail-row > div {
     min-width: 0;
   }
 
-  &__mobile-detail-row > div strong {
-    display: block;
-    color: #0f172a;
-    font-size: 1rem;
+  &__mobile-detail-main > strong:first-child {
+    color: var(--schedule-text);
+    font-size: 1.02rem;
     font-weight: 700;
-    margin-bottom: 0;
     line-height: 1.3;
+    min-width: 0;
   }
 
-  &__mobile-detail-row > strong {
+  &__mobile-detail-main > strong:last-child {
     flex-shrink: 0;
-    color: #1d4ed8;
-    font-size: 1.1rem;
+    color: var(--schedule-indigo);
+    font-size: 1.14rem;
     font-weight: 800;
     line-height: 1.2;
+  }
+
+  &__mobile-detail-progress {
+    position: relative;
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(53, 119, 241, 0.12);
+  }
+
+  &__mobile-detail-progress span {
+    display: block;
+    height: 100%;
+    width: var(--detail-fill, 12%);
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--schedule-primary), var(--schedule-indigo));
+    box-shadow: 0 6px 12px rgba(53, 119, 241, 0.18);
+  }
+
+  &__mobile-detail-row:nth-child(4n + 2) .my-schedule-app__mobile-detail-progress span {
+    background: linear-gradient(90deg, var(--schedule-success), #4ccfb9);
+    box-shadow: 0 6px 12px rgba(10, 179, 156, 0.18);
+  }
+
+  &__mobile-detail-row:nth-child(4n + 3) .my-schedule-app__mobile-detail-progress span {
+    background: linear-gradient(90deg, var(--schedule-warning), #ffd166);
+    box-shadow: 0 6px 12px rgba(247, 184, 75, 0.2);
+  }
+
+  &__mobile-detail-row:nth-child(4n + 4) .my-schedule-app__mobile-detail-progress span {
+    background: linear-gradient(90deg, var(--schedule-danger), #f48f79);
+    box-shadow: 0 6px 12px rgba(240, 101, 72, 0.2);
   }
 
   @media (min-width: 768px) {

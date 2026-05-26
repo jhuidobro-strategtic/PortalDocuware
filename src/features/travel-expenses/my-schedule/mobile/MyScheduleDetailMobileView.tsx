@@ -13,7 +13,6 @@ import { MobileStatusPill } from "./components/MobileStatusPill";
 interface MyScheduleDetailMobileViewProps {
   clearFeedback: () => void;
   feedback: FeedbackState | null;
-  getRequesterLabel: (requesterId: number) => string;
   loadingDetail: boolean;
   onBack: () => void;
   trip: ScheduleTrip | null;
@@ -22,7 +21,6 @@ interface MyScheduleDetailMobileViewProps {
 export const MyScheduleDetailMobileView = ({
   clearFeedback,
   feedback,
-  getRequesterLabel,
   loadingDetail,
   onBack,
   trip,
@@ -61,7 +59,7 @@ export const MyScheduleDetailMobileView = ({
             </h1>
             <p className="my-schedule-app__mobile-subheadline">
               {trip
-                ? `${trip.origin?.label || "-"} → ${trip.destination?.label || "-"}`
+                ? `${trip.origin?.label || "-"} -> ${trip.destination?.label || "-"}`
                 : t("Travel Expenses")}
             </p>
           </div>
@@ -95,14 +93,22 @@ export const MyScheduleDetailMobileView = ({
                   </div>
                 ) : (
                   <div className="my-schedule-app__mobile-request-list">
-                    {trip.expenseRequests.map((request) => (
+                    {trip.expenseRequests.map((request, requestIndex) => {
+                      const requestTotalValue = Number(request.totalBudget);
+
+                      return (
                       <article
                         key={request.idRequest}
                         className="my-schedule-app__mobile-request-card"
                       >
                         <div className="my-schedule-app__mobile-request-total">
-                          <span>{t("Total Budget")}</span>
-                          <strong>{formatAmount(request.totalBudget)}</strong>
+                          <div>
+                            <span>{t("Total Budget")}</span>
+                            <strong>{formatAmount(request.totalBudget)}</strong>
+                          </div>
+                          <div className="my-schedule-app__mobile-request-total-badge">
+                            #{requestIndex + 1}
+                          </div>
                         </div>
 
                         <div className="my-schedule-app__mobile-detail-rows">
@@ -111,21 +117,34 @@ export const MyScheduleDetailMobileView = ({
                               <span>{t("No records found")}</span>
                             </div>
                           ) : (
-                            request.details.map((detail) => (
+                            request.details.map((detail, detailIndex) => {
+                              const detailAmount = Number(detail.budgetedAmount);
+                              const ratio =
+                                requestTotalValue > 0 && Number.isFinite(detailAmount)
+                                  ? Math.max(12, Math.min(100, (detailAmount / requestTotalValue) * 100))
+                                  : 12;
+
+                              return (
                               <div
                                 key={detail.expenseDetailId}
                                 className="my-schedule-app__mobile-detail-row"
+                                style={{ ["--detail-fill" as string]: `${ratio}%`, ["--detail-accent-index" as string]: String(detailIndex % 4) }}
                               >
-                                <div>
+                                <div className="my-schedule-app__mobile-detail-main">
                                   <strong>{detail.conceptLabel || "-"}</strong>
+                                  <strong>{formatAmount(detail.budgetedAmount)}</strong>
                                 </div>
-                                <strong>{formatAmount(detail.budgetedAmount)}</strong>
+                                <div className="my-schedule-app__mobile-detail-progress" aria-hidden="true">
+                                  <span />
+                                </div>
                               </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </MobileSectionCard>

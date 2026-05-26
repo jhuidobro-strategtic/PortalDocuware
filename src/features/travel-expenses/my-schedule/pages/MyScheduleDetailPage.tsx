@@ -31,7 +31,6 @@ const MyScheduleDetailPage = () => {
     <MyScheduleDetailMobileView
       clearFeedback={controller.clearFeedback}
       feedback={controller.feedback}
-      getRequesterLabel={controller.getRequesterLabel}
       loadingDetail={controller.loadingDetail}
       onBack={handleBack}
       trip={controller.trip}
