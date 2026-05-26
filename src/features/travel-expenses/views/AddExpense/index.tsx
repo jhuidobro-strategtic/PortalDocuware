@@ -226,6 +226,17 @@ const buildTripOptionLabel = (trip: ExpenseRequestTrip) =>
     `${trip.origin?.label || "-"} -> ${trip.destination?.label || "-"}`,
   ].join(" - ");
 
+const parseAmount = (value: string) => {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+};
+
+const formatBudgetAmount = (value: number) =>
+  new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(value);
+
 const validateExpenseRequestForm = (
   values: ExpenseRequestFormValues,
   t: (key: string, options?: Record<string, unknown>) => string
@@ -235,6 +246,7 @@ const validateExpenseRequestForm = (
     () => ({})
   );
   let detailsError = "";
+  const totalBudgetAmount = parseAmount(values.totalBudget);
 
   if (!values.tripId.trim()) {
     formErrors.tripId = t("Complete the {{field}} field.", {
@@ -291,6 +303,31 @@ const validateExpenseRequestForm = (
       });
     }
   });
+
+  const hasBudgetFieldErrors = detailErrors.some(
+    (detail) => Boolean(detail.budgetedAmount)
+  );
+
+  if (
+    !formErrors.totalBudget &&
+    !hasBudgetFieldErrors &&
+    values.details.length > 0
+  ) {
+    const detailsBudgetTotal = values.details.reduce(
+      (acc, detail) => acc + parseAmount(detail.budgetedAmount),
+      0
+    );
+
+    if (detailsBudgetTotal > totalBudgetAmount) {
+      detailsError = t(
+        "The sum of expense detail budgets ({{detailsTotal}}) cannot exceed Total Budget ({{totalBudget}}).",
+        {
+          detailsTotal: formatBudgetAmount(detailsBudgetTotal),
+          totalBudget: formatBudgetAmount(totalBudgetAmount),
+        }
+      );
+    }
+  }
 
   return {
     formErrors,
@@ -518,6 +555,12 @@ const AddExpensePage = () => {
       setCreateFormErrors(validation.formErrors);
       setCreateDetailErrors(validation.detailErrors);
       setCreateDetailsError(validation.detailsError);
+      if (validation.detailsError) {
+        setFeedback({
+          type: "danger",
+          message: validation.detailsError,
+        });
+      }
       return;
     }
 
@@ -710,12 +753,6 @@ const AddExpensePage = () => {
                   <span>{t("Add Detail")}</span>
                 </Button>
               </div>
-
-              {createDetailsError && (
-                <div className="alert alert-danger py-2 mb-3">
-                  {createDetailsError}
-                </div>
-              )}
 
               <div className="d-flex flex-column gap-3">
                 {createFormValues.details.map((detail, detailIndex) => {
