@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { ScheduleTrip } from "../../shared/types";
 import { formatAmount, formatDateTime, getTripBudgetTotal } from "../../shared/formatters";
-import { MobileStatusPill } from "./MobileStatusPill";
 
 interface MobileScheduleCardProps {
   trip: ScheduleTrip;
@@ -32,36 +31,25 @@ export const MobileScheduleCard = ({
       transition={{ duration: 0.2, delay: index * 0.03 }}
       whileTap={{ scale: 0.985 }}
     >
-      <div className="my-schedule-app__mobile-card-top">
-        <div className="my-schedule-app__mobile-trip-chip">
-          <span className="my-schedule-app__mobile-trip-chip-label">{t("Trip")}</span>
-          <p className="my-schedule-app__mobile-trip-chip-value">{trip.tripNumber || "-"}</p>
+      <div className="my-schedule-app__mobile-card-inline">
+        <div className="my-schedule-app__mobile-card-avatar" aria-hidden="true">
+          <i className="ri-road-map-line" />
         </div>
-        <MobileStatusPill status={trip.status} />
-      </div>
 
-      <div className="my-schedule-app__mobile-route-panel">
-        <div className="my-schedule-app__mobile-route-stop">
-          <span>{t("Origin")}</span>
-          <strong>{trip.origin?.label || "-"}</strong>
+        <div className="my-schedule-app__mobile-card-copy">
+          <strong className="my-schedule-app__mobile-card-trip-number">
+            {trip.tripNumber || "-"}
+          </strong>
+          <span className="my-schedule-app__mobile-card-route">
+            {trip.origin?.label || "-"} {"->"} {trip.destination?.label || "-"}
+          </span>
+          {/* <span className="my-schedule-app__mobile-card-departure">
+            <i className="ri-calendar-event-line" aria-hidden="true" />
+            {formatDateTime(trip.departureDate)}
+          </span> */}
         </div>
-        <div className="my-schedule-app__mobile-route-connector" aria-hidden="true">
-          <span />
-        </div>
-        <div className="my-schedule-app__mobile-route-stop">
-          <span>{t("Destination")}</span>
-          <strong>{trip.destination?.label || "-"}</strong>
-        </div>
-      </div>
 
-      <div className="my-schedule-app__mobile-card-meta-row">
-        <i className="ri-calendar-event-line" aria-hidden="true" />
-        <span>{t("Departure Date")}</span>
-        <strong>{formatDateTime(trip.departureDate)}</strong>
-      </div>
-
-      <div className="my-schedule-app__mobile-card-footer">
-        <div className={`my-schedule-app__mobile-budget ${hasBudget ? "has-budget" : "is-empty"}`}>
+        <div className={`my-schedule-app__mobile-budget my-schedule-app__mobile-budget--inline ${hasBudget ? "has-budget" : "is-empty"}`}>
           <span>{t("Total Budget")}</span>
           <strong>{budgetLabel}</strong>
         </div>
