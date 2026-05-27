@@ -22,6 +22,7 @@
 
 .page-content {
     padding: calc(#{$header-height} + #{$grid-gutter-width}) calc(#{$grid-gutter-width} * 0.5) $footer-height calc(#{$grid-gutter-width} * 0.5);
+    padding-right: 0px; padding-left: 0px;
 }
 
 .navbar-menu {
