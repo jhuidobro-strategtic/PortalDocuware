@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FeedbackState, ScheduleTrip } from "../shared/types";
-import { fetchScheduleDetail } from "../services/mySchedule.service";
+import {
+  CreateExpenseVoucherInput,
+  FeedbackState,
+  ScheduleTrip,
+} from "../shared/types";
+import {
+  createExpenseVoucher,
+  fetchScheduleDetail,
+} from "../services/mySchedule.service";
 
 export const useMyScheduleDetailController = (tripId: number | null) => {
   const { t } = useTranslation();
   const [trip, setTrip] = useState<ScheduleTrip | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
+  const [submittingVoucher, setSubmittingVoucher] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [requesterLookup, setRequesterLookup] = useState<Record<number, string>>(
     {}
@@ -55,11 +63,44 @@ export const useMyScheduleDetailController = (tripId: number | null) => {
   const getRequesterLabel = (requesterId: number) =>
     requesterLookup[requesterId] || `#${requesterId || "-"}`;
 
+  const submitExpenseVoucher = useCallback(
+    async (payload: CreateExpenseVoucherInput) => {
+      try {
+        setSubmittingVoucher(true);
+        setFeedback(null);
+
+        await createExpenseVoucher(payload, t);
+        await loadDetail();
+
+        setFeedback({
+          type: "success",
+          message: t("Expense voucher registered successfully."),
+        });
+
+        return true;
+      } catch (voucherError: any) {
+        setFeedback({
+          type: "danger",
+          message:
+            voucherError?.message || t("Error registering expense voucher"),
+        });
+
+        return false;
+      } finally {
+        setSubmittingVoucher(false);
+      }
+    },
+    [loadDetail, t]
+  );
+
   return {
     clearFeedback: () => setFeedback(null),
     feedback,
     loadingDetail,
     trip,
     getRequesterLabel,
+    showFeedback: (nextFeedback: FeedbackState | null) => setFeedback(nextFeedback),
+    submittingVoucher,
+    submitExpenseVoucher,
   };
 };

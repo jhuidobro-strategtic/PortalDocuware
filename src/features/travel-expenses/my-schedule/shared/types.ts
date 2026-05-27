@@ -67,3 +67,16 @@ export interface ScheduleSummary {
   inactiveTrips: number;
   nextTrip: ScheduleTrip | null;
 }
+
+export interface CreateExpenseVoucherInput {
+  idRequest: number;
+  expenseDetailId: number;
+  documentType: number;
+  supplierRuc: string;
+  seriesNumber: string;
+  voucherNumber: string;
+  amount: string;
+  photoUrl: string;
+  rejectionReason: string | null;
+  status: number;
+}

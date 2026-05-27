@@ -22,6 +22,7 @@ interface MyScheduleDetailDesktopViewProps {
   getRequesterLabel: (requesterId: number) => string;
   loadingDetail: boolean;
   onBack: () => void;
+  onOpenExpenseVoucher: (requestId: number, expenseDetailId: number) => void;
   trip: ScheduleTrip | null;
 }
 
@@ -31,6 +32,7 @@ export const MyScheduleDetailDesktopView = ({
   getRequesterLabel,
   loadingDetail,
   onBack,
+  onOpenExpenseVoucher,
   trip,
 }: MyScheduleDetailDesktopViewProps) => {
   const { t } = useTranslation();
@@ -139,12 +141,15 @@ export const MyScheduleDetailDesktopView = ({
                                     <th>{t("Concept")}</th>
                                     <th style={{ width: "160px" }}>{t("Budget")}</th>
                                     <th>{t("Notes")}</th>
+                                    <th style={{ width: "170px" }} className="text-end">
+                                      {t("Actions")}
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {request.details.length === 0 ? (
                                     <tr>
-                                      <td colSpan={3} className="text-center py-3">
+                                      <td colSpan={4} className="text-center py-3">
                                         {t("No records found")}
                                       </td>
                                     </tr>
@@ -154,6 +159,20 @@ export const MyScheduleDetailDesktopView = ({
                                         <td>{detail.conceptLabel || "-"}</td>
                                         <td>{formatAmount(detail.budgetedAmount)}</td>
                                         <td>{detail.notes || "-"}</td>
+                                        <td className="text-end">
+                                          <Button
+                                            color="light"
+                                            size="sm"
+                                            onClick={() =>
+                                              onOpenExpenseVoucher(
+                                                request.idRequest,
+                                                detail.expenseDetailId
+                                              )
+                                            }
+                                          >
+                                            {t("Register expense")}
+                                          </Button>
+                                        </td>
                                       </tr>
                                     ))
                                   )}
