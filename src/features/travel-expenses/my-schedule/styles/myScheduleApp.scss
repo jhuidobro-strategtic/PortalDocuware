@@ -814,6 +814,13 @@
     border-radius: 26px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 252, 0.9));
     box-shadow: 0 12px 28px rgba(15, 34, 58, 0.07);
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+      border-color: rgba(53, 119, 241, 0.25);
+      box-shadow: 0 16px 36px rgba(15, 34, 58, 0.1);
+    }
   }
 
   &__mobile-expense-card-head {
@@ -926,6 +933,250 @@
 
   &__mobile-expense-action--secondary:hover {
     background: #f8faff;
+  }
+
+  &__sheet-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 34, 58, 0.35);
+    backdrop-filter: blur(5px);
+    z-index: 1040;
+  }
+
+  &__sheet {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #ffffff;
+    border-top-left-radius: 32px;
+    border-top-right-radius: 32px;
+    box-shadow: 0 -10px 35px rgba(15, 34, 58, 0.16);
+    z-index: 1050;
+    padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    max-height: 80vh;
+  }
+
+  &__sheet-handle {
+    width: 44px;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    margin: 0 auto;
+    flex-shrink: 0;
+  }
+
+  &__sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__sheet-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  &__sheet-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  &__sheet-title-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    strong {
+      color: var(--schedule-text);
+      font-size: 1.15rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      color: var(--schedule-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+  }
+
+  &__sheet-close {
+    border: 0;
+    background: #f1f5f9;
+    color: var(--schedule-indigo);
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: background 0.15s ease, transform 0.15s ease;
+    flex-shrink: 0;
+
+    &:active {
+      background: #e2e8f0;
+      transform: scale(0.95);
+    }
+  }
+
+  &__sheet-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  &__sheet-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__sheet-section-title {
+    color: var(--schedule-muted);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  &__sheet-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 16px 20px;
+    border: 1px dashed rgba(53, 119, 241, 0.4);
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(53, 119, 241, 0.07) 0%, rgba(53, 119, 241, 0.02) 100%);
+    text-align: left;
+    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+    &:active {
+      transform: scale(0.985);
+      background: rgba(53, 119, 241, 0.12);
+    }
+
+    i {
+      font-size: 1.45rem;
+      color: var(--schedule-primary);
+      flex-shrink: 0;
+    }
+  }
+
+  &__sheet-action-btn-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    strong {
+      color: var(--schedule-primary);
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+
+    span {
+      color: var(--schedule-muted);
+      font-size: 0.78rem;
+    }
+  }
+
+  &__sheet-voucher-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__sheet-voucher-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border: 1px solid var(--schedule-border);
+    border-radius: 20px;
+    width: 100%;
+    text-align: left;
+    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+    &:active {
+      transform: scale(0.985);
+      background: #f1f5f9;
+      border-color: rgba(15, 34, 58, 0.12);
+    }
+  }
+
+  &__sheet-voucher-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__sheet-voucher-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(10, 179, 156, 0.12);
+    color: var(--schedule-success);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  &__sheet-voucher-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    strong {
+      color: var(--schedule-text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      color: var(--schedule-muted);
+      font-size: 0.78rem;
+    }
+  }
+
+  &__sheet-voucher-amount {
+    color: var(--schedule-text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: right;
   }
 
   &__expense-modal .modal-content {

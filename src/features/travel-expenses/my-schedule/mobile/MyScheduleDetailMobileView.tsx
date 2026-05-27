@@ -1,12 +1,12 @@
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../../components/common/FloatingAlerts";
 import { formatAmount } from "../shared/formatters";
-import { FeedbackState, ScheduleTrip } from "../shared/types";
+import { FeedbackState, ScheduleTrip, ScheduleExpenseRequest, ScheduleExpenseRequestDetail } from "../shared/types";
 import { MobileSectionCard } from "./components/MobileSectionCard";
 
 interface MyScheduleDetailMobileViewProps {
@@ -73,6 +73,10 @@ export const MyScheduleDetailMobileView = ({
   trip,
 }: MyScheduleDetailMobileViewProps) => {
   const { t } = useTranslation();
+  const [selectedDetail, setSelectedDetail] = useState<{
+    request: ScheduleExpenseRequest;
+    detail: ScheduleExpenseRequestDetail;
+  } | null>(null);
   const floatingAlerts: FloatingAlertItem[] = [];
   const getVoucherLabel = (seriesNumber: string, voucherNumber: string, fallbackIndex: number) =>
     [seriesNumber, voucherNumber].filter(Boolean).join("-") ||
@@ -162,7 +166,9 @@ export const MyScheduleDetailMobileView = ({
                                   initial={{ opacity: 0, y: 8 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ duration: 0.18 }}
+                                  whileTap={{ scale: 0.985 }}
                                   className="my-schedule-app__mobile-expense-card"
+                                  onClick={() => setSelectedDetail({ request, detail })}
                                 >
                                   <div className="my-schedule-app__mobile-expense-card-head">
                                     <div
@@ -185,44 +191,6 @@ export const MyScheduleDetailMobileView = ({
                                       <strong>{formatAmount(detail.budgetedAmount)}</strong>
                                     </div>
                                   </div>
-
-                                  <button
-                                    type="button"
-                                    className="my-schedule-app__mobile-expense-action"
-                                    onClick={() =>
-                                      onOpenExpenseVoucher(
-                                        request.idRequest,
-                                        detail.expenseDetailId
-                                      )
-                                    }
-                                  >
-                                    {t("Register expense")}
-                                  </button>
-
-                                  {hasRegisteredVouchers ? (
-                                    <div className="my-schedule-app__mobile-detail-rows mt-2">
-                                      {detail.expenseVouchers.map((voucher, voucherIndex) => (
-                                        <button
-                                          key={
-                                            voucher.expenseVoucherId ||
-                                            `${detail.expenseDetailId}-${voucherIndex}`
-                                          }
-                                          type="button"
-                                          className="my-schedule-app__mobile-expense-action my-schedule-app__mobile-expense-action--secondary"
-                                          onClick={() =>
-                                            onOpenExpenseVoucherDocument(voucher.photoUrl)
-                                          }
-                                        >
-                                          {t("View voucher")}{" "}
-                                          {getVoucherLabel(
-                                            voucher.seriesNumber,
-                                            voucher.voucherNumber,
-                                            voucherIndex
-                                          )}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : null}
                                 </motion.article>
                               );
                             })
@@ -237,6 +205,133 @@ export const MyScheduleDetailMobileView = ({
           </div>
         ) : null}
       </section>
+
+      <AnimatePresence>
+        {selectedDetail && (() => {
+          const { request, detail } = selectedDetail;
+          const expenseMeta = getExpenseConceptMeta(detail.conceptLabel);
+          const hasRegisteredVouchers = detail.expenseVouchers.length > 0;
+
+          return (
+            <>
+              <motion.div
+                className="my-schedule-app__sheet-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedDetail(null)}
+              />
+
+              <motion.div
+                className="my-schedule-app__sheet"
+                initial={{ y: "100%", x: "-50%" }}
+                animate={{ y: 0, x: "-50%" }}
+                exit={{ y: "100%", x: "-50%" }}
+                transition={{ type: "spring", damping: 26, stiffness: 240 }}
+              >
+                <div className="my-schedule-app__sheet-handle" />
+
+                <div className="my-schedule-app__sheet-header">
+                  <div className="my-schedule-app__sheet-header-left">
+                    <div className={`my-schedule-app__sheet-title-icon my-schedule-app__mobile-expense-icon--${expenseMeta.tone}`}>
+                      <i className={expenseMeta.icon} />
+                    </div>
+                    <div className="my-schedule-app__sheet-title-info">
+                      <strong>{detail.conceptLabel || "-"}</strong>
+                      <span>{request.requestNumber}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="my-schedule-app__sheet-close"
+                    onClick={() => setSelectedDetail(null)}
+                  >
+                    <i className="ri-close-line" />
+                  </button>
+                </div>
+
+                <div className="my-schedule-app__sheet-body">
+                  <div className="my-schedule-app__sheet-section">
+                    <span className="my-schedule-app__sheet-section-title">{t("Expense details")}</span>
+                    <div className="my-schedule-app__mobile-detail-row">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="text-muted small">{t("Budgeted Amount")}</span>
+                        <strong>{formatAmount(detail.budgetedAmount)}</strong>
+                      </div>
+                      {detail.notes && (
+                        <div className="mt-2 border-top pt-2">
+                          <span className="text-muted small d-block mb-1">{t("Notes")}</span>
+                          <p className="text-body mb-0 small" style={{ whiteSpace: "pre-line" }}>
+                            {detail.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="my-schedule-app__sheet-section">
+                    <span className="my-schedule-app__sheet-section-title">{t("Select an action")}</span>
+                    <button
+                      type="button"
+                      className="my-schedule-app__sheet-action-btn"
+                      onClick={() => {
+                        setSelectedDetail(null);
+                        onOpenExpenseVoucher(request.idRequest, detail.expenseDetailId);
+                      }}
+                    >
+                      <i className="ri-file-add-line" />
+                      <div className="my-schedule-app__sheet-action-btn-copy">
+                        <strong>{t("Register expense")}</strong>
+                        <span>{t("Upload photo or enter receipt details")}</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="my-schedule-app__sheet-section">
+                    <span className="my-schedule-app__sheet-section-title">
+                      {t("Registered vouchers")} ({detail.expenseVouchers.length})
+                    </span>
+                    {hasRegisteredVouchers ? (
+                      <div className="my-schedule-app__sheet-voucher-list">
+                        {detail.expenseVouchers.map((voucher, voucherIndex) => (
+                          <button
+                            key={voucher.expenseVoucherId || `${detail.expenseDetailId}-${voucherIndex}`}
+                            type="button"
+                            className="my-schedule-app__sheet-voucher-item"
+                            onClick={() => {
+                              setSelectedDetail(null);
+                              onOpenExpenseVoucherDocument(voucher.photoUrl);
+                            }}
+                          >
+                            <div className="my-schedule-app__sheet-voucher-left">
+                              <div className="my-schedule-app__sheet-voucher-icon">
+                                <i className="ri-file-text-line" />
+                              </div>
+                              <div className="my-schedule-app__sheet-voucher-copy">
+                                <strong>
+                                  {getVoucherLabel(voucher.seriesNumber, voucher.voucherNumber, voucherIndex)}
+                                </strong>
+                                <span>{voucher.documentTypeLabel || t("Voucher")}</span>
+                              </div>
+                            </div>
+                            <div className="my-schedule-app__sheet-voucher-amount">
+                              {formatAmount(voucher.amount)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="my-schedule-app__mobile-empty my-schedule-app__mobile-empty--inline py-3 border rounded-3 border-dashed text-center">
+                        <p className="text-muted small mb-0">{t("No registered vouchers.")}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 };
