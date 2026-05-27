@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -39,6 +39,8 @@ interface VoucherQrScanState {
   tone: "success" | "danger" | "info";
 }
 
+type EvidenceInputSource = "camera" | "gallery" | "file";
+
 const createInitialExpenseVoucherValues = (
   amount = ""
 ): ExpenseVoucherFormValues => ({
@@ -55,7 +57,7 @@ const readFileAsDataUrl = (file: File) =>
     const reader = new FileReader();
 
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Unable to process the selected image."));
+    reader.onerror = () => reject(new Error("Unable to process the selected file."));
     reader.readAsDataURL(file);
   });
 
@@ -86,9 +88,14 @@ const MyScheduleExpenseVoucherPage = () => {
   );
   const [formErrors, setFormErrors] = useState<ExpenseVoucherFormErrors>({});
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [selectedEvidenceDataUrl, setSelectedEvidenceDataUrl] = useState("");
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState("");
   const [isScanningQr, setIsScanningQr] = useState(false);
   const [qrScanState, setQrScanState] = useState<VoucherQrScanState | null>(null);
+  const [isEvidencePickerOpen, setIsEvidencePickerOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedRequest = useMemo(() => {
     if (!controller.trip || parsedRequestId === null) {
@@ -126,9 +133,11 @@ const MyScheduleExpenseVoucherPage = () => {
     setFormValues(createInitialExpenseVoucherValues(selectedDetail.budgetedAmount || ""));
     setFormErrors({});
     setSelectedPhoto(null);
+    setSelectedEvidenceDataUrl("");
     setSelectedPhotoPreview("");
     setIsScanningQr(false);
     setQrScanState(null);
+    setIsEvidencePickerOpen(false);
   }, [selectedDetail]);
 
   const floatingAlerts: FloatingAlertItem[] = [];
@@ -167,30 +176,51 @@ const MyScheduleExpenseVoucherPage = () => {
     }));
   };
 
-  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+    source: EvidenceInputSource
+  ) => {
     const nextPhoto = event.target.files?.[0] ?? null;
     setSelectedPhoto(nextPhoto);
 
     if (!nextPhoto) {
+      setSelectedEvidenceDataUrl("");
       setSelectedPhotoPreview("");
       setIsScanningQr(false);
       setQrScanState(null);
+      event.target.value = "";
       return;
     }
 
     try {
-      const preview = await readFileAsDataUrl(nextPhoto);
-      setSelectedPhotoPreview(preview);
+      const nextEvidenceDataUrl = await readFileAsDataUrl(nextPhoto);
+      setSelectedEvidenceDataUrl(nextEvidenceDataUrl);
+      setSelectedPhotoPreview(
+        nextPhoto.type.startsWith("image/") ? nextEvidenceDataUrl : ""
+      );
       setFormErrors((currentErrors) => ({
         ...currentErrors,
         photoUrl: undefined,
       }));
     } catch {
+      setSelectedEvidenceDataUrl("");
       setSelectedPhotoPreview("");
       setQrScanState({
         tone: "danger",
-        message: t("Unable to read the QR code from the selected image."),
+        message: t("Unable to process the selected file."),
       });
+      event.target.value = "";
+      return;
+    }
+
+    if (!nextPhoto.type.startsWith("image/")) {
+      setIsScanningQr(false);
+      setQrScanState({
+        tone: "info",
+        message: t("The file was attached successfully. QR detection only works with images."),
+      });
+      setIsEvidencePickerOpen(false);
+      event.target.value = "";
       return;
     }
 
@@ -248,7 +278,25 @@ const MyScheduleExpenseVoucherPage = () => {
       });
     } finally {
       setIsScanningQr(false);
+      setIsEvidencePickerOpen(false);
+      event.target.value = "";
     }
+  };
+
+  const handleOpenEvidenceSource = (source: EvidenceInputSource) => {
+    setIsEvidencePickerOpen(false);
+
+    if (source === "camera") {
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    if (source === "gallery") {
+      galleryInputRef.current?.click();
+      return;
+    }
+
+    fileInputRef.current?.click();
   };
 
   const validateForm = () => {
@@ -290,7 +338,7 @@ const MyScheduleExpenseVoucherPage = () => {
       });
     }
 
-    if (!formValues.photoUrl.trim() && !selectedPhotoPreview) {
+    if (!formValues.photoUrl.trim() && !selectedEvidenceDataUrl) {
       nextErrors.photoUrl = t("Complete the {{field}} field.", {
         field: t("Photo URL"),
       });
@@ -319,7 +367,7 @@ const MyScheduleExpenseVoucherPage = () => {
       seriesNumber: formValues.seriesNumber.trim(),
       voucherNumber: formValues.voucherNumber.trim(),
       amount: formValues.amount.trim(),
-      photoUrl: formValues.photoUrl.trim() || selectedPhotoPreview,
+      photoUrl: formValues.photoUrl.trim() || selectedEvidenceDataUrl,
       rejectionReason: null,
       status: 1,
     };
@@ -437,21 +485,98 @@ const MyScheduleExpenseVoucherPage = () => {
 
       <div className="my-schedule-app__expense-modal-field">
         <Label className="form-label d-block">{t("Photo Evidence")}</Label>
-        <label className="my-schedule-app__expense-photo-field">
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoChange}
-          />
-          <span className="my-schedule-app__expense-photo-icon" aria-hidden="true">
-            <i className="ri-camera-line" />
-          </span>
-          <span className="my-schedule-app__expense-photo-copy">
-            <strong>{t("Take or upload a photo")}</strong>
-            <small>{selectedPhoto?.name || t("No file selected")}</small>
-          </span>
-        </label>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="d-none"
+          onChange={(event) => handlePhotoChange(event, "camera")}
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          className="d-none"
+          onChange={(event) => handlePhotoChange(event, "gallery")}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,application/pdf,.pdf"
+          className="d-none"
+          onChange={(event) => handlePhotoChange(event, "file")}
+        />
+        <div className="my-schedule-app__expense-evidence-picker">
+          <button
+            type="button"
+            className="my-schedule-app__expense-picker-trigger"
+            onClick={() => setIsEvidencePickerOpen((current) => !current)}
+          >
+            <span className="my-schedule-app__expense-photo-icon" aria-hidden="true">
+              <i className="ri-attachment-2" />
+            </span>
+            <span className="my-schedule-app__expense-photo-copy">
+              <strong>{selectedPhoto?.name || t("Select evidence")}</strong>
+              <small>{t("Choose how you want to attach the voucher.")}</small>
+            </span>
+            <i
+              className={`ri-arrow-down-s-line my-schedule-app__expense-picker-caret${
+                isEvidencePickerOpen ? " is-open" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {isEvidencePickerOpen ? (
+            <div className="my-schedule-app__expense-picker-sheet">
+              <button
+                type="button"
+                className="my-schedule-app__expense-picker-option"
+                onClick={() => handleOpenEvidenceSource("camera")}
+              >
+                <span className="my-schedule-app__expense-photo-icon" aria-hidden="true">
+                  <i className="ri-camera-line" />
+                </span>
+                <span className="my-schedule-app__expense-photo-copy">
+                  <strong>{t("Take photo")}</strong>
+                  <small>{t("Use the camera to capture the voucher.")}</small>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="my-schedule-app__expense-picker-option"
+                onClick={() => handleOpenEvidenceSource("gallery")}
+              >
+                <span className="my-schedule-app__expense-photo-icon" aria-hidden="true">
+                  <i className="ri-image-line" />
+                </span>
+                <span className="my-schedule-app__expense-photo-copy">
+                  <strong>{t("Upload photo")}</strong>
+                  <small>{t("Choose an existing image from the device.")}</small>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="my-schedule-app__expense-picker-option"
+                onClick={() => handleOpenEvidenceSource("file")}
+              >
+                <span className="my-schedule-app__expense-photo-icon" aria-hidden="true">
+                  <i className="ri-file-upload-line" />
+                </span>
+                <span className="my-schedule-app__expense-photo-copy">
+                  <strong>{t("Upload file")}</strong>
+                  <small>{t("Attach an image or PDF file from the device.")}</small>
+                </span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <div className="my-schedule-app__expense-evidence-name">
+          {selectedPhoto?.name || t("No file selected")}
+        </div>
         {selectedPhotoPreview ? (
           <img
             src={selectedPhotoPreview}
@@ -489,7 +614,7 @@ const MyScheduleExpenseVoucherPage = () => {
       </div>
 
       <p className="my-schedule-app__expense-modal-helper">
-        {t("The image field can use a public URL or the captured photo as a fallback.")}
+        {t("The evidence field can use a public URL or the selected file as a fallback.")}
       </p>
       <p className="my-schedule-app__expense-modal-helper">
         {t(
