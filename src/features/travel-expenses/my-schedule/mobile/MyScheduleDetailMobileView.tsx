@@ -57,11 +57,6 @@ export const MyScheduleDetailMobileView = ({
             <h1 className="my-schedule-app__mobile-headline">
               {trip?.tripNumber || t("Loading...")}
             </h1>
-            <p className="my-schedule-app__mobile-subheadline">
-              {trip
-                ? `${trip.origin?.label || "-"} -> ${trip.destination?.label || "-"}`
-                : t("Travel Expenses")}
-            </p>
           </div>
 
           {trip ? <MobileStatusPill status={trip.status} /> : null}

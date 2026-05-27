@@ -33,11 +33,6 @@
     gap: 14px;
     padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 18px;
     margin: -12px -16px 18px;
-    background: linear-gradient(135deg, var(--schedule-primary) 0%, var(--schedule-indigo) 100%);
-    border-bottom-left-radius: 30px;
-    border-bottom-right-radius: 30px;
-    box-shadow: 0 18px 36px rgba(53, 119, 241, 0.18);
-    backdrop-filter: blur(18px);
   }
 
   &__mobile-detail-hero {
@@ -55,7 +50,7 @@
   &__mobile-kicker,
   &__mobile-eyebrow {
     margin: 0;
-    color: rgba(255, 255, 255, 0.76);
+    color: #405189;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -64,7 +59,7 @@
 
   &__mobile-headline {
     margin: 4px 0 0;
-    color: #fffdf9;
+    color: #405189;
     font-size: 1.5rem;
     font-weight: 700;
     line-height: 1.1;
