@@ -250,8 +250,7 @@
   &__mobile-section,
   &__mobile-request-card {
     border-radius: 30px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 18px 42px var(--schedule-shadow);
+    background: rgba(255, 255, 255, 0.96);    
   }
 
   &__mobile-card {
@@ -660,6 +659,7 @@
     padding: 20px;
     border: 1px solid var(--schedule-border);
     background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 42px var(--schedule-shadow);
   }
 
   &__mobile-section-header {
@@ -707,13 +707,6 @@
     color: var(--schedule-indigo);
     font-size: 1.1rem;
     box-shadow: 0 12px 28px rgba(15, 34, 58, 0.14);
-  }
-
-  &__mobile-request-card {
-    padding: 18px;
-    border: 1px solid var(--schedule-border);
-    box-shadow: 0 12px 26px rgba(15, 34, 58, 0.08);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(53, 119, 241, 0.03));
   }
 
   &__mobile-request-total {
