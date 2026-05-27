@@ -61,6 +61,11 @@ const readFileAsDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const isPdfFile = (file: File) =>
+  file.type === "application/pdf" ||
+  file.type === "application/x-pdf" ||
+  /\.pdf$/i.test(file.name || "");
+
 const MyScheduleExpenseVoucherPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -195,9 +200,7 @@ const MyScheduleExpenseVoucherPage = () => {
     try {
       const nextEvidenceDataUrl = await readFileAsDataUrl(nextPhoto);
       setSelectedEvidenceDataUrl(nextEvidenceDataUrl);
-      setSelectedPhotoPreview(
-        nextPhoto.type.startsWith("image/") ? nextEvidenceDataUrl : ""
-      );
+      setSelectedPhotoPreview(nextPhoto.type.startsWith("image/") ? nextEvidenceDataUrl : "");
       setFormErrors((currentErrors) => ({
         ...currentErrors,
         photoUrl: undefined,
@@ -213,11 +216,13 @@ const MyScheduleExpenseVoucherPage = () => {
       return;
     }
 
-    if (!nextPhoto.type.startsWith("image/")) {
+    const canScanQr = nextPhoto.type.startsWith("image/") || isPdfFile(nextPhoto);
+
+    if (!canScanQr) {
       setIsScanningQr(false);
       setQrScanState({
         tone: "info",
-        message: t("The file was attached successfully. QR detection only works with images."),
+        message: t("The file was attached successfully. QR detection only works with images or PDFs."),
       });
       setIsEvidencePickerOpen(false);
       event.target.value = "";
