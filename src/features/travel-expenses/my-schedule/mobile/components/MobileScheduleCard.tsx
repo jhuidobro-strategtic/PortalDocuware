@@ -23,8 +23,10 @@ export const MobileScheduleCard = ({
     hasBudget ? formatAmount(String(totalBudget)) : "-";
 
   return (
-    <motion.article
+    <motion.button
+      type="button"
       className={`my-schedule-app__mobile-card my-schedule-app__mobile-card--${trip.status ? "active" : "inactive"}`}
+      onClick={() => onViewTrip(trip.idTrip)}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
@@ -63,16 +65,7 @@ export const MobileScheduleCard = ({
           <span>{t("Total Budget")}</span>
           <strong>{budgetLabel}</strong>
         </div>
-
-        <button
-          type="button"
-          className="my-schedule-app__mobile-primary-button"
-          onClick={() => onViewTrip(trip.idTrip)}
-        >
-          <span>{t("View")}</span>
-          <i className="ri-arrow-right-line" />
-        </button>
       </div>
-    </motion.article>
+    </motion.button>
   );
 };

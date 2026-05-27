@@ -255,8 +255,18 @@
   }
 
   &__mobile-card {
+    display: block;
+    width: 100%;
     padding: 20px;
     border: 1px solid var(--schedule-border);
+    appearance: none;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__mobile-card:focus-visible {
+    outline: 2px solid rgba(53, 119, 241, 0.35);
+    outline-offset: 3px;
   }
 
   &__mobile-card--active {
@@ -483,38 +493,17 @@
   &__mobile-card-footer {
     display: flex;
     align-items: flex-end;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
     margin-top: 18px;
   }
 
-  &__mobile-primary-button,
   &__mobile-back {
     border: 0;
     outline: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
   }
 
-  &__mobile-primary-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    width: auto;
-    min-width: 136px;
-    height: 46px;
-    margin-top: 16px;
-    margin-left: auto;
-    padding: 0 18px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, var(--schedule-indigo) 0%, var(--schedule-primary) 100%);
-    color: #ffffff;
-    font-size: 0.9rem;
-    font-weight: 700;
-    box-shadow: 0 14px 28px rgba(53, 119, 241, 0.22);
-  }
-
-  &__mobile-primary-button:active,
   &__mobile-back:active {
     transform: scale(0.98);
   }
