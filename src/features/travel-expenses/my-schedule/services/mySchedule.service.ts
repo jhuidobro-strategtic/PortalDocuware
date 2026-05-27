@@ -2,10 +2,55 @@ import { buildApiUrl } from "../../../../helpers/api-url";
 import { mapApiTrip, mapApiUser, mapExpenseRequest, mapUserLookup } from "../shared/mappers";
 import { getAuthHeaders, getCurrentSessionUser } from "../shared/session";
 import {
+  CreateExpenseVoucherResult,
   CreateExpenseVoucherInput,
   ScheduleTrip,
   SessionUser,
 } from "../shared/types";
+
+const extractExpenseVoucherId = (value: any): number | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const directCandidates = [
+    value.id,
+    value.id_voucher,
+    value.id_expense_voucher,
+    value.expense_voucher_id,
+    value.idExpenseVoucher,
+    value.idExpenseVoucherPhoto,
+  ];
+
+  for (const candidate of directCandidates) {
+    const parsedCandidate = Number(candidate);
+
+    if (Number.isFinite(parsedCandidate) && parsedCandidate > 0) {
+      return parsedCandidate;
+    }
+  }
+
+  if ("data" in value) {
+    const nestedId = extractExpenseVoucherId(value.data);
+
+    if (nestedId !== null) {
+      return nestedId;
+    }
+  }
+
+  return null;
+};
+
+const extractExpenseVoucherIdFromLocation = (locationHeader: string | null) => {
+  if (!locationHeader) {
+    return null;
+  }
+
+  const matchedId = locationHeader.match(/\/(\d+)\/?$/);
+  const parsedId = Number(matchedId?.[1] ?? "");
+
+  return Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
+};
 
 export const fetchScheduleTrips = async (
   sessionUser: SessionUser,
@@ -135,7 +180,7 @@ export const createExpenseVoucher = async (
   voucher: CreateExpenseVoucherInput,
   t: (key: string) => string,
   signal?: AbortSignal
-) => {
+): Promise<CreateExpenseVoucherResult> => {
   const sessionUser = getCurrentSessionUser();
 
   if (sessionUser.id === null) {
@@ -168,6 +213,59 @@ export const createExpenseVoucher = async (
   if (!response.ok || responseData?.success === false) {
     throw new Error(
       responseData?.message || t("Error registering expense voucher")
+    );
+  }
+
+  const createdVoucherId =
+    extractExpenseVoucherId(responseData) ||
+    extractExpenseVoucherIdFromLocation(response.headers.get("Location"));
+
+  if (createdVoucherId === null) {
+    throw new Error(t("Unable to identify the generated expense voucher ID."));
+  }
+
+  return {
+    id: createdVoucherId,
+    responseData,
+  };
+};
+
+export const uploadExpenseVoucherPhoto = async (
+  voucherId: number,
+  photoFile: File,
+  t: (key: string) => string,
+  signal?: AbortSignal
+) => {
+  const sessionUser = getCurrentSessionUser();
+
+  if (sessionUser.id === null) {
+    throw new Error(
+      t("Unable to identify the signed-in user to upload the voucher photo.")
+    );
+  }
+
+  const formData = new FormData();
+  formData.append("photo", photoFile);
+  formData.append("updated_by", String(sessionUser.id));
+
+  const authHeaders = getAuthHeaders();
+  const { ["Content-Type"]: _ignoredContentType, ...uploadHeaders } = authHeaders;
+
+  const response = await fetch(
+    buildApiUrl(`expense-vouchers/${voucherId}/photo/`),
+    {
+      method: "POST",
+      headers: uploadHeaders,
+      body: formData,
+      signal,
+    }
+  );
+
+  const responseData = await response.json().catch(() => null);
+
+  if (!response.ok || responseData?.success === false) {
+    throw new Error(
+      responseData?.message || t("Error uploading expense voucher photo")
     );
   }
 

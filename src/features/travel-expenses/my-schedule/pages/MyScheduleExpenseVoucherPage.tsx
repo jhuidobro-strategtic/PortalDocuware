@@ -367,20 +367,35 @@ const MyScheduleExpenseVoucherPage = () => {
       seriesNumber: formValues.seriesNumber.trim(),
       voucherNumber: formValues.voucherNumber.trim(),
       amount: formValues.amount.trim(),
-      photoUrl: formValues.photoUrl.trim() || selectedEvidenceDataUrl,
+      photoUrl: formValues.photoUrl.trim(),
       rejectionReason: null,
       status: 1,
     };
 
-    const saved = await controller.submitExpenseVoucher(payload);
+    const saveResult = await controller.submitExpenseVoucher(payload, selectedPhoto);
 
-    if (saved) {
+    if (saveResult.success) {
       navigate(backPath, {
         replace: true,
         state: {
           feedback: {
             type: "success",
             message: t("Expense voucher registered successfully."),
+          } as FeedbackState,
+        },
+      });
+      return;
+    }
+
+    if (saveResult.created && !saveResult.uploadedPhoto) {
+      navigate(backPath, {
+        replace: true,
+        state: {
+          feedback: {
+            type: "danger",
+            message: t(
+              "The expense voucher was created, but the photo could not be uploaded."
+            ),
           } as FeedbackState,
         },
       });

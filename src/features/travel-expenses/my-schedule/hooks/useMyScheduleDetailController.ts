@@ -8,6 +8,7 @@ import {
 import {
   createExpenseVoucher,
   fetchScheduleDetail,
+  uploadExpenseVoucherPhoto,
 } from "../services/mySchedule.service";
 
 export const useMyScheduleDetailController = (tripId: number | null) => {
@@ -64,12 +65,38 @@ export const useMyScheduleDetailController = (tripId: number | null) => {
     requesterLookup[requesterId] || `#${requesterId || "-"}`;
 
   const submitExpenseVoucher = useCallback(
-    async (payload: CreateExpenseVoucherInput) => {
+    async (
+      payload: CreateExpenseVoucherInput,
+      photoFile?: File | null
+    ) => {
       try {
         setSubmittingVoucher(true);
         setFeedback(null);
 
-        await createExpenseVoucher(payload, t);
+        const createdVoucher = await createExpenseVoucher(payload, t);
+
+        if (photoFile) {
+          try {
+            await uploadExpenseVoucherPhoto(createdVoucher.id, photoFile, t);
+          } catch (photoUploadError: any) {
+            await loadDetail();
+            setFeedback({
+              type: "danger",
+              message:
+                photoUploadError?.message ||
+                t(
+                  "The expense voucher was created, but the photo could not be uploaded."
+                ),
+            });
+
+            return {
+              success: false,
+              created: true,
+              uploadedPhoto: false,
+            };
+          }
+        }
+
         await loadDetail();
 
         setFeedback({
@@ -77,7 +104,11 @@ export const useMyScheduleDetailController = (tripId: number | null) => {
           message: t("Expense voucher registered successfully."),
         });
 
-        return true;
+        return {
+          success: true,
+          created: true,
+          uploadedPhoto: true,
+        };
       } catch (voucherError: any) {
         setFeedback({
           type: "danger",
@@ -85,7 +116,11 @@ export const useMyScheduleDetailController = (tripId: number | null) => {
             voucherError?.message || t("Error registering expense voucher"),
         });
 
-        return false;
+        return {
+          success: false,
+          created: false,
+          uploadedPhoto: false,
+        };
       } finally {
         setSubmittingVoucher(false);
       }

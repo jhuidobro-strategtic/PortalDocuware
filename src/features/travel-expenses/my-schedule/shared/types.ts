@@ -81,6 +81,11 @@ export interface CreateExpenseVoucherInput {
   status: number;
 }
 
+export interface CreateExpenseVoucherResult {
+  id: number;
+  responseData: any;
+}
+
 export interface ParsedExpenseVoucherQr {
   rawValue: string;
   supplierRuc: string;
