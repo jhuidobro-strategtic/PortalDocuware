@@ -509,18 +509,6 @@ const MyScheduleExpenseVoucherPage = () => {
       </div>
 
       <div className="my-schedule-app__expense-modal-field">
-        <Label className="form-label">{t("Photo URL")}</Label>
-        <Input
-          type="url"
-          value={formValues.photoUrl}
-          onChange={(event) => handleValueChange("photoUrl", event.target.value)}
-          placeholder={t("Enter a public photo URL")}
-          invalid={Boolean(formErrors.photoUrl)}
-        />
-        <FormFeedback>{formErrors.photoUrl}</FormFeedback>
-      </div>
-
-      <div className="my-schedule-app__expense-modal-field">
         <Label className="form-label d-block">{t("Photo Evidence")}</Label>
         <input
           ref={cameraInputRef}
@@ -650,9 +638,6 @@ const MyScheduleExpenseVoucherPage = () => {
         ) : null}
       </div>
 
-      <p className="my-schedule-app__expense-modal-helper">
-        {t("The evidence field can use a public URL or the selected file as a fallback.")}
-      </p>
       <p className="my-schedule-app__expense-modal-helper">
         {t(
           "If the voucher QR is readable, RUC, Series, Number and Amount will be auto-filled."
