@@ -798,61 +798,273 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
   }
 
-  &__mobile-detail-main {
+  &__mobile-expense-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  &__mobile-expense-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid rgba(15, 34, 58, 0.08);
+    border-radius: 26px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 252, 0.9));
+    box-shadow: 0 12px 28px rgba(15, 34, 58, 0.07);
+  }
+
+  &__mobile-expense-card-head {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+  }
+
+  &__mobile-expense-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    font-size: 1.35rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  &__mobile-expense-icon--general {
+    background: linear-gradient(180deg, rgba(53, 119, 241, 0.14), rgba(64, 81, 137, 0.14));
+    color: var(--schedule-primary);
+  }
+
+  &__mobile-expense-icon--fuel {
+    background: linear-gradient(180deg, rgba(240, 101, 72, 0.14), rgba(240, 101, 72, 0.2));
+    color: var(--schedule-danger);
+  }
+
+  &__mobile-expense-icon--food {
+    background: linear-gradient(180deg, rgba(247, 184, 75, 0.18), rgba(247, 184, 75, 0.24));
+    color: #d97706;
+  }
+
+  &__mobile-expense-icon--lodging {
+    background: linear-gradient(180deg, rgba(53, 119, 241, 0.12), rgba(53, 119, 241, 0.2));
+    color: var(--schedule-primary);
+  }
+
+  &__mobile-expense-icon--road {
+    background: linear-gradient(180deg, rgba(10, 179, 156, 0.14), rgba(10, 179, 156, 0.2));
+    color: var(--schedule-success);
+  }
+
+  &__mobile-expense-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__mobile-expense-copy strong {
+    display: block;
+    color: var(--schedule-text);
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  &__mobile-expense-copy span {
+    display: block;
+    color: var(--schedule-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__mobile-expense-amount {
+    text-align: right;
+  }
+
+  &__mobile-expense-amount strong {
+    display: block;
+    color: var(--schedule-text);
+    font-size: 1.32rem;
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  &__mobile-expense-action {
+    min-height: 48px;
+    border: 0;
+    border-radius: 999px;
+    background: #f6f1e7;
+    color: var(--schedule-text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  }
+
+  &__mobile-expense-action:active {
+    transform: scale(0.985);
+  }
+
+  &__mobile-expense-action:hover {
+    background: #f2eadc;
+    box-shadow: 0 10px 20px rgba(15, 34, 58, 0.08);
+  }
+
+  &__expense-modal .modal-content {
+    border: 0;
+    border-radius: 28px;
+    box-shadow: 0 24px 54px rgba(15, 34, 58, 0.2);
+    overflow: hidden;
+  }
+
+  &__expense-modal .modal-header {
+    align-items: center;
+    padding: 18px 20px 0;
+    border-bottom: 0;
+  }
+
+  &__expense-modal .modal-title {
+    color: var(--schedule-text);
+    font-size: 1.08rem;
+    font-weight: 800;
+  }
+
+  &__expense-modal .modal-body {
+    padding-top: 12px !important;
+  }
+
+  &__expense-modal-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__expense-modal-summary {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    min-width: 0;
+    padding: 15px 16px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(53, 119, 241, 0.08), rgba(53, 119, 241, 0.03));
+    border: 1px solid rgba(53, 119, 241, 0.14);
   }
 
-  &__mobile-detail-main > strong:first-child {
-    color: var(--schedule-text);
-    font-size: 1.02rem;
+  &__expense-modal-summary span {
+    display: block;
+    color: var(--schedule-muted);
+    font-size: 0.75rem;
     font-weight: 700;
-    line-height: 1.3;
-    min-width: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  &__mobile-detail-main > strong:last-child {
-    flex-shrink: 0;
-    color: var(--schedule-indigo);
-    font-size: 1.14rem;
+  &__expense-modal-summary strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--schedule-text);
+    font-size: 1.18rem;
     font-weight: 800;
     line-height: 1.2;
   }
 
-  &__mobile-detail-progress {
-    position: relative;
-    width: 100%;
-    height: 10px;
-    overflow: hidden;
+  &__expense-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
     border-radius: 999px;
-    background: rgba(53, 119, 241, 0.12);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--schedule-primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
   }
 
-  &__mobile-detail-progress span {
+  &__expense-modal-field .form-label {
+    margin-bottom: 8px;
+    color: var(--schedule-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  &__expense-modal-field .form-control {
+    min-height: 48px;
+    border-radius: 16px;
+    border-color: rgba(15, 34, 58, 0.1);
+    box-shadow: none;
+  }
+
+  &__expense-modal-field textarea.form-control {
+    min-height: 96px;
+    resize: none;
+  }
+
+  &__expense-photo-field {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px dashed rgba(53, 119, 241, 0.28);
+    border-radius: 20px;
+    background: rgba(53, 119, 241, 0.04);
+    cursor: pointer;
+  }
+
+  &__expense-photo-field input {
+    display: none;
+  }
+
+  &__expense-photo-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--schedule-primary);
+    font-size: 1.18rem;
+    box-shadow: 0 10px 22px rgba(53, 119, 241, 0.12);
+  }
+
+  &__expense-photo-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__expense-photo-copy strong {
     display: block;
-    height: 100%;
-    width: var(--detail-fill, 12%);
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--schedule-primary), var(--schedule-indigo));
-    box-shadow: 0 6px 12px rgba(53, 119, 241, 0.18);
+    color: var(--schedule-text);
+    font-size: 0.94rem;
+    font-weight: 700;
+    line-height: 1.3;
   }
 
-  &__mobile-detail-row:nth-child(4n + 2) .my-schedule-app__mobile-detail-progress span {
-    background: linear-gradient(90deg, var(--schedule-success), #4ccfb9);
-    box-shadow: 0 6px 12px rgba(10, 179, 156, 0.18);
+  &__expense-photo-copy small {
+    display: block;
+    color: var(--schedule-muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    word-break: break-word;
   }
 
-  &__mobile-detail-row:nth-child(4n + 3) .my-schedule-app__mobile-detail-progress span {
-    background: linear-gradient(90deg, var(--schedule-warning), #ffd166);
-    box-shadow: 0 6px 12px rgba(247, 184, 75, 0.2);
-  }
-
-  &__mobile-detail-row:nth-child(4n + 4) .my-schedule-app__mobile-detail-progress span {
-    background: linear-gradient(90deg, var(--schedule-danger), #f48f79);
-    box-shadow: 0 6px 12px rgba(240, 101, 72, 0.2);
+  &__expense-modal-helper {
+    margin: -4px 0 0;
+    color: var(--schedule-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 
   @media (min-width: 768px) {
