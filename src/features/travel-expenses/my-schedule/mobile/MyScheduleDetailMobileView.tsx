@@ -13,7 +13,6 @@ import {
   ScheduleTrip,
 } from "../shared/types";
 import { MobileSectionCard } from "./components/MobileSectionCard";
-import { MobileStatusPill } from "./components/MobileStatusPill";
 
 interface MyScheduleDetailMobileViewProps {
   clearFeedback: () => void;
@@ -135,8 +134,6 @@ export const MyScheduleDetailMobileView = ({
               {trip?.tripNumber || t("Loading...")}
             </h1>
           </div>
-
-          {trip ? <MobileStatusPill status={trip.status} /> : null}
         </header>
 
         {loadingDetail ? (

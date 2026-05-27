@@ -52,7 +52,7 @@
     margin: 0;
     color: #405189;
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -126,7 +126,7 @@
   &__mobile-metric span {
     color: var(--schedule-muted);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
   }
 
   &__mobile-summary-card strong,
@@ -134,7 +134,7 @@
   &__mobile-metric strong {
     color: var(--schedule-text);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.35;
   }
 
@@ -220,7 +220,7 @@
   &__mobile-summary-feature-copy span {
     color: var(--schedule-muted);
     font-size: 0.74rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -228,14 +228,14 @@
   &__mobile-summary-feature-copy strong {
     color: var(--schedule-text);
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.25;
   }
 
   &__mobile-summary-feature-copy small {
     color: var(--schedule-primary);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   &__mobile-list,
@@ -293,7 +293,7 @@
   &__mobile-trip-chip-label {
     color: var(--schedule-muted);
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.09em;
     text-transform: uppercase;
   }
@@ -302,7 +302,7 @@
     margin: 0;
     color: var(--schedule-text);
     font-size: 1.28rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.1;
   }
 
@@ -312,7 +312,7 @@
     margin: 4px 0 0;
     color: var(--schedule-text);
     font-size: 1.05rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.35;
   }
 
@@ -354,7 +354,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 1.1rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.2;
   }
 
@@ -362,7 +362,7 @@
     display: block;
     color: var(--schedule-muted);
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1.3;
     text-transform: uppercase;
   }
@@ -373,7 +373,7 @@
     gap: 6px;
     color: var(--schedule-primary);
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
   }
 
@@ -402,7 +402,7 @@
     margin-bottom: 4px;
     color: var(--schedule-muted);
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -411,7 +411,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.3;
   }
 
@@ -452,7 +452,7 @@
     margin-top: 14px;
     color: var(--schedule-muted);
     font-size: 0.88rem;
-    font-weight: 600;
+    font-weight: 500;
     flex-wrap: wrap;
   }
 
@@ -464,7 +464,7 @@
   &__mobile-card-meta-row strong {
     color: var(--schedule-text);
     font-size: 0.92rem;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   &__mobile-card-grid,
@@ -526,7 +526,7 @@
   &__mobile-budget span {
     color: var(--schedule-success);
     font-size: 0.74rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.03em;
     text-transform: uppercase;
   }
@@ -534,7 +534,7 @@
   &__mobile-budget strong {
     color: var(--schedule-success);
     font-size: 1.08rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.2;
   }
 
@@ -588,7 +588,7 @@
     border-radius: 999px;
     box-shadow: 0 8px 18px rgba(15, 34, 58, 0.08);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
     white-space: nowrap;
   }
 
@@ -625,7 +625,7 @@
     margin: 0;
     color: var(--schedule-text);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   &__mobile-empty-icon {
@@ -724,7 +724,7 @@
   &__mobile-request-total span {
     color: var(--schedule-success);
     font-size: 0.76rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -732,7 +732,7 @@
   &__mobile-request-total strong {
     color: var(--schedule-text);
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.1;
   }
 
@@ -747,7 +747,7 @@
     background: rgba(255, 255, 255, 0.92);
     color: var(--schedule-primary);
     font-size: 0.8rem;
-    font-weight: 800;
+    font-weight: 600;
     box-shadow: 0 8px 18px rgba(15, 34, 58, 0.12);
   }
 
@@ -760,7 +760,7 @@
     background: rgba(37, 99, 235, 0.1);
     color: #1d4ed8;
     font-size: 0.74rem;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   &__mobile-request-metadata {
@@ -775,7 +775,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.4;
   }
 
@@ -870,7 +870,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 1.05rem;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.25;
   }
 
@@ -878,7 +878,7 @@
     display: block;
     color: var(--schedule-muted);
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -891,7 +891,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 1.32rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.1;
     white-space: nowrap;
   }
@@ -903,7 +903,7 @@
     background: #f6f1e7;
     color: var(--schedule-text);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 500;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
     transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
   }
@@ -933,7 +933,7 @@
   &__expense-modal .modal-title {
     color: var(--schedule-text);
     font-size: 1.08rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   &__expense-modal .modal-body {
@@ -961,7 +961,7 @@
     display: block;
     color: var(--schedule-muted);
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -971,7 +971,7 @@
     margin-top: 4px;
     color: var(--schedule-text);
     font-size: 1.18rem;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.2;
   }
 
@@ -985,7 +985,7 @@
     background: rgba(255, 255, 255, 0.92);
     color: var(--schedule-primary);
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 600;
     white-space: nowrap;
   }
 
@@ -993,7 +993,7 @@
     margin-bottom: 8px;
     color: var(--schedule-text);
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: 500;
   }
 
   &__expense-modal-field .form-control {
@@ -1048,7 +1048,7 @@
     display: block;
     color: var(--schedule-text);
     font-size: 0.94rem;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 1.3;
   }
 

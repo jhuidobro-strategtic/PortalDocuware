@@ -100,7 +100,7 @@ export const MyScheduleDetailDesktopView = ({
                           >
                             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                               <div>
-                                <div className="fw-semibold">
+                                <div className="text-body">
                                   {request.requestNumber || "-"}
                                 </div>
                                 <div className="text-muted small">
@@ -108,7 +108,7 @@ export const MyScheduleDetailDesktopView = ({
                                 </div>
                                 <div className="small mt-1">
                                   {t("Requested by")}:{" "}
-                                  <span className="fw-semibold">
+                                  <span>
                                     {getRequesterLabel(request.requesterId)}
                                   </span>
                                 </div>
@@ -119,7 +119,7 @@ export const MyScheduleDetailDesktopView = ({
                                 </span>
                                 <div className="small">
                                   {t("Total Budget")}:{" "}
-                                  <span className="fw-semibold">
+                                  <span>
                                     {formatAmount(request.totalBudget)}
                                   </span>
                                 </div>
