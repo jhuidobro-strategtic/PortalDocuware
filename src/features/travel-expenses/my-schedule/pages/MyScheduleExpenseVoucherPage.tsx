@@ -20,6 +20,7 @@ import { useDeviceMode } from "../hooks/useDeviceMode";
 import { useMyScheduleDetailController } from "../hooks/useMyScheduleDetailController";
 import { formatAmount } from "../shared/formatters";
 import { CreateExpenseVoucherInput, FeedbackState } from "../shared/types";
+import { scanExpenseVoucherQr } from "../utils/expenseVoucherQr";
 import "../styles/myScheduleApp.scss";
 
 interface ExpenseVoucherFormValues {
@@ -32,6 +33,11 @@ interface ExpenseVoucherFormValues {
 }
 
 type ExpenseVoucherFormErrors = Partial<Record<keyof ExpenseVoucherFormValues, string>>;
+
+interface VoucherQrScanState {
+  message: string;
+  tone: "success" | "danger" | "info";
+}
 
 const createInitialExpenseVoucherValues = (
   amount = ""
@@ -81,6 +87,8 @@ const MyScheduleExpenseVoucherPage = () => {
   const [formErrors, setFormErrors] = useState<ExpenseVoucherFormErrors>({});
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState("");
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [qrScanState, setQrScanState] = useState<VoucherQrScanState | null>(null);
 
   const selectedRequest = useMemo(() => {
     if (!controller.trip || parsedRequestId === null) {
@@ -119,6 +127,8 @@ const MyScheduleExpenseVoucherPage = () => {
     setFormErrors({});
     setSelectedPhoto(null);
     setSelectedPhotoPreview("");
+    setIsScanningQr(false);
+    setQrScanState(null);
   }, [selectedDetail]);
 
   const floatingAlerts: FloatingAlertItem[] = [];
@@ -163,6 +173,8 @@ const MyScheduleExpenseVoucherPage = () => {
 
     if (!nextPhoto) {
       setSelectedPhotoPreview("");
+      setIsScanningQr(false);
+      setQrScanState(null);
       return;
     }
 
@@ -175,6 +187,67 @@ const MyScheduleExpenseVoucherPage = () => {
       }));
     } catch {
       setSelectedPhotoPreview("");
+      setQrScanState({
+        tone: "danger",
+        message: t("Unable to read the QR code from the selected image."),
+      });
+      return;
+    }
+
+    setIsScanningQr(true);
+    setQrScanState(null);
+
+    try {
+      const scanResult = await scanExpenseVoucherQr(nextPhoto);
+
+      if (!scanResult) {
+        setQrScanState({
+          tone: "info",
+          message: t("No readable QR code was detected in the selected image."),
+        });
+        return;
+      }
+
+      if (!scanResult.parsed) {
+        setQrScanState({
+          tone: "danger",
+          message: t(
+            "A QR code was detected, but it does not follow the expected SUNAT format."
+          ),
+        });
+        return;
+      }
+
+      const parsedQr = scanResult.parsed;
+
+      setFormValues((currentValues) => ({
+        ...currentValues,
+        supplierRuc: parsedQr.supplierRuc || currentValues.supplierRuc,
+        seriesNumber: parsedQr.seriesNumber || currentValues.seriesNumber,
+        voucherNumber: parsedQr.voucherNumber || currentValues.voucherNumber,
+        amount: parsedQr.amount || currentValues.amount,
+      }));
+      setFormErrors((currentErrors) => ({
+        ...currentErrors,
+        supplierRuc: undefined,
+        seriesNumber: undefined,
+        voucherNumber: undefined,
+        amount: undefined,
+        photoUrl: undefined,
+      }));
+      setQrScanState({
+        tone: "success",
+        message: t(
+          "QR detected. RUC, series, number and amount were auto-filled from the voucher."
+        ),
+      });
+    } catch {
+      setQrScanState({
+        tone: "danger",
+        message: t("Unable to read the QR code from the selected image."),
+      });
+    } finally {
+      setIsScanningQr(false);
     }
   };
 
@@ -386,10 +459,42 @@ const MyScheduleExpenseVoucherPage = () => {
             className="my-schedule-app__expense-photo-preview"
           />
         ) : null}
+        {isScanningQr || qrScanState ? (
+          <div
+            className={`my-schedule-app__expense-qr-status my-schedule-app__expense-qr-status--${
+              isScanningQr ? "info" : qrScanState?.tone || "info"
+            }`}
+          >
+            {isScanningQr ? (
+              <Spinner size="sm" />
+            ) : (
+              <i
+                className={
+                  qrScanState?.tone === "success"
+                    ? "ri-checkbox-circle-line"
+                    : qrScanState?.tone === "danger"
+                    ? "ri-error-warning-line"
+                    : "ri-information-line"
+                }
+                aria-hidden="true"
+              />
+            )}
+            <span>
+              {isScanningQr
+                ? t("Scanning voucher QR...")
+                : qrScanState?.message}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <p className="my-schedule-app__expense-modal-helper">
         {t("The image field can use a public URL or the captured photo as a fallback.")}
+      </p>
+      <p className="my-schedule-app__expense-modal-helper">
+        {t(
+          "If the voucher QR is readable, RUC, Series, Number and Amount will be auto-filled."
+        )}
       </p>
 
       <div className="d-flex justify-content-end gap-2 pt-2">

@@ -80,3 +80,13 @@ export interface CreateExpenseVoucherInput {
   rejectionReason: string | null;
   status: number;
 }
+
+export interface ParsedExpenseVoucherQr {
+  rawValue: string;
+  supplierRuc: string;
+  sunatDocumentType: string;
+  seriesNumber: string;
+  voucherNumber: string;
+  igvAmount: string;
+  amount: string;
+}

@@ -1075,6 +1075,37 @@
     box-shadow: 0 10px 24px rgba(15, 34, 58, 0.08);
   }
 
+  &__expense-qr-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  &__expense-qr-status i,
+  &__expense-qr-status .spinner-border {
+    flex-shrink: 0;
+  }
+
+  &__expense-qr-status--info {
+    background: rgba(53, 119, 241, 0.08);
+    color: var(--schedule-primary);
+  }
+
+  &__expense-qr-status--success {
+    background: rgba(10, 179, 156, 0.12);
+    color: #0a8f7b;
+  }
+
+  &__expense-qr-status--danger {
+    background: rgba(240, 101, 72, 0.1);
+    color: #d9534f;
+  }
+
   &__expense-modal-helper {
     margin: -4px 0 0;
     color: var(--schedule-muted);
