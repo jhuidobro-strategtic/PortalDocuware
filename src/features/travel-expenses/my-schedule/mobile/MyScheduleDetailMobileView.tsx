@@ -159,6 +159,11 @@ export const MyScheduleDetailMobileView = ({
                             request.details.map((detail) => {
                               const expenseMeta = getExpenseConceptMeta(detail.conceptLabel);
                               const hasRegisteredVouchers = detail.expenseVouchers.length > 0;
+                              const totalVoucherAmount = detail.expenseVouchers.reduce(
+                                (sum, voucher) => sum + parseFloat(voucher.amount || "0"),
+                                0
+                              );
+                              const isOverBudget = totalVoucherAmount > parseFloat(detail.budgetedAmount || "0");
 
                               return (
                                 <motion.article
@@ -189,6 +194,11 @@ export const MyScheduleDetailMobileView = ({
 
                                     <div className="my-schedule-app__mobile-expense-amount">
                                       <strong>{formatAmount(detail.budgetedAmount)}</strong>
+                                      {hasRegisteredVouchers && (
+                                        <span className={`my-schedule-app__mobile-expense-spent ${isOverBudget ? "is-over" : "is-under"}`}>
+                                          {formatAmount(String(totalVoucherAmount))}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </motion.article>

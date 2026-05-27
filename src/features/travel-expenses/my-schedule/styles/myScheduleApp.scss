@@ -903,6 +903,22 @@
     white-space: nowrap;
   }
 
+  &__mobile-expense-spent {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 4px;
+    white-space: nowrap;
+
+    &.is-over {
+      color: var(--schedule-danger);
+    }
+
+    &.is-under {
+      color: var(--schedule-success);
+    }
+  }
+
   &__mobile-expense-action {
     min-height: 48px;
     border: 0;
