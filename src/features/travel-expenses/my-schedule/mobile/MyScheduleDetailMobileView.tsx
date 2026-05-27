@@ -14,6 +14,7 @@ interface MyScheduleDetailMobileViewProps {
   feedback: FeedbackState | null;
   loadingDetail: boolean;
   onBack: () => void;
+  onOpenExpenseVoucherDocument: (photoUrl: string) => void;
   onOpenExpenseVoucher: (requestId: number, expenseDetailId: number) => void;
   trip: ScheduleTrip | null;
 }
@@ -67,11 +68,15 @@ export const MyScheduleDetailMobileView = ({
   feedback,
   loadingDetail,
   onBack,
+  onOpenExpenseVoucherDocument,
   onOpenExpenseVoucher,
   trip,
 }: MyScheduleDetailMobileViewProps) => {
   const { t } = useTranslation();
   const floatingAlerts: FloatingAlertItem[] = [];
+  const getVoucherLabel = (seriesNumber: string, voucherNumber: string, fallbackIndex: number) =>
+    [seriesNumber, voucherNumber].filter(Boolean).join("-") ||
+    `${t("Attachment")} ${fallbackIndex + 1}`;
 
   if (feedback) {
     floatingAlerts.push({
@@ -149,6 +154,7 @@ export const MyScheduleDetailMobileView = ({
                           ) : (
                             request.details.map((detail) => {
                               const expenseMeta = getExpenseConceptMeta(detail.conceptLabel);
+                              const hasRegisteredVouchers = detail.expenseVouchers.length > 0;
 
                               return (
                                 <motion.article
@@ -168,7 +174,11 @@ export const MyScheduleDetailMobileView = ({
 
                                     <div className="my-schedule-app__mobile-expense-copy">
                                       <strong>{detail.conceptLabel || "-"}</strong>
-                                      <span>{request.requestNumber}</span>
+                                      <span>
+                                        {hasRegisteredVouchers
+                                          ? `${detail.expenseVouchers.length} ${t("Registered vouchers")}`
+                                          : request.requestNumber}
+                                      </span>
                                     </div>
 
                                     <div className="my-schedule-app__mobile-expense-amount">
@@ -188,6 +198,31 @@ export const MyScheduleDetailMobileView = ({
                                   >
                                     {t("Register expense")}
                                   </button>
+
+                                  {hasRegisteredVouchers ? (
+                                    <div className="my-schedule-app__mobile-detail-rows mt-2">
+                                      {detail.expenseVouchers.map((voucher, voucherIndex) => (
+                                        <button
+                                          key={
+                                            voucher.expenseVoucherId ||
+                                            `${detail.expenseDetailId}-${voucherIndex}`
+                                          }
+                                          type="button"
+                                          className="my-schedule-app__mobile-expense-action my-schedule-app__mobile-expense-action--secondary"
+                                          onClick={() =>
+                                            onOpenExpenseVoucherDocument(voucher.photoUrl)
+                                          }
+                                        >
+                                          {t("View voucher")}{" "}
+                                          {getVoucherLabel(
+                                            voucher.seriesNumber,
+                                            voucher.voucherNumber,
+                                            voucherIndex
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : null}
                                 </motion.article>
                               );
                             })

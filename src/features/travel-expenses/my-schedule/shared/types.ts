@@ -3,10 +3,22 @@ export interface TripReference {
   label: string;
 }
 
+export interface ScheduleExpenseVoucher {
+  expenseVoucherId: number;
+  amount: string;
+  documentTypeLabel: string;
+  photoUrl: string;
+  seriesNumber: string;
+  statusLabel: string;
+  supplierRuc: string;
+  voucherNumber: string;
+}
+
 export interface ScheduleExpenseRequestDetail {
   expenseDetailId: number;
   conceptLabel: string;
   budgetedAmount: string;
+  expenseVouchers: ScheduleExpenseVoucher[];
   notes: string;
 }
 

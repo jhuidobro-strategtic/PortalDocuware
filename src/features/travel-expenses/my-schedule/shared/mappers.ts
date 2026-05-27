@@ -1,6 +1,7 @@
 import {
   ScheduleExpenseRequest,
   ScheduleExpenseRequestDetail,
+  ScheduleExpenseVoucher,
   ScheduleTrip,
   TripReference,
   UserApiItem,
@@ -53,10 +54,26 @@ const mapDriverReference = (item: any): TripReference | null => {
   };
 };
 
+export const mapExpenseVoucher = (item: any): ScheduleExpenseVoucher => ({
+  expenseVoucherId: Number(item.expense_voucher_id ?? item.id_expense_voucher ?? 0),
+  amount: String(item.amount ?? "").trim(),
+  documentTypeLabel: String(
+    item.document_type_data?.tipo ?? item.document_type ?? ""
+  ).trim(),
+  photoUrl: String(item.photo_url ?? "").trim(),
+  seriesNumber: String(item.series_number ?? "").trim(),
+  statusLabel: String(
+    item.status_data?.descripcion ?? item.status ?? ""
+  ).trim(),
+  supplierRuc: String(item.supplier_ruc ?? "").trim(),
+  voucherNumber: String(item.voucher_number ?? "").trim(),
+});
+
 export const mapExpenseRequestDetail = (item: any): ScheduleExpenseRequestDetail => ({
   expenseDetailId: Number(item.expense_detail_id ?? 0),
   conceptLabel: String(item.concept?.nombre_concepto ?? "").trim(),
   budgetedAmount: String(item.budgeted_amount ?? "").trim(),
+  expenseVouchers: [],
   notes: String(item.notes ?? "").trim(),
 });
 

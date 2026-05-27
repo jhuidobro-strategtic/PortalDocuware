@@ -917,6 +917,17 @@
     box-shadow: 0 10px 20px rgba(15, 34, 58, 0.08);
   }
 
+  &__mobile-expense-action--secondary {
+    min-height: 42px;
+    background: #fff;
+    border: 1px solid rgba(77, 95, 160, 0.16);
+    font-size: 0.9rem;
+  }
+
+  &__mobile-expense-action--secondary:hover {
+    background: #f8faff;
+  }
+
   &__expense-modal .modal-content {
     border: 0;
     border-radius: 28px;

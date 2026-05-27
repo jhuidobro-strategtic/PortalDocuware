@@ -51,12 +51,27 @@ const MyScheduleDetailPage = () => {
     );
   };
 
+  const handleOpenExpenseVoucherDocument = (photoUrl: string) => {
+    const trimmedUrl = photoUrl.trim();
+
+    if (!trimmedUrl) {
+      return;
+    }
+
+    const openedWindow = window.open(trimmedUrl, "_blank", "noopener,noreferrer");
+
+    if (!openedWindow) {
+      window.location.href = trimmedUrl;
+    }
+  };
+
   return device.isMobile ? (
     <MyScheduleDetailMobileView
       clearFeedback={controller.clearFeedback}
       feedback={controller.feedback}
       loadingDetail={controller.loadingDetail}
       onBack={handleBack}
+      onOpenExpenseVoucherDocument={handleOpenExpenseVoucherDocument}
       onOpenExpenseVoucher={handleOpenExpenseVoucher}
       trip={controller.trip}
     />
@@ -67,6 +82,7 @@ const MyScheduleDetailPage = () => {
       getRequesterLabel={controller.getRequesterLabel}
       loadingDetail={controller.loadingDetail}
       onBack={handleBack}
+      onOpenExpenseVoucherDocument={handleOpenExpenseVoucherDocument}
       onOpenExpenseVoucher={handleOpenExpenseVoucher}
       trip={controller.trip}
     />

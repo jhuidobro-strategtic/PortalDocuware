@@ -22,6 +22,7 @@ interface MyScheduleDetailDesktopViewProps {
   getRequesterLabel: (requesterId: number) => string;
   loadingDetail: boolean;
   onBack: () => void;
+  onOpenExpenseVoucherDocument: (photoUrl: string) => void;
   onOpenExpenseVoucher: (requestId: number, expenseDetailId: number) => void;
   trip: ScheduleTrip | null;
 }
@@ -32,11 +33,15 @@ export const MyScheduleDetailDesktopView = ({
   getRequesterLabel,
   loadingDetail,
   onBack,
+  onOpenExpenseVoucherDocument,
   onOpenExpenseVoucher,
   trip,
 }: MyScheduleDetailDesktopViewProps) => {
   const { t } = useTranslation();
   const floatingAlerts: FloatingAlertItem[] = [];
+  const getVoucherLabel = (seriesNumber: string, voucherNumber: string, fallbackIndex: number) =>
+    [seriesNumber, voucherNumber].filter(Boolean).join("-") ||
+    `${t("Attachment")} ${fallbackIndex + 1}`;
 
   if (feedback) {
     floatingAlerts.push({
@@ -51,10 +56,7 @@ export const MyScheduleDetailDesktopView = ({
   return (
     <div className="page-content">
       <Container fluid>
-        <FloatingAlerts
-          alerts={floatingAlerts}
-          onRemove={clearFeedback}
-        />
+        <FloatingAlerts alerts={floatingAlerts} onRemove={clearFeedback} />
 
         <BreadCrumb title="My Schedule" pageTitle="Travel Expenses" />
 
@@ -110,9 +112,7 @@ export const MyScheduleDetailDesktopView = ({
                                 </div>
                                 <div className="small mt-1">
                                   {t("Requested by")}:{" "}
-                                  <span>
-                                    {getRequesterLabel(request.requesterId)}
-                                  </span>
+                                  <span>{getRequesterLabel(request.requesterId)}</span>
                                 </div>
                               </div>
                               <div className="text-md-end">
@@ -121,9 +121,7 @@ export const MyScheduleDetailDesktopView = ({
                                 </span>
                                 <div className="small">
                                   {t("Total Budget")}:{" "}
-                                  <span>
-                                    {formatAmount(request.totalBudget)}
-                                  </span>
+                                  <span>{formatAmount(request.totalBudget)}</span>
                                 </div>
                                 <div className="small text-muted mt-1">
                                   {t("Created")}: {formatDateTime(request.createdAt)}
@@ -141,7 +139,7 @@ export const MyScheduleDetailDesktopView = ({
                                     <th>{t("Concept")}</th>
                                     <th style={{ width: "160px" }}>{t("Budget")}</th>
                                     <th>{t("Notes")}</th>
-                                    <th style={{ width: "170px" }} className="text-end">
+                                    <th style={{ width: "240px" }} className="text-end">
                                       {t("Actions")}
                                     </th>
                                   </tr>
@@ -158,20 +156,51 @@ export const MyScheduleDetailDesktopView = ({
                                       <tr key={detail.expenseDetailId}>
                                         <td>{detail.conceptLabel || "-"}</td>
                                         <td>{formatAmount(detail.budgetedAmount)}</td>
-                                        <td>{detail.notes || "-"}</td>
+                                        <td>
+                                          <div>{detail.notes || "-"}</div>
+                                          {detail.expenseVouchers.length > 0 ? (
+                                            <div className="small text-muted mt-1">
+                                              {detail.expenseVouchers.length} {t("Registered vouchers")}
+                                            </div>
+                                          ) : null}
+                                        </td>
                                         <td className="text-end">
-                                          <Button
-                                            color="light"
-                                            size="sm"
-                                            onClick={() =>
-                                              onOpenExpenseVoucher(
-                                                request.idRequest,
-                                                detail.expenseDetailId
-                                              )
-                                            }
-                                          >
-                                            {t("Register expense")}
-                                          </Button>
+                                          <div className="d-inline-flex flex-column align-items-end gap-2">
+                                            <Button
+                                              color="light"
+                                              size="sm"
+                                              onClick={() =>
+                                                onOpenExpenseVoucher(
+                                                  request.idRequest,
+                                                  detail.expenseDetailId
+                                                )
+                                              }
+                                            >
+                                              {t("Register expense")}
+                                            </Button>
+
+                                            {detail.expenseVouchers.map((voucher, voucherIndex) => (
+                                              <Button
+                                                key={
+                                                  voucher.expenseVoucherId ||
+                                                  `${detail.expenseDetailId}-${voucherIndex}`
+                                                }
+                                                color="link"
+                                                size="sm"
+                                                className="p-0 text-decoration-none"
+                                                onClick={() =>
+                                                  onOpenExpenseVoucherDocument(voucher.photoUrl)
+                                                }
+                                              >
+                                                {t("View voucher")}{" "}
+                                                {getVoucherLabel(
+                                                  voucher.seriesNumber,
+                                                  voucher.voucherNumber,
+                                                  voucherIndex
+                                                )}
+                                              </Button>
+                                            ))}
+                                          </div>
                                         </td>
                                       </tr>
                                     ))

@@ -1,9 +1,16 @@
 import { buildApiUrl } from "../../../../helpers/api-url";
-import { mapApiTrip, mapApiUser, mapExpenseRequest, mapUserLookup } from "../shared/mappers";
+import {
+  mapApiTrip,
+  mapApiUser,
+  mapExpenseRequest,
+  mapExpenseVoucher,
+  mapUserLookup,
+} from "../shared/mappers";
 import { getAuthHeaders, getCurrentSessionUser } from "../shared/session";
 import {
   CreateExpenseVoucherResult,
   CreateExpenseVoucherInput,
+  ScheduleExpenseRequest,
   ScheduleTrip,
   SessionUser,
 } from "../shared/types";
@@ -50,6 +57,75 @@ const extractExpenseVoucherIdFromLocation = (locationHeader: string | null) => {
   const parsedId = Number(matchedId?.[1] ?? "");
 
   return Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
+};
+
+const enrichExpenseRequestsWithVouchers = async (
+  expenseRequests: ScheduleExpenseRequest[],
+  signal?: AbortSignal
+) => {
+  const voucherRequests = expenseRequests.flatMap((request) =>
+    request.details.map((detail) => ({
+      expenseDetailId: detail.expenseDetailId,
+      idRequest: request.idRequest,
+    }))
+  );
+
+  if (voucherRequests.length === 0) {
+    return expenseRequests;
+  }
+
+  const voucherResponses = await Promise.all(
+    voucherRequests.map(async ({ idRequest, expenseDetailId }) => {
+      let vouchers: ReturnType<typeof mapExpenseVoucher>[] = [];
+
+      try {
+        const response = await fetch(
+          buildApiUrl(
+            `expense-vouchers/?id_request=${encodeURIComponent(
+              String(idRequest)
+            )}&expense_detail_id=${encodeURIComponent(String(expenseDetailId))}`
+          ),
+          {
+            cache: "no-store",
+            headers: getAuthHeaders(),
+            signal,
+          }
+        );
+        const responseData = await response.json().catch(() => null);
+        vouchers =
+          response.ok &&
+          responseData?.success &&
+          Array.isArray(responseData?.data)
+            ? responseData.data.map(mapExpenseVoucher)
+            : [];
+      } catch {
+        vouchers = [];
+      }
+
+      return {
+        expenseDetailId,
+        idRequest,
+        vouchers,
+      };
+    })
+  );
+
+  const voucherLookup = voucherResponses.reduce<Record<string, ReturnType<typeof mapExpenseVoucher>[]>>(
+    (acc, item) => {
+      acc[`${item.idRequest}:${item.expenseDetailId}`] = item.vouchers;
+      return acc;
+    },
+    {}
+  );
+
+  return expenseRequests.map((request) => ({
+    ...request,
+    details: request.details.map((detail) => ({
+      ...detail,
+      expenseVouchers:
+        voucherLookup[`${request.idRequest}:${detail.expenseDetailId}`] ?? [],
+    })),
+  }));
 };
 
 export const fetchScheduleTrips = async (
@@ -108,7 +184,7 @@ export const fetchScheduleTrips = async (
         )
       : {};
 
-  return (tripsData.data as any[]).map((item) => {
+  const trips = (tripsData.data as any[]).map((item) => {
     const trip = mapApiTrip(item);
 
     return {
@@ -118,6 +194,18 @@ export const fetchScheduleTrips = async (
         trip.expenseRequests,
     };
   });
+
+  const enrichedTrips = await Promise.all(
+    trips.map(async (trip) => ({
+      ...trip,
+      expenseRequests: await enrichExpenseRequestsWithVouchers(
+        trip.expenseRequests,
+        signal
+      ),
+    }))
+  );
+
+  return enrichedTrips;
 };
 
 export const fetchScheduleDetail = async (
@@ -166,11 +254,15 @@ export const fetchScheduleDetail = async (
   const expenseRequests = (requestsData.data as any[])
     .filter((request) => Number(request.id_trip ?? request.trip?.id_trip ?? 0) === tripId)
     .map(mapExpenseRequest);
+  const enrichedExpenseRequests = await enrichExpenseRequestsWithVouchers(
+    expenseRequests,
+    signal
+  );
 
   return {
     trip: {
       ...trip,
-      expenseRequests,
+      expenseRequests: enrichedExpenseRequests,
     },
     requesterLookup,
   };
