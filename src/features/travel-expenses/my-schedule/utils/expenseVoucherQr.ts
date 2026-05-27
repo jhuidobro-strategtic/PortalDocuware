@@ -1,3 +1,13 @@
+import {
+  BarcodeFormat,
+  BinaryBitmap,
+  DecodeHintType,
+  GlobalHistogramBinarizer,
+  HybridBinarizer,
+  InvertedLuminanceSource,
+  MultiFormatReader,
+  RGBLuminanceSource,
+} from "@zxing/library";
 import jsQR from "jsqr";
 
 import { ParsedExpenseVoucherQr } from "../shared/types";
@@ -16,12 +26,34 @@ type BarcodeDetectorConstructor = new (options?: {
   formats?: string[];
 }) => BarcodeDetectorLike;
 
+type ExpenseVoucherScanSource = "qr" | "pdf-text";
+
+type ParsedExpenseVoucherCandidate = Partial<
+  Omit<ParsedExpenseVoucherQr, "rawValue">
+>;
+
+type CropScanConfig = {
+  heightRatio: number;
+  maxDimension?: number;
+  widthRatio: number;
+  x: number;
+  y: number;
+};
+
 const getBarcodeDetector = () =>
   (window as unknown as {
     BarcodeDetector?: BarcodeDetectorConstructor;
   }).BarcodeDetector;
 
 const PDF_MIME_TYPES = new Set(["application/pdf", "application/x-pdf"]);
+const PDF_WORKER_PUBLIC_PATH = `${
+  process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/$/, "") : ""
+}/pdf.worker.min.js`;
+const QR_HINTS = new Map<DecodeHintType, any>([
+  [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
+  [DecodeHintType.TRY_HARDER, true],
+]);
+let pdfJsPromise: Promise<typeof import("pdfjs-dist/legacy/build/pdf")> | null = null;
 
 const normalizeAmount = (value: string) => {
   const trimmedValue = value.trim().replace(/\s+/g, "");
@@ -111,6 +143,174 @@ export const parseExpenseVoucherQr = (
     igvAmount,
     amount,
   };
+};
+
+const buildParsedExpenseVoucherData = (
+  candidate: ParsedExpenseVoucherCandidate
+): ParsedExpenseVoucherQr | null => {
+  const supplierRuc = candidate.supplierRuc?.replace(/\D/g, "") || "";
+  const seriesNumber = candidate.seriesNumber?.trim().toUpperCase() || "";
+  const voucherNumber = candidate.voucherNumber?.trim() || "";
+  const amount = normalizeAmount(candidate.amount || "");
+
+  if (supplierRuc.length !== 11 || !seriesNumber || !voucherNumber || !amount) {
+    return null;
+  }
+
+  const sunatDocumentType = candidate.sunatDocumentType?.trim() || "";
+  const igvAmount = normalizeAmount(candidate.igvAmount || "");
+  const rawValue = [
+    supplierRuc,
+    sunatDocumentType,
+    seriesNumber,
+    voucherNumber,
+    igvAmount,
+    amount,
+  ].join("|");
+
+  return {
+    rawValue,
+    supplierRuc,
+    sunatDocumentType,
+    seriesNumber,
+    voucherNumber,
+    igvAmount,
+    amount,
+  };
+};
+
+const normalizeTextContent = (value: string) =>
+  value.replace(/\s+/g, " ").replace(/\s+([:;,.])/g, "$1").trim();
+
+const extractFirstMatch = (value: string, patterns: RegExp[]) => {
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return "";
+};
+
+const extractLastMatch = (value: string, patterns: RegExp[]) => {
+  for (const pattern of patterns) {
+    const matches = Array.from(value.matchAll(pattern));
+
+    if (matches.length > 0) {
+      const lastMatch = matches[matches.length - 1];
+
+      if (lastMatch?.[1]) {
+        return lastMatch[1].trim();
+      }
+    }
+  }
+
+  return "";
+};
+
+const extractAllMatches = (value: string, patterns: RegExp[]) => {
+  const matches: string[] = [];
+
+  for (const pattern of patterns) {
+    for (const match of Array.from(value.matchAll(pattern))) {
+      if (match?.[1]) {
+        const nextValue = match[1].trim();
+
+        if (nextValue && !matches.includes(nextValue)) {
+          matches.push(nextValue);
+        }
+      }
+    }
+  }
+
+  return matches;
+};
+
+const inferDocumentTypeFromText = (value: string, seriesNumber = "") => {
+  if (/FACTURA\s+ELECTR[OÓ]NICA/i.test(value) || /^F/i.test(seriesNumber)) {
+    return "01";
+  }
+
+  if (/BOLETA\s+ELECTR[OÓ]NICA/i.test(value) || /^B/i.test(seriesNumber)) {
+    return "03";
+  }
+
+  if (/NOTA\s+DE\s+CR[EÉ]DITO/i.test(value)) {
+    return "07";
+  }
+
+  if (/NOTA\s+DE\s+D[EÉ]BITO/i.test(value)) {
+    return "08";
+  }
+
+  return "";
+};
+
+const extractVoucherDataFromFileName = (
+  fileName: string
+): ParsedExpenseVoucherCandidate => {
+  const normalizedFileName = fileName.replace(/\.[^.]+$/, "");
+  const match = normalizedFileName.match(
+    /(\d{11})[-_\s]+(\d{2})[-_\s]+([A-Z0-9]{3,5})[-_\s]+(\d{1,12})/i
+  );
+
+  if (!match) {
+    return {};
+  }
+
+  return {
+    supplierRuc: match[1],
+    sunatDocumentType: match[2],
+    seriesNumber: match[3],
+    voucherNumber: match[4],
+  };
+};
+
+const extractVoucherDataFromText = (rawText: string, fileName = "") => {
+  const normalizedText = normalizeTextContent(rawText);
+  const fileNameCandidate = extractVoucherDataFromFileName(fileName);
+  const seriesMatch =
+    normalizedText.match(/\b([A-Z][A-Z0-9]{2,4})\s*-\s*([0-9]{1,12})\b/) ||
+    normalizedText.match(
+      /\bSERIE[:\s-]*([A-Z0-9]{3,5})\b[\s\S]{0,60}?\b(?:NRO|NUMERO|NÚMERO)[:\s-]*([0-9]{1,12})\b/i
+    );
+  const supplierRucCandidates = extractAllMatches(normalizedText, [
+    /\bRUC(?:\s+NRO\.?)?[:\s-]*([0-9]{11})\b/gi,
+    /\b([0-9]{11})\b/g,
+  ]);
+  const supplierRuc =
+    fileNameCandidate.supplierRuc ||
+    supplierRucCandidates.find((candidate) => candidate.length === 11) ||
+    "";
+  const seriesNumber =
+    seriesMatch?.[1]?.trim().toUpperCase() || fileNameCandidate.seriesNumber || "";
+  const voucherNumber =
+    seriesMatch?.[2]?.trim() || fileNameCandidate.voucherNumber || "";
+  const igvAmount = extractLastMatch(normalizedText, [
+    /\bIGV[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+    /\bI\.?G\.?V\.?[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+  ]);
+  const amount = extractFirstMatch(normalizedText, [
+    /\bImporte\s+Total[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+    /\bTotal\s+a\s+Pagar[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+    /\bMonto\s+Total[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+    /\bImporte[:\s-]*([0-9]+(?:[.,][0-9]{2,3})?)\b/i,
+  ]);
+  const sunatDocumentType =
+    inferDocumentTypeFromText(normalizedText, seriesNumber) ||
+    fileNameCandidate.sunatDocumentType ||
+    "";
+
+  return buildParsedExpenseVoucherData({
+    supplierRuc,
+    sunatDocumentType,
+    seriesNumber,
+    voucherNumber,
+    igvAmount,
+    amount,
+  });
 };
 
 const getScaledDimensions = (width: number, height: number, maxDimension: number) => {
@@ -240,6 +440,49 @@ const scanImageDataWithJsQr = (imageData: ImageData) => {
   return code?.data || null;
 };
 
+const scanImageDataWithZxing = (imageData: ImageData) => {
+  const luminanceSource = new RGBLuminanceSource(
+    imageData.data,
+    imageData.width,
+    imageData.height
+  );
+  const reader = new MultiFormatReader();
+  const luminanceVariants = [
+    luminanceSource,
+    new InvertedLuminanceSource(luminanceSource),
+  ];
+
+  reader.setHints(QR_HINTS);
+
+  try {
+    for (const sourceVariant of luminanceVariants) {
+      const bitmapVariants = [
+        new BinaryBitmap(new HybridBinarizer(sourceVariant)),
+        new BinaryBitmap(new GlobalHistogramBinarizer(sourceVariant)),
+      ];
+
+      for (const bitmap of bitmapVariants) {
+        try {
+          const result = reader.decodeWithState(bitmap);
+
+          if (result?.getText()) {
+            return result.getText();
+          }
+        } catch {
+          // Try the next luminance/binarizer combination.
+        } finally {
+          reader.reset();
+          reader.setHints(QR_HINTS);
+        }
+      }
+    }
+
+    return null;
+  } finally {
+    reader.reset();
+  }
+};
+
 const scanCanvasVariantsWithJsQr = (canvas: HTMLCanvasElement) => {
   const context = getCanvasContext(canvas);
   const baseImageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -250,7 +493,8 @@ const scanCanvasVariantsWithJsQr = (canvas: HTMLCanvasElement) => {
   ];
 
   for (const imageData of variantImageData) {
-    const detectedCode = scanImageDataWithJsQr(imageData);
+    const detectedCode =
+      scanImageDataWithJsQr(imageData) || scanImageDataWithZxing(imageData);
 
     if (detectedCode) {
       return detectedCode;
@@ -260,14 +504,10 @@ const scanCanvasVariantsWithJsQr = (canvas: HTMLCanvasElement) => {
   return null;
 };
 
-const scanCornerCropsWithJsQr = (sourceCanvas: HTMLCanvasElement) => {
-  const cropConfigs = [
-    { x: 0, y: 0, widthRatio: 0.58, heightRatio: 0.58 },
-    { x: 0.42, y: 0, widthRatio: 0.58, heightRatio: 0.58 },
-    { x: 0, y: 0.42, widthRatio: 0.58, heightRatio: 0.58 },
-    { x: 0.42, y: 0.42, widthRatio: 0.58, heightRatio: 0.58 },
-  ];
-
+const scanConfiguredCropsWithJsQr = (
+  sourceCanvas: HTMLCanvasElement,
+  cropConfigs: CropScanConfig[]
+) => {
   for (const cropConfig of cropConfigs) {
     const sourceX = Math.round(sourceCanvas.width * cropConfig.x);
     const sourceY = Math.round(sourceCanvas.height * cropConfig.y);
@@ -279,7 +519,16 @@ const scanCornerCropsWithJsQr = (sourceCanvas: HTMLCanvasElement) => {
       sourceCanvas.height - sourceY,
       Math.round(sourceCanvas.height * cropConfig.heightRatio)
     );
-    const targetDimensions = getScaledDimensions(sourceWidth, sourceHeight, 1400);
+
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
+      continue;
+    }
+
+    const targetDimensions = getScaledDimensions(
+      sourceWidth,
+      sourceHeight,
+      cropConfig.maxDimension || 1400
+    );
     const cropCanvas = createCanvas(targetDimensions.width, targetDimensions.height);
     const cropContext = getCanvasContext(cropCanvas);
 
@@ -305,12 +554,71 @@ const scanCornerCropsWithJsQr = (sourceCanvas: HTMLCanvasElement) => {
   return null;
 };
 
+const scanFocusedRegionsWithJsQr = (sourceCanvas: HTMLCanvasElement) => {
+  const cropConfigs: CropScanConfig[] = [
+    { x: 0, y: 0, widthRatio: 0.58, heightRatio: 0.58, maxDimension: 1600 },
+    { x: 0.42, y: 0, widthRatio: 0.58, heightRatio: 0.58, maxDimension: 1600 },
+    { x: 0, y: 0.42, widthRatio: 0.58, heightRatio: 0.58, maxDimension: 1600 },
+    { x: 0.42, y: 0.42, widthRatio: 0.58, heightRatio: 0.58, maxDimension: 1600 },
+    { x: 0.2, y: 0.2, widthRatio: 0.6, heightRatio: 0.6, maxDimension: 1800 },
+    { x: 0, y: 0, widthRatio: 1, heightRatio: 0.5, maxDimension: 2000 },
+    { x: 0, y: 0.5, widthRatio: 1, heightRatio: 0.5, maxDimension: 2000 },
+    { x: 0, y: 0, widthRatio: 0.5, heightRatio: 1, maxDimension: 2000 },
+    { x: 0.5, y: 0, widthRatio: 0.5, heightRatio: 1, maxDimension: 2000 },
+  ];
+
+  const windowRatio = 0.48;
+  const positions = [0, 0.26, 0.52];
+
+  for (const y of positions) {
+    for (const x of positions) {
+      cropConfigs.push({
+        x,
+        y,
+        widthRatio: windowRatio,
+        heightRatio: windowRatio,
+        maxDimension: 1700,
+      });
+    }
+  }
+
+  return scanConfiguredCropsWithJsQr(sourceCanvas, cropConfigs);
+};
+
 const isPdfFile = (file: File) =>
   PDF_MIME_TYPES.has(file.type) || /\.pdf$/i.test(file.name || "");
 
 const loadPdfJs = async () => {
-  await import("pdfjs-dist/legacy/build/pdf.worker.entry");
-  return import("pdfjs-dist/legacy/build/pdf");
+  if (!pdfJsPromise) {
+    pdfJsPromise = import("pdfjs-dist/legacy/build/pdf").then((pdfjs) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_PUBLIC_PATH;
+      return pdfjs;
+    });
+  }
+
+  return pdfJsPromise;
+};
+
+const extractVoucherDataFromPdfText = async (
+  pdfDocument: Awaited<ReturnType<Awaited<ReturnType<typeof loadPdfJs>>["getDocument"]>["promise"]>,
+  fileName: string
+) => {
+  const pageCount = Math.min(pdfDocument.numPages, 3);
+
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    const page = await pdfDocument.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const rawText = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+    const parsed = extractVoucherDataFromText(rawText, fileName);
+
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return null;
 };
 
 const scanPdfWithJsQr = async (file: File) => {
@@ -354,17 +662,35 @@ const scanPdfWithJsQr = async (file: File) => {
       const directCode = scanCanvasVariantsWithJsQr(canvas);
 
       if (directCode) {
-        return directCode;
+        return {
+          rawValue: directCode,
+          parsed: parseExpenseVoucherQr(directCode),
+          source: "qr" as ExpenseVoucherScanSource,
+        };
       }
 
-      const cornerCode = scanCornerCropsWithJsQr(canvas);
+      const cornerCode = scanFocusedRegionsWithJsQr(canvas);
 
       if (cornerCode) {
-        return cornerCode;
+        return {
+          rawValue: cornerCode,
+          parsed: parseExpenseVoucherQr(cornerCode),
+          source: "qr" as ExpenseVoucherScanSource,
+        };
       }
     }
 
-    return null;
+    const parsedFromText = await extractVoucherDataFromPdfText(pdfDocument, file.name);
+
+    if (!parsedFromText) {
+      return null;
+    }
+
+    return {
+      rawValue: parsedFromText.rawValue,
+      parsed: parsedFromText,
+      source: "pdf-text" as ExpenseVoucherScanSource,
+    };
   } finally {
     await loadingTask.destroy();
   }
@@ -402,7 +728,7 @@ const scanWithJsQr = async (file: File) => {
           return directCode;
         }
 
-        const cornerCode = scanCornerCropsWithJsQr(canvas);
+        const cornerCode = scanFocusedRegionsWithJsQr(canvas);
 
         if (cornerCode) {
           return cornerCode;
@@ -436,16 +762,7 @@ const scanWithBarcodeDetector = async (file: File) => {
 
 export const scanExpenseVoucherQr = async (file: File) => {
   if (isPdfFile(file)) {
-    const rawPdfValue = await scanPdfWithJsQr(file);
-
-    if (!rawPdfValue) {
-      return null;
-    }
-
-    return {
-      rawValue: rawPdfValue,
-      parsed: parseExpenseVoucherQr(rawPdfValue),
-    };
+    return scanPdfWithJsQr(file);
   }
 
   const barcodeDetectorValue = await scanWithBarcodeDetector(file);
@@ -458,5 +775,6 @@ export const scanExpenseVoucherQr = async (file: File) => {
   return {
     rawValue,
     parsed: parseExpenseVoucherQr(rawValue),
+    source: "qr" as ExpenseVoucherScanSource,
   };
 };

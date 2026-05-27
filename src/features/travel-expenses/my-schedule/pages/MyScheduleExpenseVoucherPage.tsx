@@ -234,11 +234,16 @@ const MyScheduleExpenseVoucherPage = () => {
 
     try {
       const scanResult = await scanExpenseVoucherQr(nextPhoto);
+      const isPdfEvidence = isPdfFile(nextPhoto);
 
       if (!scanResult) {
         setQrScanState({
           tone: "info",
-          message: t("No readable QR code was detected in the selected image."),
+          message: isPdfEvidence
+            ? t(
+                "No readable QR code or voucher data was detected in the selected file."
+              )
+            : t("No readable QR code was detected in the selected image."),
         });
         return;
       }
@@ -246,9 +251,14 @@ const MyScheduleExpenseVoucherPage = () => {
       if (!scanResult.parsed) {
         setQrScanState({
           tone: "danger",
-          message: t(
-            "A QR code was detected, but it does not follow the expected SUNAT format."
-          ),
+          message:
+            scanResult.source === "pdf-text"
+              ? t(
+                  "Voucher data was detected in the file, but it does not match the expected SUNAT format."
+                )
+              : t(
+                  "A QR code was detected, but it does not follow the expected SUNAT format."
+                ),
         });
         return;
       }
@@ -272,14 +282,21 @@ const MyScheduleExpenseVoucherPage = () => {
       }));
       setQrScanState({
         tone: "success",
-        message: t(
-          "QR detected. RUC, series, number and amount were auto-filled from the voucher."
-        ),
+        message:
+          scanResult.source === "pdf-text"
+            ? t(
+                "Voucher data was detected and auto-filled from the selected file."
+              )
+            : t(
+                "QR detected. RUC, series, number and amount were auto-filled from the voucher."
+              ),
       });
     } catch {
       setQrScanState({
         tone: "danger",
-        message: t("Unable to read the QR code from the selected image."),
+        message: isPdfFile(nextPhoto)
+          ? t("Unable to extract voucher data from the selected file.")
+          : t("Unable to read the QR code from the selected image."),
       });
     } finally {
       setIsScanningQr(false);
