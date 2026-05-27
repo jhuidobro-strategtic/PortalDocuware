@@ -130,7 +130,7 @@ const MyScheduleExpenseVoucherPage = () => {
       return;
     }
 
-    setFormValues(createInitialExpenseVoucherValues(selectedDetail.budgetedAmount || ""));
+    setFormValues(createInitialExpenseVoucherValues());
     setFormErrors({});
     setSelectedPhoto(null);
     setSelectedEvidenceDataUrl("");
