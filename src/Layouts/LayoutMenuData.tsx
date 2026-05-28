@@ -77,9 +77,9 @@ const Navdata = (t: (key: string) => string) => [
                 link: "/travel-expenses/requests",
             },
             {
-                id: "travel-expenses-advances",
-                label: t("Advances"),
-                link: "/travel-expenses/advances",
+                id: "travel-expenses-anticipos",
+                label: t("Anticipos"),
+                link: "/travel-expenses/anticipos",
             },
             {
                 id: "travel-expenses-my-schedule",

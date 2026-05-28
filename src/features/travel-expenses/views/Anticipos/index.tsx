@@ -12,10 +12,10 @@ import {
 } from "reactstrap";
 
 import BreadCrumb from "../../../../components/common/BreadCrumb";
-import "./Advances.css";
+import "./Anticipos.css";
 
 // MOCK DATA based on the provided image
-const mockAdvances = [
+const mockAnticipos = [
   {
     id: "ANT-2705-8477",
     status: "Pendiente",
@@ -58,7 +58,7 @@ const mockAdvances = [
   },
 ];
 
-const Advances = () => {
+const Anticipos = () => {
   const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>("ANT-2705-8477"); // Default open first one based on image
 
@@ -70,7 +70,7 @@ const Advances = () => {
     <React.Fragment>
       <div className="page-content">
         <Container fluid>
-          <BreadCrumb title={t("Advances")} pageTitle={t("Travel Expenses")} />
+          <BreadCrumb title={t("Anticipos")} pageTitle={t("Travel Expenses")} />
 
           <div className="d-flex align-items-center justify-content-between mb-4">
             <div>
@@ -86,7 +86,7 @@ const Advances = () => {
 
           <Row className="mb-4">
             <Col md={4}>
-              <Card className="shadow-sm border-0 advance-kpi-card mb-3 mb-md-0">
+              <Card className="shadow-sm border-0 anticipo-kpi-card mb-3 mb-md-0">
                 <CardBody>
                   <div className="text-muted small mb-1">Por Entregar</div>
                   <h3 className="mb-0 text-orange fw-bold">S/ 5000.00</h3>
@@ -94,7 +94,7 @@ const Advances = () => {
               </Card>
             </Col>
             <Col md={4}>
-              <Card className="shadow-sm border-0 advance-kpi-card mb-3 mb-md-0">
+              <Card className="shadow-sm border-0 anticipo-kpi-card mb-3 mb-md-0">
                 <CardBody>
                   <div className="text-muted small mb-1">Entregados</div>
                   <h3 className="mb-0 text-primary fw-bold">S/ 12332.00</h3>
@@ -102,7 +102,7 @@ const Advances = () => {
               </Card>
             </Col>
             <Col md={4}>
-              <Card className="shadow-sm border-0 advance-kpi-card">
+              <Card className="shadow-sm border-0 anticipo-kpi-card">
                 <CardBody>
                   <div className="text-muted small mb-1">Liquidados</div>
                   <h3 className="mb-0 text-success fw-bold">S/ 0.00</h3>
@@ -112,8 +112,8 @@ const Advances = () => {
           </Row>
 
           <div>
-            {mockAdvances.map((item) => (
-              <Card key={item.id} className="mb-3 shadow-sm border-0 advance-list-card">
+            {mockAnticipos.map((item) => (
+              <Card key={item.id} className="mb-3 shadow-sm border-0 anticipo-list-card">
                 <CardBody className="p-4">
                   <div 
                     className="d-flex justify-content-between align-items-sm-center flex-column flex-sm-row cursor-pointer" 
@@ -124,7 +124,7 @@ const Advances = () => {
                         <h5 className="mb-0 me-3 fw-bold">{item.id}</h5>
                         <Badge 
                           color={item.statusColor} 
-                          className={`me-3 advance-badge advance-badge-${item.statusColor}`}
+                          className={`me-3 anticipo-badge anticipo-badge-${item.statusColor}`}
                         >
                           {item.status}
                         </Badge>
@@ -189,10 +189,10 @@ const Advances = () => {
                     </div>
                     
                     <div className="d-flex gap-2">
-                      <Button color="dark" outline size="sm" className="px-4 py-1 advance-action-btn">
+                      <Button color="dark" outline size="sm" className="px-4 py-1 anticipo-action-btn">
                         Aprobar
                       </Button>
-                      <Button color="danger" outline size="sm" className="px-4 py-1 advance-action-btn border-danger-subtle text-danger">
+                      <Button color="danger" outline size="sm" className="px-4 py-1 anticipo-action-btn border-danger-subtle text-danger">
                         Anular
                       </Button>
                     </div>
@@ -208,4 +208,4 @@ const Advances = () => {
   );
 };
 
-export default Advances;
+export default Anticipos;
