@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Card,
-  CardBody,
-  Col,
-  Container,
-  Input,
-  Label,
-  Row,
-  Button,
-  Form,
-  FormFeedback,
   Spinner,
 } from "reactstrap";
 import { useSelector, useDispatch } from "react-redux";
@@ -120,163 +110,112 @@ const Login = (props: any) => {
         </div>
       )}
 
-      <div className="auth-page-content">
-        <Container fluid className="px-0">
-          <Row className="min-vh-100 g-0">
-            <Col md={6} className="d-none d-md-block position-relative">
-              <div className="auth-image-container h-100 w-100 position-relative">
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="h-100 w-100 position-absolute"
-                  style={{
-                    objectFit: "cover",
-                    zIndex: 1,
-                    top: 0,
-                    left: 0,
-                  }}
-                  src="/video/videodocuware.mp4"
-                />
+      <div className="premium-login-container">
+        {/* Columna Izquierda (Video y Textos) */}
+        <div className="premium-left-pane">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="premium-video-bg"
+            src="/video/videodocuware.mp4"
+          />
+          <div className="premium-video-overlay"></div>
+          
+          <div className="premium-left-content">
+            <h3 className="premium-welcome-text">{t("Welcome to").toUpperCase()}</h3>
+            <h1 className="premium-brand-title">DOCUWARE</h1>
+            <p className="premium-subtitle">Transformando la gestión documental empresarial</p>
+            <p className="premium-description">
+              Automatiza, organiza y protege tu información con tecnología inteligente.
+            </p>
+          </div>
 
-                <div
-                  className="h-100 w-100 position-absolute"
-                  style={{
-                    backgroundColor: "rgba(0, 0, 0, 0.2)",
-                    zIndex: 2,
-                    top: 0,
-                    left: 0,
-                  }}
-                ></div>
+          <div className="premium-particles-wrapper">
+            <ParticlesJS />
+          </div>
+        </div>
 
-                <div
-                  className="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white text-center"
-                  style={{ zIndex: 3 }}
-                >
-                  <div className="w-50 border-top border-white mb-4" />
+        {/* Columna Derecha (Formulario) */}
+        <div className="premium-right-pane">
+          <div className="premium-glass-card">
+            <div className="premium-logo-container">
+              <img src={logologin} alt="Docuware Logo" />
+            </div>
 
-                  <h3 className="montserrat fs-3.5 fs-lg-1 mb-2 text-white">
-                    {t("Welcome to").toUpperCase()}
-                  </h3>
-
-                  <h1 className="montserrat-bold display-4 fw-bold text-white">
-                    DOCUWARE
-                  </h1>
-
-                  <div className="w-50 border-top border-white mt-4" />
-                </div>
-
-                <div
-                  className="position-absolute w-100 h-100"
-                  style={{ zIndex: 4 }}
-                >
-                  <ParticlesJS />
-                </div>
-              </div>
-            </Col>
-
-            <Col
-              md={6}
-              className="d-flex align-items-center justify-content-center"
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                validation.handleSubmit();
+                return false;
+              }}
             >
-              <div className="w-100 p-4" style={{ maxWidth: "400px" }}>
-                <Card className="shadow-sm border-0 cardDatosIniciales">
-                  <CardBody className="p-4">
-                    <div className="login-brand">
-                      <img
-                        src={logologin}
-                        alt="Docuware Logo"
-                        className="login-brand-logo"
-                      />
-                    </div>
-
-                    <Form
-                      className="mt-4"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        validation.handleSubmit();
-                        return false;
-                      }}
-                    >
-                      <div className="mb-3">
-                        <Label htmlFor="user" className="form-label">
-                          {t("Username")}
-                        </Label>
-                        <Input
-                          name="username"
-                          type="text"
-                          placeholder={t("Enter your username")}
-                          value={validation.values.username || ""}
-                          onChange={validation.handleChange}
-                          onBlur={validation.handleBlur}
-                          invalid={
-                            !!(
-                              validation.touched.username &&
-                              validation.errors.username
-                            )
-                          }
-                        />
-                        {validation.touched.username &&
-                          validation.errors.username && (
-                            <FormFeedback type="invalid">
-                              {validation.errors.username}
-                            </FormFeedback>
-                          )}
-                      </div>
-
-                      <div className="mb-3">
-                        <Label htmlFor="password" className="form-label">
-                          {t("Password")}
-                        </Label>
-                        <div className="position-relative auth-pass-inputgroup mb-3">
-                          <Input
-                            name="password"
-                            value={validation.values.password || ""}
-                            type={passwordShow ? "text" : "password"}
-                            placeholder={t("Enter your password")}
-                            onChange={validation.handleChange}
-                            onBlur={validation.handleBlur}
-                            invalid={
-                              !!(
-                                validation.touched.password &&
-                                validation.errors.password
-                              )
-                            }
-                          />
-                          {validation.touched.password &&
-                            validation.errors.password && (
-                              <FormFeedback type="invalid">
-                                {validation.errors.password}
-                              </FormFeedback>
-                            )}
-                          <button
-                            type="button"
-                            className="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted"
-                            onClick={() => setPasswordShow(!passwordShow)}
-                          >
-                            <i className="ri-eye-fill align-middle"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <Button
-                          type="submit"
-                          className="w-100 custom-button"
-                          disabled={loader}
-                        >
-                          {loader && <Spinner size="sm" className="me-2" />}{" "}
-                          {t("Sign In")}
-                        </Button>
-                      </div>
-                    </Form>
-                  </CardBody>
-                </Card>
+              <div className="premium-input-group">
+                <label htmlFor="username" className="premium-label">
+                  {t("Username")}
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  className={`premium-input ${validation.touched.username && validation.errors.username ? 'is-invalid' : ''}`}
+                  placeholder={t("Enter your username")}
+                  value={validation.values.username || ""}
+                  onChange={validation.handleChange}
+                  onBlur={validation.handleBlur}
+                />
+                {validation.touched.username && validation.errors.username && (
+                  <span className="premium-error-text">{validation.errors.username}</span>
+                )}
               </div>
-            </Col>
-          </Row>
-        </Container>
+
+              <div className="premium-input-group">
+                <label htmlFor="password" className="premium-label">
+                  {t("Password")}
+                </label>
+                <div className="premium-password-wrapper">
+                  <input
+                    id="password"
+                    name="password"
+                    type={passwordShow ? "text" : "password"}
+                    className={`premium-input ${validation.touched.password && validation.errors.password ? 'is-invalid' : ''}`}
+                    placeholder={t("Enter your password")}
+                    value={validation.values.password || ""}
+                    onChange={validation.handleChange}
+                    onBlur={validation.handleBlur}
+                  />
+                  <button
+                    type="button"
+                    className="premium-password-toggle"
+                    onClick={() => setPasswordShow(!passwordShow)}
+                  >
+                    <i className={passwordShow ? "ri-eye-off-fill align-middle fs-5" : "ri-eye-fill align-middle fs-5"}></i>
+                  </button>
+                </div>
+                {validation.touched.password && validation.errors.password && (
+                  <span className="premium-error-text">{validation.errors.password}</span>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="premium-button"
+                disabled={loader}
+              >
+                {loader && <Spinner size="sm" className="me-2" />}
+                {t("Sign In")}
+              </button>
+            </form>
+          </div>
+
+          <div className="premium-footer">
+            <span className="security">
+              <i className="ri-shield-check-fill"></i> Sistema seguro • Cifrado SSL
+            </span>
+            <span>Versión 2.5.1</span>
+          </div>
+        </div>
       </div>
     </React.Fragment>
   );
