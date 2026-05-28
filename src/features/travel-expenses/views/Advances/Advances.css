@@ -1,0 +1,42 @@
+.advance-kpi-card {
+  border-radius: 12px !important;
+}
+
+.text-orange {
+  color: #ea580c !important; /* Tailwind orange-600 */
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.advance-list-card {
+  border-radius: 12px !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.advance-list-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Custom Badges matching the image */
+.advance-badge {
+  padding: 0.4em 0.8em !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+}
+
+.advance-badge-warning {
+  background-color: #ffedd5 !important; /* Light orange bg */
+  color: #c2410c !important; /* Dark orange text */
+}
+
+.advance-badge-info {
+  background-color: #cffafe !important; /* Light cyan bg */
+  color: #0891b2 !important; /* Teal text */
+}
+
+.advance-action-btn {
+  border-radius: 8px !important;
+  font-weight: 500;
+}
