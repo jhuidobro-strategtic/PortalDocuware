@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import Select from "react-select";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -522,6 +523,7 @@ const renderBudgetDetailPreview = (details: ExpenseRequestDetail[]) => {
 
 const RequestsPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const sessionUser = getCurrentSessionUser();
   const [requests, setRequests] = useState<ExpenseRequestItem[]>([]);
   const [users, setUsers] = useState<UserApiItem[]>([]);
@@ -987,6 +989,13 @@ const RequestsPage = () => {
                                       icon: "ri-edit-line",
                                       tone: "neutral",
                                       onClick: () => handleOpenEditModal(request),
+                                    },
+                                    {
+                                      id: `add-anticipo-${request.idRequest}`,
+                                      label: t("Generar Anticipo"),
+                                      icon: "ri-file-add-line",
+                                      tone: "primary",
+                                      onClick: () => navigate(`/travel-expenses/requests/${request.idRequest}/add-anticipo`),
                                     },
                                   ]}
                                 />
