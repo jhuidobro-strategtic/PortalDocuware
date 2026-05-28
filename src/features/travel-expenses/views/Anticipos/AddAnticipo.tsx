@@ -18,7 +18,7 @@ import BreadCrumb from "../../../../components/common/BreadCrumb";
 const AddAnticipo = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { requestId } = useParams<{ requestId?: string }>();
+  // const { requestId } = useParams<{ requestId?: string }>(); // Comentado ya que no se usará temporalmente
 
   return (
     <div className="page-content">
@@ -41,27 +41,17 @@ const AddAnticipo = () => {
         </div>
 
         <Row>
-          {/* COLUMNA IZQUIERDA: Datos Principales */}
+          {/* COLUMNA IZQUIERDA: Datos Principales y Autorización */}
           <Col lg={7}>
             <Card className="border-0 shadow-sm mb-4">
               <CardHeader className="bg-transparent border-bottom-0 pb-0 pt-4 px-4">
                 <h5 className="card-title mb-0 fw-bold">
-                  <i className="ri-file-list-3-line me-2 text-primary"></i>Datos de la Solicitud
+                  <i className="ri-file-list-3-line me-2 text-primary"></i>Datos del Beneficiario
                 </h5>
               </CardHeader>
               <CardBody className="p-4">
                 <Row className="g-4">
-                  <Col md={12}>
-                    <FormGroup className="mb-0">
-                      <Label className="fw-medium text-muted small text-uppercase">Solicitud de Gastos <span className="text-danger">*</span></Label>
-                      <Input type="select" defaultValue={requestId || ""} className="form-select-lg fs-6 bg-light border-0">
-                        <option value="" disabled>Seleccionar solicitud vinculada...</option>
-                        {requestId && <option value={requestId}>Solicitud #{requestId}</option>}
-                        <option value="REQ-001">REQ-001 - Viaje a Piura</option>
-                        <option value="REQ-002">REQ-002 - Capacitación Lima</option>
-                      </Input>
-                    </FormGroup>
-                  </Col>
+                  {/* Se ocultó el campo Solicitud de Gastos por requerimiento */}
                   <Col md={6}>
                     <FormGroup className="mb-0">
                       <Label className="fw-medium text-muted small text-uppercase">DNI del Beneficiario</Label>
@@ -110,9 +100,33 @@ const AddAnticipo = () => {
                 </Row>
               </CardBody>
             </Card>
+
+            <Card className="border-0 shadow-sm mb-4">
+              <CardHeader className="bg-transparent border-bottom-0 pb-0 pt-4 px-4">
+                <h5 className="card-title mb-0 fw-bold">
+                  <i className="ri-user-star-line me-2 text-primary"></i>Autorización
+                </h5>
+              </CardHeader>
+              <CardBody className="p-4">
+                <Row className="g-4">
+                  <Col md={12}>
+                    <FormGroup className="mb-0">
+                      <Label className="fw-medium text-muted small text-uppercase">Aprobado por</Label>
+                      <Input type="text" placeholder="Nombre del responsable" />
+                    </FormGroup>
+                  </Col>
+                  <Col md={12}>
+                    <FormGroup className="mb-0">
+                      <Label className="fw-medium text-muted small text-uppercase">Observaciones</Label>
+                      <Input type="textarea" rows="3" placeholder="Agrega notas adicionales..." />
+                    </FormGroup>
+                  </Col>
+                </Row>
+              </CardBody>
+            </Card>
           </Col>
 
-          {/* COLUMNA DERECHA: Datos de Pago y Aprobación */}
+          {/* COLUMNA DERECHA: Datos de Pago */}
           <Col lg={5}>
             <Card className="border-0 shadow-sm mb-4" style={{ backgroundColor: "#fafbfc" }}>
               <CardHeader className="bg-transparent border-bottom-0 pb-0 pt-4 px-4">
@@ -169,30 +183,6 @@ const AddAnticipo = () => {
                     <FormGroup className="mb-0">
                       <Label className="fw-medium text-muted small text-uppercase">N° de Operación / Voucher</Label>
                       <Input type="text" placeholder="Código de la transacción" />
-                    </FormGroup>
-                  </Col>
-                </Row>
-              </CardBody>
-            </Card>
-
-            <Card className="border-0 shadow-sm mb-4">
-              <CardHeader className="bg-transparent border-bottom-0 pb-0 pt-4 px-4">
-                <h5 className="card-title mb-0 fw-bold">
-                  <i className="ri-user-star-line me-2 text-primary"></i>Autorización
-                </h5>
-              </CardHeader>
-              <CardBody className="p-4">
-                <Row className="g-4">
-                  <Col md={12}>
-                    <FormGroup className="mb-0">
-                      <Label className="fw-medium text-muted small text-uppercase">Aprobado por</Label>
-                      <Input type="text" placeholder="Nombre del responsable" />
-                    </FormGroup>
-                  </Col>
-                  <Col md={12}>
-                    <FormGroup className="mb-0">
-                      <Label className="fw-medium text-muted small text-uppercase">Observaciones</Label>
-                      <Input type="textarea" rows="3" placeholder="Agrega notas adicionales..." />
                     </FormGroup>
                   </Col>
                 </Row>
