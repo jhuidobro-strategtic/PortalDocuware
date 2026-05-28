@@ -21,7 +21,6 @@ import { useFormik } from "formik";
 import ParticlesJS from "./AuthenticationInner/ParticlesJS";
 import { loginUser, resetLoginFlag } from "../../../slices/auth/login/thunk";
 import logologin from "../../../assets/images/Grupo_Cayala_Color.png";
-import fondoCayala from "../../../assets/images/cayala.jpg";
 import "./Login.css";
 
 const getLoginErrorMessage = (
@@ -126,18 +125,20 @@ const Login = (props: any) => {
           <Row className="min-vh-100 g-0">
             <Col md={6} className="d-none d-md-block position-relative">
               <div className="auth-image-container h-100 w-100 position-relative">
-                <div
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
                   className="h-100 w-100 position-absolute"
                   style={{
-                    backgroundImage: `url(${fondoCayala})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
+                    objectFit: "cover",
                     zIndex: 1,
                     top: 0,
                     left: 0,
                   }}
-                ></div>
+                  src="/video/videodocuware.mp4"
+                />
 
                 <div
                   className="h-100 w-100 position-absolute"
