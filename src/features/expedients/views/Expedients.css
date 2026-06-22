@@ -3,6 +3,21 @@
   width: 120px;
 }
 
+.expedients-toolbar {
+  flex-wrap: nowrap !important;
+}
+
+.expedients-toolbar-actions {
+  flex-wrap: nowrap !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.expedients-toolbar-search {
+  width: 280px;
+  min-width: 280px;
+}
+
 .expedients-registered-documents-cell .table-actions-menu {
   justify-content: center;
 }
@@ -665,6 +680,16 @@
 }
 
 @media (max-width: 767.98px) {
+  .expedients-toolbar,
+  .expedients-toolbar-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .expedients-toolbar-search {
+    width: 100%;
+    min-width: 0;
+  }
+
   .expedient-drawer {
     width: 100vw;
     padding: 0;

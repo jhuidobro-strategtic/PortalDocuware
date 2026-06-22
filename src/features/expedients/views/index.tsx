@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
+import JSZip from "jszip";
 import { PDFDocument, PDFPage } from "pdf-lib";
 import Select from "react-select";
 import {
@@ -377,6 +378,96 @@ const buildBulkExpedientPdfFileName = (expedient: Expedient) => {
   return `${fileNameParts.join("-")}.pdf`;
 };
 
+const buildMultiExpedientsZipFileName = () =>
+  `expedientes-seleccionados-${moment().format("DD-MM-YYYY-HHmmss")}.zip`;
+
+const hasExpedientDownloadablePdfs = (expedient: Expedient) =>
+  expedient.expediente_documentos.some((file) =>
+    /\.pdf$/i.test(file.filename || file.file_url || file.filepath || "")
+  );
+
+const buildMergedExpedientPdfBlob = async (
+  expedient: Expedient,
+  t: (key: string) => string
+) => {
+  const pdfFiles = expedient.expediente_documentos.filter((file) =>
+    /\.pdf$/i.test(file.filename || file.file_url || file.filepath || "")
+  );
+
+  if (!pdfFiles.length) {
+    throw new Error(t("No PDF files are available to merge."));
+  }
+
+  const mergedPdf = await PDFDocument.create();
+
+  for (const file of pdfFiles) {
+    const fetchCandidates = getExpedientDocumentFetchUrls(file);
+    let sourcePdf: PDFDocument | null = null;
+
+    for (const candidateUrl of fetchCandidates) {
+      try {
+        const response = await fetch(candidateUrl, { method: "GET" });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const sourceBytes = await response.arrayBuffer();
+        sourcePdf = await PDFDocument.load(sourceBytes);
+        break;
+      } catch {
+        // Try the next available URL for this document.
+      }
+    }
+
+    if (!sourcePdf) {
+      throw new Error(
+        t("Unable to generate the combined PDF.") +
+          ` (${file.filename || file.file_url || file.filepath})`
+      );
+    }
+
+    const copiedPages = await mergedPdf.copyPages(
+      sourcePdf,
+      sourcePdf.getPageIndices()
+    );
+
+    copiedPages.forEach((page: PDFPage) => mergedPdf.addPage(page));
+  }
+
+  if (mergedPdf.getPageCount() === 0) {
+    throw new Error(t("No PDF files are available to merge."));
+  }
+
+  const mergedBytes = await mergedPdf.save();
+
+  return new Blob([new Uint8Array(mergedBytes)], {
+    type: "application/pdf",
+  });
+};
+
+const buildUniqueZipEntryName = (
+  usedNames: Set<string>,
+  proposedName: string,
+  fallbackId: number
+) => {
+  const trimmedName = proposedName.trim() || `expediente-${fallbackId}.pdf`;
+  const dotIndex = trimmedName.lastIndexOf(".");
+  const baseName =
+    dotIndex > 0 ? trimmedName.slice(0, dotIndex) : trimmedName;
+  const extension = dotIndex > 0 ? trimmedName.slice(dotIndex) : ".pdf";
+  let nextName = trimmedName;
+  let duplicateIndex = 2;
+
+  while (usedNames.has(nextName.toLowerCase())) {
+    nextName = `${baseName} (${duplicateIndex})${extension}`;
+    duplicateIndex += 1;
+  }
+
+  usedNames.add(nextName.toLowerCase());
+  return nextName;
+};
+
 const getCurrentSessionUser = (): SessionUser => {
   try {
     const authUser = sessionStorage.getItem("authUser");
@@ -431,6 +522,9 @@ const Expedients = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedExpedientIds, setSelectedExpedientIds] = useState<Set<number>>(
+    new Set()
+  );
   const [selectedExpedient, setSelectedExpedient] = useState<Expedient | null>(null);
   const [selectedPreviewDocument, setSelectedPreviewDocument] =
     useState<ExpedientDocument | null>(null);
@@ -438,6 +532,7 @@ const Expedients = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkSelectedDownloading, setBulkSelectedDownloading] = useState(false);
   const [bulkDownloadError, setBulkDownloadError] = useState<string | null>(
     null
   );
@@ -485,6 +580,20 @@ const Expedients = () => {
 
   const syncExpedientsCollection = useCallback((nextExpedients: Expedient[]) => {
     setExpedients(nextExpedients);
+    setSelectedExpedientIds((currentSelectedIds) => {
+      const availableIds = new Set(
+        nextExpedients.map((expedient) => expedient.expedienteid)
+      );
+      const nextSelectedIds = new Set<number>();
+
+      currentSelectedIds.forEach((id) => {
+        if (availableIds.has(id)) {
+          nextSelectedIds.add(id);
+        }
+      });
+
+      return nextSelectedIds;
+    });
     setSelectedExpedient((currentSelected) =>
       currentSelected
         ? nextExpedients.find(
@@ -594,6 +703,66 @@ const Expedients = () => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+  const selectablePaginatedExpedients = useMemo(
+    () =>
+      paginatedExpedients.filter((expedient) =>
+        hasExpedientDownloadablePdfs(expedient)
+      ),
+    [paginatedExpedients]
+  );
+  const selectedExpedients = useMemo(
+    () =>
+      expedients.filter((expedient) =>
+        selectedExpedientIds.has(expedient.expedienteid)
+      ),
+    [expedients, selectedExpedientIds]
+  );
+  const hasSelectedExpedients = selectedExpedients.length > 0;
+  const areAllCurrentPageExpedientsSelected =
+    selectablePaginatedExpedients.length > 0 &&
+    selectablePaginatedExpedients.every((expedient) =>
+      selectedExpedientIds.has(expedient.expedienteid)
+    );
+
+  const handleToggleExpedientSelection = (expedientId: number) => {
+    setSelectedExpedientIds((currentSelectedIds) => {
+      const nextSelectedIds = new Set(currentSelectedIds);
+
+      if (nextSelectedIds.has(expedientId)) {
+        nextSelectedIds.delete(expedientId);
+      } else {
+        nextSelectedIds.add(expedientId);
+      }
+
+      return nextSelectedIds;
+    });
+  };
+
+  const handleToggleCurrentPageSelection = () => {
+    if (!selectablePaginatedExpedients.length) {
+      return;
+    }
+
+    setSelectedExpedientIds((currentSelectedIds) => {
+      const nextSelectedIds = new Set(currentSelectedIds);
+
+      if (areAllCurrentPageExpedientsSelected) {
+        selectablePaginatedExpedients.forEach((expedient) => {
+          nextSelectedIds.delete(expedient.expedienteid);
+        });
+      } else {
+        selectablePaginatedExpedients.forEach((expedient) => {
+          nextSelectedIds.add(expedient.expedienteid);
+        });
+      }
+
+      return nextSelectedIds;
+    });
+  };
+
+  const handleClearSelectedExpedients = () => {
+    setSelectedExpedientIds(new Set());
+  };
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -959,63 +1128,11 @@ const Expedients = () => {
       return;
     }
 
-      setBulkDownloading(true);
-      setBulkDownloadError(null);
+    setBulkDownloading(true);
+    setBulkDownloadError(null);
 
     try {
-      const pdfFiles = selectedExpedient.expediente_documentos.filter((file) =>
-        /\.pdf$/i.test(file.filename || file.file_url || "")
-      );
-
-      if (!pdfFiles.length) {
-        throw new Error(t("No PDF files are available to merge."));
-      }
-
-      const mergedPdf = await PDFDocument.create();
-
-      for (const file of pdfFiles) {
-        const fetchCandidates = getExpedientDocumentFetchUrls(file);
-        let sourcePdf: PDFDocument | null = null;
-
-        for (const candidateUrl of fetchCandidates) {
-          try {
-            const response = await fetch(candidateUrl, { method: "GET" });
-
-            if (!response.ok) {
-              continue;
-            }
-
-            const sourceBytes = await response.arrayBuffer();
-            sourcePdf = await PDFDocument.load(sourceBytes);
-            break;
-          } catch {
-            // Try the next available URL for this document.
-          }
-        }
-
-        if (!sourcePdf) {
-          throw new Error(
-            t("Unable to generate the combined PDF.") +
-              ` (${file.filename || file.file_url || file.filepath})`
-          );
-        }
-
-        const copiedPages = await mergedPdf.copyPages(
-          sourcePdf,
-          sourcePdf.getPageIndices()
-        );
-
-        copiedPages.forEach((page: PDFPage) => mergedPdf.addPage(page));
-      }
-
-      if (mergedPdf.getPageCount() === 0) {
-        throw new Error(t("No PDF files are available to merge."));
-      }
-
-      const mergedBytes = await mergedPdf.save();
-      const mergedBlob = new Blob([new Uint8Array(mergedBytes)], {
-        type: "application/pdf",
-      });
+      const mergedBlob = await buildMergedExpedientPdfBlob(selectedExpedient, t);
       const mergedBlobUrl = URL.createObjectURL(mergedBlob);
       const fileName = buildBulkExpedientPdfFileName(selectedExpedient);
 
@@ -1032,6 +1149,77 @@ const Expedients = () => {
       setBulkDownloadError(message);
     } finally {
       setBulkDownloading(false);
+    }
+  };
+
+  const handleBulkDownloadSelectedExpedients = async () => {
+    if (bulkSelectedDownloading) {
+      return;
+    }
+
+    if (!selectedExpedients.length) {
+      pushFloatingAlert("info", t("Select at least one expedient to download."));
+      return;
+    }
+
+    const downloadableExpedients = selectedExpedients.filter((expedient) =>
+      hasExpedientDownloadablePdfs(expedient)
+    );
+
+    if (!downloadableExpedients.length) {
+      pushFloatingAlert("danger", t("No selected expedients contain PDF files."));
+      return;
+    }
+
+    setBulkSelectedDownloading(true);
+
+    try {
+      const zip = new JSZip();
+      const usedEntryNames = new Set<string>();
+
+      for (const expedient of downloadableExpedients) {
+        const expedientBlob = await buildMergedExpedientPdfBlob(expedient, t);
+        const expedientBytes = await expedientBlob.arrayBuffer();
+        const zipEntryName = buildUniqueZipEntryName(
+          usedEntryNames,
+          buildBulkExpedientPdfFileName(expedient),
+          expedient.expedienteid
+        );
+
+        zip.file(zipEntryName, expedientBytes);
+      }
+
+      if (Object.keys(zip.files).length === 0) {
+        throw new Error(t("No selected expedients contain PDF files."));
+      }
+
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 6,
+        },
+      });
+      const zipBlobUrl = URL.createObjectURL(zipBlob);
+
+      triggerPdfDownload(zipBlobUrl, buildMultiExpedientsZipFileName());
+
+      window.setTimeout(() => {
+        revokeObjectUrl(zipBlobUrl);
+      }, 1500);
+
+      pushFloatingAlert(
+        "success",
+        t("The selected expedients were downloaded successfully.")
+      );
+    } catch (downloadError) {
+      const message =
+        downloadError instanceof Error
+          ? downloadError.message
+          : t("Unable to download the selected expedients.");
+      pushFloatingAlert("danger", message);
+    } finally {
+      setBulkSelectedDownloading(false);
     }
   };
 
@@ -1078,7 +1266,7 @@ const Expedients = () => {
 
         <Card className="border-0 shadow-sm">
           <CardBody>
-            <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 expedients-toolbar">
               <div>
                 <h5 className="mb-1">{t("Expedient List")}</h5>
                 <p className="text-muted mb-0">
@@ -1086,19 +1274,55 @@ const Expedients = () => {
                 </p>
               </div>
 
-              <InputGroup style={{ maxWidth: "280px" }}>
-                <InputGroupText>
-                  <i className="ri-search-line" />
-                </InputGroupText>
-                <Input
-                  placeholder={t("Search expedients...")}
-                  value={searchTerm}
-                  onChange={(event) => {
-                    setSearchTerm(event.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </InputGroup>
+              <div className="d-flex flex-wrap align-items-center justify-content-end gap-2 expedients-toolbar-actions">
+                {hasSelectedExpedients ? (
+                  <Button
+                    color="light"
+                    onClick={handleClearSelectedExpedients}
+                    disabled={bulkSelectedDownloading}
+                  >
+                    {t("Clear selection")}
+                  </Button>
+                ) : null}
+
+                <Button
+                  color="primary"
+                  className="d-inline-flex align-items-center gap-2"
+                  onClick={handleBulkDownloadSelectedExpedients}
+                  disabled={!hasSelectedExpedients || bulkSelectedDownloading}
+                >
+                  {bulkSelectedDownloading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm" role="status" />
+                      <span>{t("Downloading selected...")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-download-2-line" />
+                      <span>
+                        {t("Download selected")}
+                        {hasSelectedExpedients
+                          ? ` (${selectedExpedients.length})`
+                          : ""}
+                      </span>
+                    </>
+                  )}
+                </Button>
+
+                <InputGroup className="expedients-toolbar-search">
+                  <InputGroupText>
+                    <i className="ri-search-line" />
+                  </InputGroupText>
+                  <Input
+                    placeholder={t("Search expedients...")}
+                    value={searchTerm}
+                    onChange={(event) => {
+                      setSearchTerm(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </InputGroup>
+              </div>
             </div>
 
             {loading && (
@@ -1126,6 +1350,14 @@ const Expedients = () => {
                   >
                     <thead className="table-light">
                       <tr>
+                        <th className="text-center" style={{ minWidth: "56px" }}>
+                          <Input
+                            type="checkbox"
+                            checked={areAllCurrentPageExpedientsSelected}
+                            disabled={!selectablePaginatedExpedients.length}
+                            onChange={handleToggleCurrentPageSelection}
+                          />
+                        </th>
                         <th className="text-center" style={{ minWidth: "150px" }}>
                           {t("Invoice ID")}
                         </th>                        
@@ -1158,7 +1390,7 @@ const Expedients = () => {
                     <tbody>
                       {paginatedExpedients.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="text-center py-4">
+                          <td colSpan={9} className="text-center py-4">
                             {t("No registered expedients were found.")}
                           </td>
                         </tr>
@@ -1179,6 +1411,20 @@ const Expedients = () => {
 
                           return (
                             <tr key={expedient.expedienteid}>
+                              <td className="text-center">
+                                <Input
+                                  type="checkbox"
+                                  checked={selectedExpedientIds.has(
+                                    expedient.expedienteid
+                                  )}
+                                  disabled={!hasExpedientDownloadablePdfs(expedient)}
+                                  onChange={() =>
+                                    handleToggleExpedientSelection(
+                                      expedient.expedienteid
+                                    )
+                                  }
+                                />
+                              </td>
                               <td style={{ whiteSpace: "normal" }} className="text-center">
                                 <div className="fw-semibold">
                                   #
