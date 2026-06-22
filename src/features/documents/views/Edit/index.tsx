@@ -1,6 +1,17 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Button, Card, CardBody, Col, Container, Row, Spinner } from "reactstrap";
+import {
+  Button,
+  Card,
+  CardBody,
+  Col,
+  Container,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  Row,
+  Spinner,
+} from "reactstrap";
 import { useTranslation } from "react-i18next";
 import BreadCrumb from "../../../../components/common/BreadCrumb";
 import Notifications from "../../components/ListNotifications";
@@ -223,6 +234,8 @@ const DocumentEditPage: React.FC = () => {
   const [editIgvPercent, setEditIgvPercent] = useState<number>(18);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showGenerateOrderModal, setShowGenerateOrderModal] = useState(false);
+  const [savedDocumentForOrder, setSavedDocumentForOrder] = useState<Document | null>(null);
 
   const addNotification = useCallback((type: Notification["type"], message: string) => {
     const id = Date.now();
@@ -639,14 +652,16 @@ const DocumentEditPage: React.FC = () => {
       const payload = await response.json();
 
       if (payload.success) {
-        sessionStorage.setItem(
-          DOCUMENTS_FLASH_NOTIFICATION_KEY,
-          JSON.stringify({
-            type: "success",
-            message: t("Document updated successfully"),
-          })
-        );
-        navigate("/documents");
+        const nextSavedDocument = {
+          ...editDoc,
+          ...(payload.data && typeof payload.data === "object" ? payload.data : {}),
+          documenttype: editDoc.documenttype,
+          centercost: editDoc.centercost,
+        } as Document;
+
+        setEditDoc(nextSavedDocument);
+        setSavedDocumentForOrder(nextSavedDocument);
+        setShowGenerateOrderModal(true);
       } else {
         addNotification("danger", payload.message || t("Error updating"));
       }
@@ -656,6 +671,33 @@ const DocumentEditPage: React.FC = () => {
     } finally {
       setLoadingSave(false);
     }
+  };
+
+  const handleSkipOrderGeneration = () => {
+    setShowGenerateOrderModal(false);
+    setSavedDocumentForOrder(null);
+    sessionStorage.setItem(
+      DOCUMENTS_FLASH_NOTIFICATION_KEY,
+      JSON.stringify({
+        type: "success",
+        message: t("Document updated successfully"),
+      })
+    );
+    navigate("/documents");
+  };
+
+  const handleGenerateOrder = () => {
+    const targetDocument = savedDocumentForOrder ?? editDoc;
+
+    if (!targetDocument) {
+      handleSkipOrderGeneration();
+      return;
+    }
+
+    setShowGenerateOrderModal(false);
+    navigate(`/documents/order-c/${targetDocument.documentid}`, {
+      state: { document: targetDocument },
+    });
   };
 
   if (loading) {
@@ -758,6 +800,34 @@ const DocumentEditPage: React.FC = () => {
             />
           </Col>
         </Row>
+
+        <Modal
+          isOpen={showGenerateOrderModal}
+          toggle={handleSkipOrderGeneration}
+          centered
+          size="sm"
+        >
+          <ModalBody className="text-center py-4">
+            <i
+              className="ri-checkbox-circle-line text-success d-inline-block mb-3"
+              style={{ fontSize: "3.5rem" }}
+            />
+            <h5 className="mb-2">{t("Document updated successfully")}</h5>
+            <p className="text-muted mb-0">
+              {t(
+                "The fields were saved successfully. Do you want to generate the Purchase/Service Order?"
+              )}
+            </p>
+          </ModalBody>
+          <ModalFooter className="justify-content-center">
+            <Button color="light" onClick={handleSkipOrderGeneration}>
+              {t("No")}
+            </Button>
+            <Button color="primary" onClick={handleGenerateOrder}>
+              {t("Yes")}
+            </Button>
+          </ModalFooter>
+        </Modal>
       </Container>
     </div>
   );
