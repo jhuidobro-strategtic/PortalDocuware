@@ -397,6 +397,13 @@ const getPurchaseStateKind = (
   const normalizedLabel = String(purchaseStateLabel ?? "").trim().toLowerCase();
 
   if (
+    normalizedLabel.includes("pagad") ||
+    normalizedLabel.includes("paid")
+  ) {
+    return "paid" as const;
+  }
+
+  if (
     normalizedLabel.includes("aprob") ||
     normalizedLabel.includes("approv")
   ) {
@@ -432,6 +439,15 @@ const getPurchaseStateMeta = (
   purchaseStateLabel?: string
 ) => {
   switch (getPurchaseStateKind(purchaseState, purchaseStateLabel)) {
+    case "paid":
+      return {
+        kind: "paid" as const,
+        label: purchaseStateLabel || t("Paid"),
+        className:
+          "badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        colorClass: "primary" as const,
+        icon: "ri-secure-payment-line",
+      };
     case "approved":
       return {
         kind: "approved" as const,
@@ -477,6 +493,8 @@ const getPurchaseStateDescription = (
   purchaseStateLabel?: string
 ) => {
   switch (getPurchaseStateKind(purchaseState, purchaseStateLabel)) {
+    case "paid":
+      return t("Marks the purchase order as paid.");
     case "approved":
       return t("Generates the PDF of the purchase order.");
     case "pending":
@@ -732,9 +750,36 @@ const PurchaseOrderDetails = () => {
       description: getPurchaseStateDescription(option.id, t, option.descripcion),
     };
   });
-  const visibleModalStateOptions = modalStateOptions.filter(
-    (option) => option.kind !== "pending" && !option.label.toLowerCase().includes("temporal") && !option.label.toLowerCase().includes("temproral")
-  );
+  const getAvailableModalStateOptions = (
+    currentState: number,
+    currentStateLabel?: string
+  ) => {
+    const currentStateKind = getPurchaseStateKind(currentState, currentStateLabel);
+
+    return modalStateOptions.filter((option) => {
+      const normalizedLabel = option.label.toLowerCase();
+      const isTemporaryState =
+        normalizedLabel.includes("temporal") ||
+        normalizedLabel.includes("temproral");
+
+      if (isTemporaryState) {
+        return false;
+      }
+
+      if (currentStateKind === "pending") {
+        return option.kind === "approved" || option.kind === "rejected";
+      }
+
+      if (currentStateKind === "approved") {
+        return option.kind === "paid";
+      }
+
+      return false;
+    });
+  };
+  const visibleModalStateOptions = orderModal
+    ? getAvailableModalStateOptions(orderModal.purchaseState, orderModal.purchaseStateLabel)
+    : [];
   const selectedStateMeta =
     selectedState !== null
       ? getPurchaseStateMeta(
@@ -746,10 +791,16 @@ const PurchaseOrderDetails = () => {
       : null;
 
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
-    const currentStateOption = visibleModalStateOptions.find(
-      (option) => option.value === purchaseOrder.purchaseState
+    const availableOptions = getAvailableModalStateOptions(
+      purchaseOrder.purchaseState,
+      purchaseOrder.purchaseStateLabel
     );
-    setSelectedState(currentStateOption?.value ?? null);
+
+    if (availableOptions.length === 0) {
+      return;
+    }
+
+    setSelectedState(availableOptions.length === 1 ? availableOptions[0].value : null);
     setActionError(null);
     setActionSuccess(null);
     setOrderModal(purchaseOrder);
@@ -1501,8 +1552,11 @@ const PurchaseOrderDetails = () => {
                             purchaseOrder.storeLabel ||
                             getLookupLabel(storeLookup, purchaseOrder.store);
                           const isActionBlocked =
-                            purchaseState.kind === "approved" ||
-                            purchaseState.kind === "rejected";
+                            getAvailableModalStateOptions(
+                              purchaseOrder.purchaseState,
+                              purchaseOrder.purchaseStateLabel ||
+                              purchaseStateLookup[purchaseOrder.purchaseState]
+                            ).length === 0;
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
