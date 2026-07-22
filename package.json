@@ -43,6 +43,7 @@
     "react-datepicker": "^8.7.0",
     "react-dom": "^18.2.0",
     "react-draggable": "^4.5.0",
+    "react-dropzone": "^19.1.1",
     "react-flatpickr": "^3.10.13",
     "react-i18next": "^15.0.3",
     "react-masonry-css": "^1.0.16",

@@ -94,6 +94,18 @@ const Navdata = (t: (key: string) => string) => [
         ],
     },
     {
+        id: "folders",
+        label: t("Procesamiento de Archivos"),
+        icon: "ri-folder-2-line",
+        subItems: [
+            {
+                id: "procesamiento-archivos-list",
+                label: t("Archivos"),
+                link: "/procesamiento-archivos",
+            },
+        ],
+    },
+    {
         id: "user-management",
         label: t("User Management"),
         icon: "ri-user-settings-line",
