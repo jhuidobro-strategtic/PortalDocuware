@@ -92,75 +92,94 @@ const Folders = () => {
     <div id="dropzone-view" className="mb-2 fade-in">
       <Row className="justify-content-between align-items-center mb-4">
         <Col>
-          <div className="d-flex align-items-center">
-            <button 
-              className="btn btn-sm btn-ghost-dark me-2"
-              onClick={() => setCurrentView("folders")}
-            >
-              <i className="ri-arrow-left-line align-bottom fs-16"></i>
-            </button>
-            <h5 className="card-title mb-0 fs-15 text-dark fw-medium">Assets</h5>
-          </div>
+          <h4 className="mb-sm-0 text-primary fw-bold fs-16">Subida de Documentos</h4>
+          <p className="text-muted mb-0 mt-1 fs-13">Sube tus facturas (PDF, Imágenes) para ser procesadas automáticamente.</p>
+        </Col>
+        <Col className="text-end">
+          <button className="btn btn-sm btn-soft-secondary rounded-pill" onClick={() => setCurrentView("folders")}>
+            <i className="ri-arrow-left-line align-bottom me-1"></i> Volver
+          </button>
         </Col>
       </Row>
 
       <Row>
         <Col lg={12}>
-          <div 
-            {...getRootProps()} 
-            className={`dropzone-wrapper ${isDragActive ? 'active' : ''}`}
-          >
+          <div {...getRootProps()} className={`premium-dropzone ${isDragActive ? 'active' : ''}`} style={{ minHeight: '300px' }}>
             <input {...getInputProps()} />
-            <i className="ri-upload-cloud-2-line dropzone-icon"></i>
-            <h4 className="fw-semibold text-dark mb-1">
-              {isDragActive ? '¡Suelta tus archivos aquí!' : 'Arrastra y suelta tus archivos aquí'}
-            </h4>
-            <p className="text-muted fs-14 mb-4">o haz clic para seleccionar los archivos</p>
-            <button className="btn btn-success px-4 rounded-pill shadow-sm">
-              Seleccionar Archivos
-            </button>
+            
+            {uploadedFiles.length === 0 ? (
+              <div className="premium-dropzone-content">
+                <div className="dropzone-icon-wrapper">
+                  <i className="ri-cloud-windy-line dropzone-icon"></i>
+                </div>
+                <h4 className="dropzone-title">Arrastra y suelta tus documentos aquí</h4>
+                <p className="dropzone-text">o haz clic para explorar en tu computadora</p>
+                <div className="dropzone-badges mt-3">
+                  <span className="badge bg-primary-subtle text-primary">PDF</span>
+                  <span className="badge bg-primary-subtle text-primary">JPG/PNG</span>
+                </div>
+              </div>
+            ) : (
+              <div className="premium-dropzone-content text-start w-100 h-100 d-flex flex-column">
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                  <div>
+                    <h5 className="text-dark fw-bold mb-1">Archivos en Cola ({uploadedFiles.length})</h5>
+                    <p className="text-muted fs-13 mb-0">Puedes seguir arrastrando más documentos aquí dentro o hacer clic en el fondo blanco.</p>
+                  </div>
+                  <button 
+                    className="btn btn-sm btn-soft-danger rounded-pill"
+                    onClick={(e) => { e.stopPropagation(); setUploadedFiles([]); }}
+                    disabled={isUploading}
+                  >
+                    <i className="ri-delete-bin-line align-bottom me-1"></i> Limpiar lista
+                  </button>
+                </div>
+                
+                <div className={`premium-file-list flex-grow-1 ${isUploading ? 'processing-state' : ''}`}>
+                  {uploadedFiles.map((file, idx) => (
+                    <div 
+                      key={idx} 
+                      className="premium-file-item d-flex align-items-center bg-white" 
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="file-icon-box" style={{ width: '35px', height: '35px', fontSize: '18px' }}>
+                        <i className="ri-file-pdf-fill"></i>
+                      </div>
+                      <div className="file-details flex-grow-1 overflow-hidden ms-3">
+                        <h5 className="fs-13 mb-1 text-truncate text-dark fw-medium" title={file.name}>{file.name}</h5>
+                        <p className="text-muted mb-0 fs-12">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                      <div className="file-actions ms-3">
+                        <button 
+                          className="btn btn-sm btn-ghost-danger btn-icon rounded-circle"
+                          disabled={isUploading}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                        >
+                          <i className="ri-close-line fs-16"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Col>
       </Row>
 
       {uploadedFiles.length > 0 && (
-        <Row className="mt-4 fade-in-up">
+        <Row className="mt-3 fade-in-up">
           <Col lg={12}>
-            <h6 className="mb-3 text-muted fw-semibold text-uppercase fs-12">Archivos Pendientes ({uploadedFiles.length})</h6>
-            <div className={`d-flex flex-wrap gap-3 ${isUploading ? 'processing-state' : ''}`}>
-              {uploadedFiles.map((file, idx) => (
-                <div key={idx} className="uploaded-file-card p-3 d-flex align-items-center" style={{ width: '280px' }}>
-                  <div className="avatar-sm me-3">
-                    <div className="avatar-title bg-primary-subtle text-primary rounded fs-20">
-                      <i className="ri-file-text-fill"></i>
-                    </div>
-                  </div>
-                  <div className="flex-grow-1 overflow-hidden">
-                    <h5 className="fs-13 mb-1 text-truncate" title={file.name}>{file.name}</h5>
-                    <p className="text-muted mb-0 fs-12">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                  <div className="flex-shrink-0 ms-2">
-                    <button 
-                      className="btn btn-sm btn-ghost-danger btn-icon"
-                      disabled={isUploading}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
-                      }}
-                    >
-                      <i className="ri-close-line fs-16"></i>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 text-end">
+            <div className="text-end">
               <button 
-                className={`btn btn-primary shadow-sm px-4 ${isUploading ? 'btn-loading' : ''}`}
+                className={`btn btn-primary shadow-sm px-4 py-1 fw-medium fs-13 rounded-pill ${isUploading ? 'btn-loading' : ''}`}
                 onClick={handleUpload}
                 disabled={isUploading}
               >
-                <i className="ri-upload-cloud-2-line align-bottom me-1"></i> Subir al Servidor
+                <i className="ri-upload-cloud-2-fill align-bottom me-1 fs-15"></i> Iniciar Procesamiento
               </button>
             </div>
           </Col>
