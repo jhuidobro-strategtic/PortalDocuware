@@ -401,7 +401,7 @@ const DocumentEditPage: React.FC = () => {
             suppliernumber: detail.suppliernumber,
             unit_measure_description: detail.unit_measure_description,
             description: detail.description,
-            vehicle_no: detail.vehicle_no,
+            vehicle_nro: detail.vehicle_no || (detail as any).vehicle_nro,
             quantity: detail.quantity,
             unit_value: detail.unit_value,
             tax_value: detail.tax_value,
