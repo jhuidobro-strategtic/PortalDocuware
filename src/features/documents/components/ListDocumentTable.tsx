@@ -105,12 +105,12 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               >
                 {t("Document Type")}
               </ResizableHeader>
-              <ResizableHeader
+              {/* <ResizableHeader
                 width={columnWidths.driver}
                 onResize={(w: number) => onResizeColumn("driver", w)}
               >
                 {t("Buyer")}
-              </ResizableHeader>
+              </ResizableHeader> */}
               <ResizableHeader
                 width={columnWidths.fecha}
                 onResize={(w: number) => onResizeColumn("fecha", w)}
@@ -228,9 +228,9 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       ? getTipoDocumentoNombre(doc.documenttype)
                       : t("Unknown")}
                   </td>
-                  <td style={{ ...style, width: columnWidths.driver }}>
+                  {/* <td style={{ ...style, width: columnWidths.driver }}>
                     {doc.driver}
-                  </td>
+                  </td> */}
                   <td
                     style={{
                       ...style,
