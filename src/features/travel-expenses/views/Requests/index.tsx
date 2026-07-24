@@ -504,17 +504,29 @@ const buildExpenseRequestUpdatePayload = (
   })),
 });
 
-const renderBudgetDetailPreview = (details: ExpenseRequestDetail[]) => {
+const renderBudgetDetailPreview = (
+  details: ExpenseRequestDetail[],
+  t?: (key: string) => string
+) => {
   if (details.length === 0) {
     return <span className="text-muted">-</span>;
   }
 
   return (
-    <div className="d-flex flex-column gap-1">
-      {details.map((detail) => (
-        <div key={detail.expenseDetailId} className="small text-wrap">
-          <span className="fw-semibold">{detail.concept?.label || "-"}</span>
-          <span className="text-muted">: {formatAmount(detail.budgetedAmount)}</span>
+    <div className="d-flex flex-column gap-1 py-1" style={{ minWidth: "220px", maxWidth: "300px" }}>
+      {details.map((detail, idx) => (
+        <div
+          key={detail.expenseDetailId}
+          className={`d-flex justify-content-between align-items-center gap-3 py-1 ${
+            idx < details.length - 1 ? "border-bottom border-light-subtle" : ""
+          }`}
+        >
+          <span className="fw-medium text-dark small text-truncate" title={detail.concept?.label || "-"}>
+            {detail.concept?.label || "-"}
+          </span>
+          <span className="fw-semibold text-primary small text-nowrap">
+            {formatAmount(detail.budgetedAmount)}
+          </span>
         </div>
       ))}
     </div>
@@ -531,6 +543,24 @@ const RequestsPage = () => {
     []
   );
   const [concepts, setConcepts] = useState<ExpenseConceptReference[]>([]);
+  const activeConcepts = useMemo(() => {
+    const map = new Map<number, string>();
+    concepts.forEach((c) => {
+      if (c.id && c.label) {
+        map.set(c.id, c.label);
+      }
+    });
+
+    requests.forEach((req) => {
+      req.details.forEach((d) => {
+        if (d.concept?.id && d.concept?.label && !map.has(d.concept.id)) {
+          map.set(d.concept.id, d.concept.label);
+        }
+      });
+    });
+
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [concepts, requests]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -937,17 +967,25 @@ const RequestsPage = () => {
                     <thead className="table-light">
                       <tr>
                         <th style={{ width: "170px" }}>{t("Request Number")}</th>
-                        <th style={{ minWidth: "280px" }}>{t("Reason")}</th>
+                        <th style={{ minWidth: "220px" }}>{t("Reason")}</th>
                         <th style={{ width: "160px" }}>{t("Requested by")}</th>
-                        <th style={{ width: "150px" }}>{t("Total Budget")}</th>
-                        <th style={{ minWidth: "280px" }}>{t("Budget Detail")}</th>
-                        <th style={{ width: "130px" }}>{t("Actions")}</th>
+                        {activeConcepts.map((concept) => (
+                          <th
+                            key={concept.id}
+                            style={{ minWidth: "120px" }}
+                            className="text-center"
+                          >
+                            {concept.label}
+                          </th>
+                        ))}
+                        <th style={{ width: "150px" }} className="text-end">{t("Total Budget")}</th>
+                        <th style={{ width: "130px" }} className="text-center">{t("Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedRequests.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-4">
+                          <td colSpan={5 + activeConcepts.length} className="text-center py-4">
                             {t("No expense requests were found.")}
                           </td>
                         </tr>
@@ -961,18 +999,32 @@ const RequestsPage = () => {
                               className="text-wrap"
                               style={{ whiteSpace: "normal" }}
                             >
-                                {request.reason || "-"}
-                              </td>
-                              <td>{getRequesterLabel(request)}</td>
-                              <td className="fw-semibold">
-                                {formatAmount(request.totalBudget)}
-                              </td>
-                              <td
-                                className="text-wrap"
-                                style={{ whiteSpace: "normal" }}
-                              >
-                                {renderBudgetDetailPreview(request.details)}
-                              </td>
+                              {request.reason || "-"}
+                            </td>
+                            <td>{getRequesterLabel(request)}</td>
+                            {activeConcepts.map((concept) => {
+                              const matchingDetails = request.details.filter(
+                                (d) => d.concept?.id === concept.id
+                              );
+                              const totalForConcept = matchingDetails.reduce(
+                                (sum, d) => sum + parseFloat(d.budgetedAmount || "0"),
+                                0
+                              );
+                              return (
+                                <td key={concept.id} className="text-center">
+                                  {totalForConcept > 0 ? (
+                                    <span className="fw-semibold text-primary">
+                                      {formatAmount(String(totalForConcept))}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td className="fw-semibold text-end text-success">
+                              {formatAmount(request.totalBudget)}
+                            </td>
                               <td className="text-center">
                                 <TableActionsMenu
                                   items={[
