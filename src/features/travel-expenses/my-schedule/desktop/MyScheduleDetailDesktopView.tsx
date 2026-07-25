@@ -167,8 +167,9 @@ export const MyScheduleDetailDesktopView = ({
                                         <td className="text-end">
                                           <div className="d-inline-flex flex-column align-items-end gap-2">
                                             <Button
-                                              color="light"
+                                              color="primary"
                                               size="sm"
+                                              className="d-inline-flex align-items-center gap-1 px-3 py-1 fw-semibold shadow-sm"
                                               onClick={() =>
                                                 onOpenExpenseVoucher(
                                                   request.idRequest,
@@ -176,7 +177,8 @@ export const MyScheduleDetailDesktopView = ({
                                                 )
                                               }
                                             >
-                                              {t("Register expense")}
+                                              <i className="ri-add-circle-line fs-14" />
+                                              <span>{t("Register expense")}</span>
                                             </Button>
 
                                             {detail.expenseVouchers.map((voucher, voucherIndex) => (
@@ -187,17 +189,20 @@ export const MyScheduleDetailDesktopView = ({
                                                 }
                                                 color="link"
                                                 size="sm"
-                                                className="p-0 text-decoration-none"
+                                                className="p-0 text-decoration-none text-primary d-inline-flex align-items-center gap-1 small mt-1"
                                                 onClick={() =>
                                                   onOpenExpenseVoucherDocument(voucher.photoUrl)
                                                 }
                                               >
-                                                {t("View voucher")}{" "}
-                                                {getVoucherLabel(
-                                                  voucher.seriesNumber,
-                                                  voucher.voucherNumber,
-                                                  voucherIndex
-                                                )}
+                                                <i className="ri-file-text-line" />
+                                                <span>
+                                                  {t("View voucher")}{" "}
+                                                  {getVoucherLabel(
+                                                    voucher.seriesNumber,
+                                                    voucher.voucherNumber,
+                                                    voucherIndex
+                                                  )}
+                                                </span>
                                               </Button>
                                             ))}
                                           </div>
