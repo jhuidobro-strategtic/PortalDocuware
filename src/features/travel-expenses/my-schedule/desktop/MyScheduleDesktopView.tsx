@@ -135,18 +135,8 @@ export const MyScheduleDesktopView = ({
                           return (
                             <tr key={trip.idTrip}>
                               <td>#{trip.idTrip}</td>
-                              <td>
-                                <div className="fw-semibold">
-                                  {trip.tripNumber || "-"}
-                                </div>
-                                {trip.notes ? (
-                                  <div
-                                    className="text-muted small text-wrap"
-                                    style={{ whiteSpace: "normal" }}
-                                  >
-                                    {trip.notes}
-                                  </div>
-                                ) : null}
+                              <td className="fw-semibold">
+                                {trip.tripNumber || "-"}
                               </td>
                               <td>{trip.vehicle?.label || "-"}</td>
                               <td>{trip.driver?.label || "-"}</td>
