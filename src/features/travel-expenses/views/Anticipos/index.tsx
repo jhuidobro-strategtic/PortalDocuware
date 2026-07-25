@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -60,6 +61,7 @@ const mockAnticipos = [
 
 const Anticipos = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>("ANT-2705-8477"); // Default open first one based on image
 
   const toggleAccordion = (id: string) => {
@@ -78,7 +80,11 @@ const Anticipos = () => {
               <p className="text-muted mb-0">Control de anticipos entregados contra solicitudes de gastos</p>
             </div>
             <div>
-              <Button color="primary" className="d-flex align-items-center gap-1 btn-label-icon">
+              <Button
+                color="primary"
+                className="d-flex align-items-center gap-1 btn-label-icon"
+                onClick={() => navigate("/travel-expenses/anticipos/new")}
+              >
                 <i className="ri-add-line fs-5"></i> Nuevo Anticipo
               </Button>
             </div>
