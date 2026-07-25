@@ -437,78 +437,6 @@ const MyScheduleExpenseVoucherPage = () => {
       </div>
 
       <div className="my-schedule-app__expense-modal-field">
-        <Label className="form-label">{t("Expense Concept")}</Label>
-        <Input type="text" value={selectedDetail.conceptLabel} readOnly />
-      </div>
-
-      <div className="my-schedule-app__expense-modal-field">
-        <Label className="form-label">{t("Document Type")}</Label>
-        <Input
-          type="select"
-          value={formValues.documentType}
-          onChange={(event) => handleValueChange("documentType", event.target.value)}
-          invalid={Boolean(formErrors.documentType)}
-        >
-          <option value="1">{t("Type 1")}</option>
-          <option value="2">{t("Type 2")}</option>
-        </Input>
-        <FormFeedback>{formErrors.documentType}</FormFeedback>
-      </div>
-
-      <div className="my-schedule-app__expense-modal-field">
-        <Label className="form-label">{t("RUC")}</Label>
-        <Input
-          type="text"
-          inputMode="numeric"
-          maxLength={11}
-          value={formValues.supplierRuc}
-          onChange={(event) => handleValueChange("supplierRuc", event.target.value)}
-          placeholder={t("Enter RUC")}
-          invalid={Boolean(formErrors.supplierRuc)}
-        />
-        <FormFeedback>{formErrors.supplierRuc}</FormFeedback>
-      </div>
-
-      <div className="my-schedule-app__expense-modal-grid">
-        <div className="my-schedule-app__expense-modal-field">
-          <Label className="form-label">{t("Series")}</Label>
-          <Input
-            type="text"
-            value={formValues.seriesNumber}
-            onChange={(event) => handleValueChange("seriesNumber", event.target.value)}
-            placeholder={t("Series")}
-            invalid={Boolean(formErrors.seriesNumber)}
-          />
-          <FormFeedback>{formErrors.seriesNumber}</FormFeedback>
-        </div>
-
-        <div className="my-schedule-app__expense-modal-field">
-          <Label className="form-label">{t("Number")}</Label>
-          <Input
-            type="text"
-            value={formValues.voucherNumber}
-            onChange={(event) => handleValueChange("voucherNumber", event.target.value)}
-            placeholder={t("Number")}
-            invalid={Boolean(formErrors.voucherNumber)}
-          />
-          <FormFeedback>{formErrors.voucherNumber}</FormFeedback>
-        </div>
-      </div>
-
-      <div className="my-schedule-app__expense-modal-field">
-        <Label className="form-label">{t("Amount")}</Label>
-        <Input
-          type="text"
-          inputMode="decimal"
-          value={formValues.amount}
-          onChange={(event) => handleValueChange("amount", event.target.value)}
-          placeholder={t("Amount")}
-          invalid={Boolean(formErrors.amount)}
-        />
-        <FormFeedback>{formErrors.amount}</FormFeedback>
-      </div>
-
-      <div className="my-schedule-app__expense-modal-field">
         <Label className="form-label d-block">{t("Photo Evidence")}</Label>
         <input
           ref={cameraInputRef}
@@ -643,6 +571,78 @@ const MyScheduleExpenseVoucherPage = () => {
           "If the voucher QR is readable, RUC, Series, Number and Amount will be auto-filled."
         )}
       </p>
+
+      <div className="my-schedule-app__expense-modal-field">
+        <Label className="form-label">{t("Expense Concept")}</Label>
+        <Input type="text" value={selectedDetail.conceptLabel} readOnly />
+      </div>
+
+      <div className="my-schedule-app__expense-modal-field">
+        <Label className="form-label">{t("Document Type")}</Label>
+        <Input
+          type="select"
+          value={formValues.documentType}
+          onChange={(event) => handleValueChange("documentType", event.target.value)}
+          invalid={Boolean(formErrors.documentType)}
+        >
+          <option value="1">{t("Type 1")}</option>
+          <option value="2">{t("Type 2")}</option>
+        </Input>
+        <FormFeedback>{formErrors.documentType}</FormFeedback>
+      </div>
+
+      <div className="my-schedule-app__expense-modal-field">
+        <Label className="form-label">{t("RUC")}</Label>
+        <Input
+          type="text"
+          inputMode="numeric"
+          maxLength={11}
+          value={formValues.supplierRuc}
+          onChange={(event) => handleValueChange("supplierRuc", event.target.value)}
+          placeholder={t("Enter RUC")}
+          invalid={Boolean(formErrors.supplierRuc)}
+        />
+        <FormFeedback>{formErrors.supplierRuc}</FormFeedback>
+      </div>
+
+      <div className="my-schedule-app__expense-modal-grid">
+        <div className="my-schedule-app__expense-modal-field">
+          <Label className="form-label">{t("Series")}</Label>
+          <Input
+            type="text"
+            value={formValues.seriesNumber}
+            onChange={(event) => handleValueChange("seriesNumber", event.target.value)}
+            placeholder={t("Series")}
+            invalid={Boolean(formErrors.seriesNumber)}
+          />
+          <FormFeedback>{formErrors.seriesNumber}</FormFeedback>
+        </div>
+
+        <div className="my-schedule-app__expense-modal-field">
+          <Label className="form-label">{t("Number")}</Label>
+          <Input
+            type="text"
+            value={formValues.voucherNumber}
+            onChange={(event) => handleValueChange("voucherNumber", event.target.value)}
+            placeholder={t("Number")}
+            invalid={Boolean(formErrors.voucherNumber)}
+          />
+          <FormFeedback>{formErrors.voucherNumber}</FormFeedback>
+        </div>
+      </div>
+
+      <div className="my-schedule-app__expense-modal-field">
+        <Label className="form-label">{t("Amount")}</Label>
+        <Input
+          type="text"
+          inputMode="decimal"
+          value={formValues.amount}
+          onChange={(event) => handleValueChange("amount", event.target.value)}
+          placeholder={t("Amount")}
+          invalid={Boolean(formErrors.amount)}
+        />
+        <FormFeedback>{formErrors.amount}</FormFeedback>
+      </div>
 
       <div className="d-flex justify-content-end gap-2 pt-2">
         <Button color="light" onClick={handleBack} disabled={controller.submittingVoucher}>
