@@ -554,7 +554,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
     "Travel Expenses": "Gastos de Viaje",
     "Trips": "Viajes",
     "Requests": "Solicitudes",
-    "My Schedule": "Mi Programación",
+    "My Schedule": "Rendición de Gastos",
     "Reports": "Reportes",
     "All trips available for admin profiles.": "Todos los viajes disponibles para perfiles administradores.",
     "Trips assigned to the signed-in driver.": "Viajes asignados al conductor autenticado.",
