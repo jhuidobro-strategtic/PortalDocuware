@@ -137,6 +137,7 @@ export const parseExpenseVoucherQr = (
   return {
     rawValue: payload,
     supplierRuc,
+    supplierName: "",
     sunatDocumentType,
     seriesNumber,
     voucherNumber,
@@ -171,6 +172,7 @@ const buildParsedExpenseVoucherData = (
   return {
     rawValue,
     supplierRuc,
+    supplierName: candidate.supplierName || "",
     sunatDocumentType,
     seriesNumber,
     voucherNumber,
@@ -303,8 +305,13 @@ const extractVoucherDataFromText = (rawText: string, fileName = "") => {
     fileNameCandidate.sunatDocumentType ||
     "";
 
+  const supplierName = extractFirstMatch(normalizedText, [
+    /\b(?:RAZ[OÓ]N\s+SOCIAL|NOMBRE\s+O\s+RAZ[OÓ]N\s+SOCIAL|PROVEEDOR)[:\s-]*([A-Z0-9\s.,&-]{3,60})/i,
+  ]);
+
   return buildParsedExpenseVoucherData({
     supplierRuc,
+    supplierName,
     sunatDocumentType,
     seriesNumber,
     voucherNumber,

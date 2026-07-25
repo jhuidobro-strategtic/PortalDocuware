@@ -290,6 +290,7 @@ export const createExpenseVoucher = async (
       expense_detail_id: voucher.expenseDetailId,
       document_type: voucher.documentType,
       supplier_ruc: voucher.supplierRuc.trim(),
+      supplier_name: voucher.supplierName ? voucher.supplierName.trim() : "",
       series_number: voucher.seriesNumber.trim(),
       voucher_number: voucher.voucherNumber.trim(),
       amount: voucher.amount.trim(),

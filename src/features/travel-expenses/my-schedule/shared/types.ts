@@ -85,6 +85,7 @@ export interface CreateExpenseVoucherInput {
   expenseDetailId: number;
   documentType: number;
   supplierRuc: string;
+  supplierName?: string;
   seriesNumber: string;
   voucherNumber: string;
   amount: string;
@@ -101,6 +102,7 @@ export interface CreateExpenseVoucherResult {
 export interface ParsedExpenseVoucherQr {
   rawValue: string;
   supplierRuc: string;
+  supplierName?: string;
   sunatDocumentType: string;
   seriesNumber: string;
   voucherNumber: string;

@@ -21,6 +21,7 @@ import { useMyScheduleDetailController } from "../hooks/useMyScheduleDetailContr
 import { formatAmount } from "../shared/formatters";
 import { CreateExpenseVoucherInput, FeedbackState } from "../shared/types";
 import { scanExpenseVoucherQr } from "../utils/expenseVoucherQr";
+import { fetchRazonSocialByRuc } from "../services/rucLookup.service";
 import "../styles/myScheduleApp.scss";
 
 interface ExpenseVoucherFormValues {
@@ -29,6 +30,7 @@ interface ExpenseVoucherFormValues {
   photoUrl: string;
   seriesNumber: string;
   supplierRuc: string;
+  supplierName: string;
   voucherNumber: string;
 }
 
@@ -49,6 +51,7 @@ const createInitialExpenseVoucherValues = (
   photoUrl: "",
   seriesNumber: "",
   supplierRuc: "",
+  supplierName: "",
   voucherNumber: "",
 });
 
@@ -98,9 +101,46 @@ const MyScheduleExpenseVoucherPage = () => {
   const [isScanningQr, setIsScanningQr] = useState(false);
   const [qrScanState, setQrScanState] = useState<VoucherQrScanState | null>(null);
   const [isEvidencePickerOpen, setIsEvidencePickerOpen] = useState(false);
+  const [loadingRucInfo, setLoadingRucInfo] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const cleanRuc = formValues.supplierRuc.trim().replace(/\D/g, "");
+
+    if (cleanRuc.length !== 11) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    let isMounted = true;
+
+    setLoadingRucInfo(true);
+    fetchRazonSocialByRuc(cleanRuc, abortController.signal)
+      .then((razonSocial) => {
+        if (isMounted && razonSocial) {
+          setFormValues((current) => ({
+            ...current,
+            supplierName: razonSocial,
+          }));
+          setFormErrors((current) => ({
+            ...current,
+            supplierName: undefined,
+          }));
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingRucInfo(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [formValues.supplierRuc]);
 
   const selectedRequest = useMemo(() => {
     if (!controller.trip || parsedRequestId === null) {
@@ -268,6 +308,7 @@ const MyScheduleExpenseVoucherPage = () => {
       setFormValues((currentValues) => ({
         ...currentValues,
         supplierRuc: parsedQr.supplierRuc || currentValues.supplierRuc,
+        supplierName: parsedQr.supplierName || currentValues.supplierName,
         seriesNumber: parsedQr.seriesNumber || currentValues.seriesNumber,
         voucherNumber: parsedQr.voucherNumber || currentValues.voucherNumber,
         amount: parsedQr.amount || currentValues.amount,
@@ -275,6 +316,7 @@ const MyScheduleExpenseVoucherPage = () => {
       setFormErrors((currentErrors) => ({
         ...currentErrors,
         supplierRuc: undefined,
+        supplierName: undefined,
         seriesNumber: undefined,
         voucherNumber: undefined,
         amount: undefined,
@@ -386,6 +428,7 @@ const MyScheduleExpenseVoucherPage = () => {
       expenseDetailId: selectedDetail.expenseDetailId,
       documentType: Number(formValues.documentType),
       supplierRuc: formValues.supplierRuc.trim(),
+      supplierName: formValues.supplierName.trim(),
       seriesNumber: formValues.seriesNumber.trim(),
       voucherNumber: formValues.voucherNumber.trim(),
       amount: formValues.amount.trim(),
@@ -603,6 +646,26 @@ const MyScheduleExpenseVoucherPage = () => {
           invalid={Boolean(formErrors.supplierRuc)}
         />
         <FormFeedback>{formErrors.supplierRuc}</FormFeedback>
+      </div>
+
+      <div className="my-schedule-app__expense-modal-field">
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <Label className="form-label mb-0">{t("Razón Social")}</Label>
+          {loadingRucInfo ? (
+            <span className="text-primary small d-flex align-items-center gap-1">
+              <Spinner size="sm" />
+              <span>{t("Buscando Razón Social...")}</span>
+            </span>
+          ) : null}
+        </div>
+        <Input
+          type="text"
+          value={formValues.supplierName}
+          onChange={(event) => handleValueChange("supplierName", event.target.value)}
+          placeholder={t("Ingrese la Razón Social del proveedor")}
+          invalid={Boolean(formErrors.supplierName)}
+        />
+        <FormFeedback>{formErrors.supplierName}</FormFeedback>
       </div>
 
       <div className="my-schedule-app__expense-modal-grid">
