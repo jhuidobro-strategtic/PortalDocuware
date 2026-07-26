@@ -1,6 +1,34 @@
 import { buildApiUrl } from "../../../../../helpers/api-url";
 import { getAuthHeaders, getCurrentSessionUser } from "../../../my-schedule/shared/session";
 
+export interface ExpenseDetailItem {
+  expense_detail_id: number;
+  id_request: number;
+  id_concept: number;
+  concept?: {
+    id_concept: number;
+    nombre_concepto: string;
+  };
+  budgeted_amount: string;
+  notes?: string;
+}
+
+export interface ExpenseRequestData {
+  id_request: number;
+  request_number: string;
+  requester_name?: string | number;
+  reason?: string;
+  total_budget?: string;
+  status?: number;
+  status_data?: {
+    id: number;
+    tipo_catalogo?: string;
+    codigo?: string;
+    descripcion: string;
+  };
+  details?: ExpenseDetailItem[];
+}
+
 export interface ExpenseAdvanceItem {
   id?: number;
   expense_advance_id?: number;
@@ -44,6 +72,7 @@ export interface ExpenseAdvanceItem {
     descripcion?: string;
     codigo?: string;
   };
+  expense_request?: ExpenseRequestData;
   created_by?: number;
   created_at?: string;
   updated_at?: string;

@@ -220,10 +220,13 @@ const Anticipos = () => {
                         onClick={() => toggleAccordion(itemId)}
                       >
                         <div>
-                          <div className="d-flex align-items-center mb-2">
-                            <h5 className="mb-0 me-3 fw-bold">{item.anticipo_number || `ANT-${itemId}`}</h5>
+                          <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
+                            <h5 className="mb-0 me-2 fw-bold">{item.anticipo_number || `ANT-${itemId}`}</h5>
                             {getStatusBadge(item)}
-                            <span className="text-muted small fw-medium">{item.request_number || `-`}</span>
+                            <span className="text-muted small fw-medium">
+                              {item.request_number || item.expense_request?.request_number || `-`}
+                              {item.expense_request?.reason ? ` · ${item.expense_request.reason}` : ""}
+                            </span>
                           </div>
                           <div className="text-muted small">
                             <span className="fw-medium text-dark">{item.requester_name || "-"}</span>
@@ -291,8 +294,24 @@ const Anticipos = () => {
                           </Col>
                         </Row>
 
+                        {item.expense_request?.details && item.expense_request.details.length > 0 ? (
+                          <div className="mb-3 p-3 bg-light rounded border border-light">
+                            <div className="text-muted small fw-semibold mb-2">
+                              <i className="ri-pie-chart-line me-1 text-primary"></i> Desglose de Presupuesto por Concepto:
+                            </div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {item.expense_request.details.map((detail) => (
+                                <Badge key={detail.expense_detail_id} color="white" className="border text-dark px-3 py-2 fw-normal shadow-sm">
+                                  <span className="fw-semibold text-primary me-1">{detail.concept?.nombre_concepto || "CONCEPTO"}:</span>{" "}
+                                  <span className="fw-bold">{item.currency || "S/"} {formatAmount(detail.budgeted_amount)}</span>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
                         {item.notes ? (
-                          <div className="fst-italic text-muted small mb-3 mt-1 bg-light p-2 rounded">
+                          <div className="fst-italic text-muted small mb-3 bg-light p-2 rounded">
                             "{item.notes}"
                           </div>
                         ) : null}

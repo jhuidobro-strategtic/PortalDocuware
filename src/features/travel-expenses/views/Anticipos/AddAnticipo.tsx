@@ -255,8 +255,8 @@ const AddAnticipo = () => {
 
   const costCenterSelectOptions = useMemo<SelectOption[]>(
     () =>
-      costCenterCatalog.map((cc) => ({
-        value: cc.descripcion,
+      costCenterCatalog.map((cc: any) => ({
+        value: String(cc.centroid || cc.id || cc.descripcion),
         label: cc.centrocodigo ? `${cc.centrocodigo} - ${cc.descripcion}` : cc.descripcion,
       })),
     [costCenterCatalog]
@@ -354,7 +354,7 @@ const AddAnticipo = () => {
       requester_name: formValues.requester_name.trim() || "Conductor Beneficiario",
       requester_dni: formValues.requester_dni.trim() || "-",
       requester_email: formValues.requester_email.trim() || "-",
-      cost_center: null,
+      cost_center: formValues.cost_center ? (!isNaN(Number(formValues.cost_center)) ? Number(formValues.cost_center) : formValues.cost_center) : null,
       amount: String(formValues.amount).trim(),
       currency: formValues.currency,
       delivery_date: formValues.delivery_date,
