@@ -22,7 +22,11 @@ import {
 import BreadCrumb from "../../../../components/common/BreadCrumb";
 import { buildApiUrl } from "../../../../helpers/api-url";
 import { getAuthHeaders, getCurrentSessionUser } from "../../my-schedule/shared/session";
-import { createExpenseAdvance } from "./services/expenseAdvances.service";
+import {
+  createExpenseAdvance,
+  getExpenseAdvanceById,
+  updateExpenseAdvance,
+} from "./services/expenseAdvances.service";
 
 interface ExpenseRequestOption {
   id_request: number;
@@ -34,6 +38,7 @@ interface ExpenseRequestOption {
     id?: number;
   };
   requester_name?: any;
+  details?: any[];
   trip?: {
     driver?: {
       fullName?: string;
@@ -99,7 +104,8 @@ const getTodayDateString = () => {
 const AddAnticipo = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { requestId } = useParams<{ requestId?: string }>();
+  const { id, requestId } = useParams<{ id?: string; requestId?: string }>();
+  const isEditMode = Boolean(id);
 
   const [requestsOptions, setRequestsOptions] = useState<ExpenseRequestOption[]>([]);
   const [bankCatalog, setBankCatalog] = useState<CatalogOption[]>([]);
@@ -165,7 +171,7 @@ const AddAnticipo = () => {
             const bankData = await bankRes.json();
             const list = Array.isArray(bankData?.data) ? bankData.data : [];
             setBankCatalog(list);
-            if (list.length > 0) {
+            if (list.length > 0 && !isEditMode) {
               setFormValues((prev) => ({ ...prev, bank: String(list[0].id) }));
             }
           }
@@ -173,7 +179,7 @@ const AddAnticipo = () => {
             const accData = await accountTypeRes.json();
             const list = Array.isArray(accData?.data) ? accData.data : [];
             setAccountTypeCatalog(list);
-            if (list.length > 0) {
+            if (list.length > 0 && !isEditMode) {
               setFormValues((prev) => ({ ...prev, account_type: String(list[0].id) }));
             }
           }
@@ -181,7 +187,7 @@ const AddAnticipo = () => {
             const pmData = await paymentMethodRes.json();
             const list = Array.isArray(pmData?.data) ? pmData.data : [];
             setPaymentMethodCatalog(list);
-            if (list.length > 0) {
+            if (list.length > 0 && !isEditMode) {
               setFormValues((prev) => ({ ...prev, payment_method: String(list[0].id) }));
             }
           }
@@ -189,7 +195,7 @@ const AddAnticipo = () => {
             const ccData = await costCenterRes.json();
             const list = Array.isArray(ccData) ? ccData : Array.isArray(ccData?.data) ? ccData.data : [];
             setCostCenterCatalog(list);
-            if (list.length > 0) {
+            if (list.length > 0 && !isEditMode) {
               setFormValues((prev) => ({ ...prev, cost_center: list[0].descripcion || String(list[0].centroid) }));
             }
           }
@@ -213,7 +219,43 @@ const AddAnticipo = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (id) {
+      const fetchEditAnticipo = async () => {
+        try {
+          const item = await getExpenseAdvanceById(Number(id));
+          if (item) {
+            setFormValues({
+              id_request: String(item.id_request || item.expense_request?.id_request || ""),
+              request_number: item.request_number || item.expense_request?.request_number || "",
+              anticipo_number: item.anticipo_number || generateAnticipoNumber(),
+              requester_name: item.requester_name || "",
+              requester_dni: item.requester_dni || "",
+              requester_email: item.requester_email || "",
+              cost_center: String(item.cost_center || item.cost_center_data?.descripcion || ""),
+              amount: item.amount ? String(parseFloat(item.amount)) : "",
+              currency: item.currency || "PEN",
+              delivery_date: item.delivery_date || getTodayDateString(),
+              payment_method: String(item.payment_method || item.payment_method_data?.id || ""),
+              bank: String(item.bank || item.bank_data?.id || ""),
+              account_type: String(item.account_type || item.account_type_data?.id || ""),
+              account_number: item.account_number || "",
+              cci: item.cci || "",
+              operation_number: item.operation_number || "",
+              approved_by: item.approved_by || "",
+              notes: item.notes || "",
+              status: String(item.status || item.status_data?.id || "11"),
+            });
+          }
+        } catch (fetchErr: any) {
+          setSubmitError(fetchErr?.message || "Error al cargar los datos del anticipo.");
+        }
+      };
+      fetchEditAnticipo();
+    }
+  }, [id]);
 
   const requestSelectOptions = useMemo<SelectOption[]>(
     () =>
@@ -288,7 +330,7 @@ const AddAnticipo = () => {
         ...prev,
         id_request: String(selected.id_request),
         request_number: selected.request_number || `SG-${selected.id_request}`,
-        amount: selected.total_budget ? String(parseFloat(selected.total_budget)) : prev.amount,
+        amount: selected.total_budget && !prev.amount ? String(parseFloat(selected.total_budget)) : prev.amount,
         requester_name: driverName || prev.requester_name,
       }));
     } else {
@@ -305,10 +347,10 @@ const AddAnticipo = () => {
   };
 
   useEffect(() => {
-    if (requestId && requestsOptions.length > 0) {
+    if (requestId && requestsOptions.length > 0 && !isEditMode) {
       handleRequestSelect(requestId, requestsOptions);
     }
-  }, [requestId, requestsOptions]);
+  }, [requestId, requestsOptions, isEditMode]);
 
   const handleValueChange = (field: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -366,16 +408,20 @@ const AddAnticipo = () => {
       operation_number: formValues.operation_number.trim() || "-",
       approved_by: formValues.approved_by.trim() || "Jefatura",
       notes: formValues.notes.trim() || "Sin observaciones",
-      status: Number(validStatusId),
+      status: formValues.status ? Number(formValues.status) : Number(validStatusId),
       created_by: sessionUser.id || 1,
     };
 
     setSubmitting(true);
     try {
-      await createExpenseAdvance(payload);
+      if (isEditMode && id) {
+        await updateExpenseAdvance(Number(id), payload);
+      } else {
+        await createExpenseAdvance(payload);
+      }
       navigate("/travel-expenses/anticipos");
     } catch (err: any) {
-      setSubmitError(err?.message || "Error al registrar el anticipo. Intente nuevamente.");
+      setSubmitError(err?.message || "Error al procesar el anticipo. Intente nuevamente.");
     } finally {
       setSubmitting(false);
     }
@@ -384,27 +430,29 @@ const AddAnticipo = () => {
   return (
     <div className="page-content">
       <Container fluid>
-        <BreadCrumb title={t("Nuevo Anticipo")} pageTitle={t("Anticipos")} />
+        <BreadCrumb title={t(isEditMode ? "Editar Anticipo" : "Nuevo Anticipo")} pageTitle={t("Anticipos")} />
 
         <Form onSubmit={handleSubmit}>
           <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
             <div>
-              <h2 className="mb-1 fw-bold text-dark">Generar Anticipo</h2>
-              <p className="text-muted mb-0">Completa la información para registrar el pago del viático</p>
+              <h2 className="mb-1 fw-bold text-dark">{isEditMode ? "Editar Anticipo" : "Generar Anticipo"}</h2>
+              <p className="text-muted mb-0">
+                {isEditMode ? "Actualiza la información del anticipo registrado" : "Completa la información para registrar el pago del viático"}
+              </p>
             </div>
             <div className="d-flex gap-2">
               <Button color="light" outline className="px-4" type="button" onClick={() => navigate(-1)} disabled={submitting}>
                 Cancelar
               </Button>
               <Button color="primary" type="submit" className="px-4 shadow-sm fw-medium d-flex align-items-center gap-1" disabled={submitting}>
-                {submitting ? <Spinner size="sm" /> : <i className="ri-save-line fs-5"></i>}
-                <span>Registrar Anticipo</span>
+                {submitting ? <Spinner size="sm" /> : <i className={isEditMode ? "ri-refresh-line fs-5" : "ri-save-line fs-5"}></i>}
+                <span>{isEditMode ? "Actualizar Anticipo" : "Registrar Anticipo"}</span>
               </Button>
             </div>
           </div>
 
           {submitError ? (
-            <Alert color="danger" className="mb-4">
+            <Alert color="danger" fade={false} className="mb-4">
               {submitError}
             </Alert>
           ) : null}
@@ -446,6 +494,28 @@ const AddAnticipo = () => {
                         {formErrors.id_request && (
                           <div className="text-danger small mt-1">{formErrors.id_request}</div>
                         )}
+
+                        {(() => {
+                          const selectedReq = requestsOptions.find((r) => r.id_request === Number(formValues.id_request));
+                          if (selectedReq?.details && selectedReq.details.length > 0) {
+                            return (
+                              <div className="mt-3 p-3 bg-light rounded border">
+                                <div className="text-muted small fw-semibold mb-2">
+                                  <i className="ri-pie-chart-line me-1 text-primary"></i> Desglose de Presupuesto por Concepto:
+                                </div>
+                                <div className="d-flex flex-wrap gap-2">
+                                  {selectedReq.details.map((detail: any, idx: number) => (
+                                    <span key={detail.expense_detail_id || idx} className="badge bg-white text-dark border px-3 py-2 fw-normal shadow-sm">
+                                      <strong className="text-primary me-1">{detail.concept?.nombre_concepto || "CONCEPTO"}:</strong>{" "}
+                                      <strong>S/ {parseFloat(detail.budgeted_amount || "0").toFixed(2)}</strong>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </FormGroup>
                     </Col>
 

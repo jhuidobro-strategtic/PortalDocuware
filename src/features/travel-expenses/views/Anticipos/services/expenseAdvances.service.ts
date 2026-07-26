@@ -79,6 +79,8 @@ export interface ExpenseAdvanceItem {
 }
 
 export interface CreateExpenseAdvancePayload {
+  id?: number;
+  expense_advance_id?: number;
   id_request: number;
   request_number: string;
   anticipo_number: string;
@@ -98,7 +100,8 @@ export interface CreateExpenseAdvancePayload {
   approved_by: string;
   notes: string;
   status: number;
-  created_by: number;
+  created_by?: number;
+  updated_by?: number;
 }
 
 export interface ExpenseAdvanceResponse {
@@ -181,6 +184,45 @@ export const createExpenseAdvance = async (
       responseData?.message
         ? `${responseData.message}${errorDetails ? ` (${errorDetails})` : ""}`
         : "Error al registrar el anticipo."
+    );
+  }
+
+  return responseData?.data || responseData;
+};
+
+export const updateExpenseAdvance = async (
+  id: number,
+  payload: CreateExpenseAdvancePayload,
+  signal?: AbortSignal
+): Promise<ExpenseAdvanceItem> => {
+  const sessionUser = getCurrentSessionUser();
+  const finalPayload = {
+    ...payload,
+    expense_advance_id: id,
+    id: id,
+    updated_by: sessionUser.id || 1,
+  };
+
+  const response = await fetch(buildApiUrl("expense-advances/"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    signal,
+    body: JSON.stringify(finalPayload),
+  });
+
+  const responseData = await response.json().catch(() => null);
+
+  if (!response.ok || responseData?.success === false) {
+    const errorDetails = responseData?.data
+      ? Object.entries(responseData.data)
+          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
+          .join(" | ")
+      : "";
+
+    throw new Error(
+      responseData?.message
+        ? `${responseData.message}${errorDetails ? ` (${errorDetails})` : ""}`
+        : `Error al actualizar el anticipo #${id}.`
     );
   }
 

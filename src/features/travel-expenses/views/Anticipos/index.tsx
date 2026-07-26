@@ -242,7 +242,19 @@ const Anticipos = () => {
                             </h4>
                             <div className="text-muted small">{item.delivery_date || "-"}</div>
                           </div>
-                          <div className="ms-2">
+                          <Button
+                            color="light"
+                            size="sm"
+                            className="btn-icon text-primary me-2 shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/travel-expenses/anticipos/${itemId}/edit`);
+                            }}
+                            title="Editar Anticipo"
+                          >
+                            <i className="ri-pencil-line fs-5"></i>
+                          </Button>
+                          <div className="ms-1">
                             <i className={`ri-arrow-${isExpanded ? "up" : "down"}-s-line fs-2 text-muted`}></i>
                           </div>
                         </div>

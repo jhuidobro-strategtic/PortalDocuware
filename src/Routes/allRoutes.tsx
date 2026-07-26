@@ -44,6 +44,7 @@ const authProtectedRoutes = [
   { path: "/travel-expenses/requests/:requestId/add-anticipo", component: <TravelAddAnticipo /> },
   { path: "/travel-expenses/anticipos", component: <TravelAnticipos /> },
   { path: "/travel-expenses/anticipos/new", component: <TravelAddAnticipo /> },
+  { path: "/travel-expenses/anticipos/:id/edit", component: <TravelAddAnticipo /> },
   { path: "/travel-expenses/my-schedule", component: <TravelMySchedule /> },
   { path: "/travel-expenses/my-schedule/:tripId", component: <TravelMyScheduleDetail /> },
   {
