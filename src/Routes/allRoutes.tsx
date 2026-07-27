@@ -22,7 +22,7 @@ const TravelMyScheduleDetail = lazy(() => import("../features/travel-expenses/vi
 const TravelMyScheduleVoucher = lazy(
   () => import("../features/travel-expenses/views/MyScheduleVoucher")
 );
-const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports"));
+const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports/RendicionReport"));
 const Folders = lazy(() => import("../features/folders/views"));
 const Users = lazy(() => import("../features/users/views"));
 
@@ -52,6 +52,7 @@ const authProtectedRoutes = [
     component: <TravelMyScheduleVoucher />,
   },
   { path: "/travel-expenses/reports", component: <TravelReports /> },
+  { path: "/reports/rendiciones", component: <TravelReports /> },
   { path: "/procesamiento-archivos", component: <Folders /> },
   { path: "/users", component: <Users /> },
   { path: "/profile", component: <UserProfile /> },

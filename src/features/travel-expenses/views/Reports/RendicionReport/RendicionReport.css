@@ -1,0 +1,81 @@
+/* ====== REPORTE DE RENDICIONES STYLES ====== */
+
+.rendicion-card {
+  border: 1px solid rgba(64, 81, 137, 0.12);
+  border-radius: 12px;
+  background: #ffffff;
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.rendicion-card:hover {
+  border-color: rgba(64, 81, 137, 0.3);
+  box-shadow: 0 4px 18px rgba(64, 81, 137, 0.08);
+}
+
+.rendicion-card.expanded {
+  border-color: #405189;
+  box-shadow: 0 6px 22px rgba(64, 81, 137, 0.12);
+}
+
+.rendicion-header {
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.rendicion-header:hover {
+  background: #f3f6f9;
+}
+
+.rendicion-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid #405189;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #405189;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.rendicion-card.expanded .rendicion-toggle-btn {
+  background: #405189;
+  color: #ffffff;
+}
+
+.rendicion-toggle-btn:hover {
+  background: #405189;
+  color: #ffffff;
+}
+
+.kpi-summary-badge {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.voucher-thumbnail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #405189;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.voucher-thumbnail-link:hover {
+  color: #0ab39c;
+  text-decoration: underline;
+}

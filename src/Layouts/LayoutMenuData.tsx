@@ -88,8 +88,8 @@ const Navdata = (t: (key: string) => string) => [
             },
             {
                 id: "travel-expenses-reports",
-                label: t("Reports"),
-                link: "/travel-expenses/reports",
+                label: t("Reporte de Rendiciones"),
+                link: "/reports/rendiciones",
             },
         ],
     },
