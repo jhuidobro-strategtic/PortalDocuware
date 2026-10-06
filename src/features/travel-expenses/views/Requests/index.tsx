@@ -325,23 +325,26 @@ const formatDateTime = (value: string) => {
   return parsedDate.isValid() ? parsedDate.format("DD/MM/YYYY HH:mm") : "-";
 };
 
-const formatAmount = (value: string) => {
+const formatAmount = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
   const parsedValue = Number(value);
 
   if (!Number.isFinite(parsedValue)) {
-    return value || "-";
+    return String(value) || "-";
   }
 
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
+  return new Intl.NumberFormat("es-PE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(parsedValue);
 };
 
 const formatBudgetAmount = (value: number) =>
-  new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
+  new Intl.NumberFormat("es-PE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 
 const normalizeBudgetInputValue = (value: string) => {
@@ -973,7 +976,7 @@ const RequestsPage = () => {
                           <th
                             key={concept.id}
                             style={{ minWidth: "120px" }}
-                            className="text-center"
+                            className="text-end"
                           >
                             {concept.label}
                           </th>
@@ -1011,10 +1014,10 @@ const RequestsPage = () => {
                                 0
                               );
                               return (
-                                <td key={concept.id} className="text-center">
+                                <td key={concept.id} className="text-end">
                                   {totalForConcept > 0 ? (
                                     <span className="fw-semibold text-primary">
-                                      {formatAmount(String(totalForConcept))}
+                                      {formatAmount(totalForConcept)}
                                     </span>
                                   ) : (
                                     <span className="text-muted">-</span>

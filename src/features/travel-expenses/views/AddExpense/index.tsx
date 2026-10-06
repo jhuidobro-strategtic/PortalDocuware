@@ -1495,11 +1495,6 @@ const AddExpensePage = () => {
                                 </option>
                               ))}
                             </Input>
-                            {matchingRule && (
-                              <small className="text-primary font-size-11 d-block mt-1">
-                                Regla: S/. {parseFloat(matchingRule.unit_amount || "0").toFixed(2)} ({matchingRule.calculation_type})
-                              </small>
-                            )}
                           </td>
 
                           {/* Cantidad */}
