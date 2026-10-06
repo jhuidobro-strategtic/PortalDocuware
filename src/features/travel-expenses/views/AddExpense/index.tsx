@@ -1263,7 +1263,7 @@ const AddExpensePage = () => {
                         {autoGenerating ? (
                           <Spinner size="sm" className="me-1 text-white" />
                         ) : (
-                          <i className="ri-magic-line fs-5" />
+                          <i className="ri-calculator-line fs-5" />
                         )}
                         <span>{t("Autogenerar gastos con reglas")}</span>
                       </Button>
@@ -1615,25 +1615,8 @@ const AddExpensePage = () => {
               </div>
 
               {/* Form Action Buttons */}
-              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-4">
+              <div className="d-flex justify-content-end gap-2 mt-4">
                 <Button
-                  color="warning"
-                  type="button"
-                  outline
-                  onClick={handleAutoGenerate}
-                  disabled={autoGenerating || creatingExpenseRequest}
-                  className="d-inline-flex align-items-center gap-1"
-                >
-                  {autoGenerating ? (
-                    <Spinner size="sm" className="me-1" />
-                  ) : (
-                    <i className="ri-magic-line" />
-                  )}
-                  <span>{t("Autogenerar gastos con reglas")}</span>
-                </Button>
-
-                <div className="d-flex gap-2">
-                  <Button
                     color="light"
                     type="button"
                     onClick={() => navigate("/travel-expenses/trips")}
@@ -1654,7 +1637,6 @@ const AddExpensePage = () => {
                     <span>{t("Guardar solicitud / Ajustes")}</span>
                   </Button>
                 </div>
-              </div>
             </Form>
           </CardBody>
         </Card>
