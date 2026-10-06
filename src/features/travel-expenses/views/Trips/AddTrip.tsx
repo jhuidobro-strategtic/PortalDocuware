@@ -576,61 +576,63 @@ const AddTrip = () => {
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               {/* Left Group */}
               <div className="d-flex flex-wrap align-items-center gap-2">
-                <div className="d-flex align-items-center gap-1">
-                  <span className="text-muted small">Agregar filas</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={rowsToAdd}
-                    onChange={(e) =>
-                      setRowsToAdd(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                    style={{
-                      width: "60px",
-                      height: "36px",
-                      textAlign: "center",
-                      fontSize: "13px",
-                    }}
-                  />
-                </div>
+                {!isEditMode ? (
+                  <>
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="text-muted small">Agregar filas</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={rowsToAdd}
+                        onChange={(e) =>
+                          setRowsToAdd(Math.max(1, parseInt(e.target.value) || 1))
+                        }
+                        style={{
+                          width: "60px",
+                          height: "36px",
+                          textAlign: "center",
+                          fontSize: "13px",
+                        }}
+                      />
+                    </div>
 
-                <Button
-                  color="light"
-                  className="border bg-white"
-                  style={{ height: "36px", fontSize: "13px" }}
-                  onClick={handleAddRows}
-                >
-                  + Agregar {rowsToAdd}
-                </Button>
+                    <Button
+                      color="light"
+                      className="border bg-white"
+                      style={{ height: "36px", fontSize: "13px" }}
+                      onClick={handleAddRows}
+                    >
+                      + Agregar {rowsToAdd}
+                    </Button>
 
-                <Button
-                  color="light"
-                  className="border bg-white text-muted"
-                  style={{ height: "36px", fontSize: "13px" }}
-                  onClick={handleDuplicateSelected}
-                  disabled={selectedRowIds.size === 0}
-                >
-                  Duplicar seleccionados
-                </Button>
+                    <Button
+                      color="light"
+                      className="border bg-white text-muted"
+                      style={{ height: "36px", fontSize: "13px" }}
+                      onClick={handleDuplicateSelected}
+                      disabled={selectedRowIds.size === 0}
+                    >
+                      Duplicar seleccionados
+                    </Button>
 
-                <Button
-                  color="light"
-                  className="border"
-                  style={{
-                    height: "36px",
-                    fontSize: "13px",
-                    borderColor: "#fca5a5",
-                    color: "#ef4444",
-                    backgroundColor: "#fff",
-                  }}
-                  onClick={handleDeleteSelected}
-                  disabled={selectedRowIds.size === 0}
-                >
-                  Eliminar seleccionados
-                </Button>
-
-                {isEditMode && (
+                    <Button
+                      color="light"
+                      className="border"
+                      style={{
+                        height: "36px",
+                        fontSize: "13px",
+                        borderColor: "#fca5a5",
+                        color: "#ef4444",
+                        backgroundColor: "#fff",
+                      }}
+                      onClick={handleDeleteSelected}
+                      disabled={selectedRowIds.size === 0}
+                    >
+                      Eliminar seleccionados
+                    </Button>
+                  </>
+                ) : (
                   <span className="badge bg-primary-subtle text-primary px-3 py-2 fs-6">
                     Editando Viaje #{activeId}
                   </span>
@@ -730,15 +732,17 @@ const AddTrip = () => {
                       <th style={{ width: "300px", minWidth: "300px" }} className="align-middle">
                         CONFIGURACIÓN Y UNIDADES
                       </th>
-                      <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
-                        ACCIONES
-                      </th>
+                      {!isEditMode && (
+                        <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
+                          ACCIONES
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="text-center py-5 text-muted">
+                        <td colSpan={isEditMode ? 9 : 10} className="text-center py-5 text-muted">
                           No hay viajes agregados. Usa el botón "+ Agregar" para añadir filas.
                         </td>
                       </tr>
@@ -1014,34 +1018,36 @@ const AddTrip = () => {
                             </td>
 
                             {/* Acciones */}
-                            <td
-                              style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
-                              className="pt-2 text-center"
-                            >
-                              <div
-                                className="d-flex align-items-center justify-content-center gap-1"
-                                style={{ height: "36px" }}
+                            {!isEditMode && (
+                              <td
+                                style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
+                                className="pt-2 text-center"
                               >
-                                <Button
-                                  color="light"
-                                  className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                  style={{ width: "32px", height: "32px" }}
-                                  onClick={() => handleAddRowAfter(index)}
-                                  title="Agregar fila debajo"
+                                <div
+                                  className="d-flex align-items-center justify-content-center gap-1"
+                                  style={{ height: "36px" }}
                                 >
-                                  <i className="ri-add-line fs-5" />
-                                </Button>
-                                <Button
-                                  color="light"
-                                  className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                  style={{ width: "32px", height: "32px" }}
-                                  onClick={() => handleDeleteSingleRow(row.rowId)}
-                                  title="Eliminar fila"
-                                >
-                                  <i className="ri-close-line fs-5" />
-                                </Button>
-                              </div>
-                            </td>
+                                  <Button
+                                    color="light"
+                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                    style={{ width: "32px", height: "32px" }}
+                                    onClick={() => handleAddRowAfter(index)}
+                                    title="Agregar fila debajo"
+                                  >
+                                    <i className="ri-add-line fs-5" />
+                                  </Button>
+                                  <Button
+                                    color="light"
+                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                    style={{ width: "32px", height: "32px" }}
+                                    onClick={() => handleDeleteSingleRow(row.rowId)}
+                                    title="Eliminar fila"
+                                  >
+                                    <i className="ri-close-line fs-5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })
