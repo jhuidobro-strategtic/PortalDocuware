@@ -132,7 +132,17 @@ interface SelectOption {
 const selectStyles = {
   control: (base: Record<string, unknown>) => ({
     ...base,
-    minHeight: "36px",
+    minHeight: "38px",
+    height: "38px",
+  }),
+  valueContainer: (base: Record<string, unknown>) => ({
+    ...base,
+    height: "38px",
+    padding: "0 8px",
+  }),
+  indicatorsContainer: (base: Record<string, unknown>) => ({
+    ...base,
+    height: "38px",
   }),
   menu: (base: Record<string, unknown>) => ({
     ...base,
@@ -1408,14 +1418,14 @@ const AddExpensePage = () => {
 
               {/* Expense Details Table */}
               <div className="table-responsive border rounded-3 mb-3">
-                <Table className="table align-middle mb-0" style={{ minWidth: "1050px" }}>
+                <Table className="table align-middle mb-0" style={{ minWidth: "1160px" }}>
                   <thead className="table-light">
                     <tr>
                       <th style={{ width: "40px" }} className="text-center">#</th>
                       <th style={{ width: "240px", minWidth: "240px" }}>
                         {t("Concept")} <span className="text-danger">*</span>
                       </th>
-                      <th style={{ width: "170px", minWidth: "170px" }}>
+                      <th style={{ width: "180px", minWidth: "180px" }}>
                         {t("Cálculo de costo")}
                       </th>
                       <th style={{ width: "100px", minWidth: "100px" }}>
@@ -1424,10 +1434,10 @@ const AddExpensePage = () => {
                       <th style={{ width: "120px", minWidth: "120px" }}>
                         {t("Monto Unit.")}
                       </th>
-                      <th style={{ width: "140px", minWidth: "140px" }}>
+                      <th style={{ width: "165px", minWidth: "165px" }}>
                         {t("Presupuesto")} (S/.) <span className="text-danger">*</span>
                       </th>
-                      <th style={{ minWidth: "220px" }}>{t("Notas")}</th>
+                      <th style={{ minWidth: "250px" }}>{t("Notas")}</th>
                       <th style={{ width: "60px" }} className="text-center">{t("Acción")}</th>
                     </tr>
                   </thead>
@@ -1479,7 +1489,8 @@ const AddExpensePage = () => {
                           <td>
                             <Input
                               type="select"
-                              className="form-select form-select-sm"
+                              className="form-select"
+                              style={{ height: "38px" }}
                               value={detail.calculationType || "MANUAL"}
                               onChange={(e) =>
                                 handleCalculationTypeChange(
@@ -1502,7 +1513,8 @@ const AddExpensePage = () => {
                             <Input
                               type="number"
                               step="any"
-                              className="form-control-sm text-end"
+                              className="text-end"
+                              style={{ height: "38px" }}
                               value={detail.quantity}
                               onChange={(e) =>
                                 handleQuantityChange(detailIndex, e.target.value)
@@ -1517,7 +1529,8 @@ const AddExpensePage = () => {
                             <Input
                               type="number"
                               step="any"
-                              className="form-control-sm text-end"
+                              className="text-end"
+                              style={{ height: "38px" }}
                               value={detail.unitAmount}
                               onChange={(e) =>
                                 handleUnitAmountChange(
@@ -1535,9 +1548,10 @@ const AddExpensePage = () => {
                             <Input
                               type="number"
                               step="any"
-                              className={`form-control-sm text-end ${
+                              className={`text-end ${
                                 detailError.budgetedAmount ? "is-invalid" : ""
                               }`}
+                              style={{ height: "38px" }}
                               value={detail.budgetedAmount}
                               onChange={(e) =>
                                 handleBudgetedAmountChange(
@@ -1559,7 +1573,7 @@ const AddExpensePage = () => {
                           <td>
                             <Input
                               type="text"
-                              className="form-control-sm"
+                              style={{ height: "38px" }}
                               value={detail.notes}
                               onChange={(e) =>
                                 handleNotesChange(detailIndex, e.target.value)
@@ -1574,8 +1588,9 @@ const AddExpensePage = () => {
                             <Button
                               color="danger"
                               type="button"
-                              size="sm"
                               outline
+                              style={{ height: "38px", width: "38px" }}
+                              className="d-inline-flex align-items-center justify-content-center p-0"
                               onClick={() => handleRemoveDetail(detailIndex)}
                               disabled={
                                 creatingExpenseRequest ||
@@ -1583,7 +1598,7 @@ const AddExpensePage = () => {
                               }
                               title={t("Remove")}
                             >
-                              <i className="ri-delete-bin-line" />
+                              <i className="ri-delete-bin-line fs-5" />
                             </Button>
                           </td>
                         </tr>
