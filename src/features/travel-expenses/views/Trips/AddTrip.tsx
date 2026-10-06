@@ -145,8 +145,15 @@ const AddTrip = () => {
                 ? tripData.returnDate.slice(0, 16)
                 : "",
               vehicleId: tripData.vehicle ? String(tripData.vehicle.id) : "",
-              configurationCode: "T3S3",
-              semiPlates: [""],
+              configurationCode:
+                (tripData as any).configuration?.code ||
+                (tripData as any).configuration_code ||
+                "",
+              configurationId:
+                (tripData as any).configurationId ||
+                (tripData as any).configuration?.id ||
+                undefined,
+              semiPlates: (tripData as any).semi_plates || [],
               foodCost: "",
               lodgingCost: "",
               costPerAxle: "",
@@ -328,10 +335,26 @@ const AddTrip = () => {
     rowId: string,
     configCode: string
   ) => {
+    if (!configCode) {
+      setRows((prev) =>
+        prev.map((row) => {
+          if (row.rowId !== rowId) return row;
+          return {
+            ...row,
+            configurationCode: "",
+            configurationId: undefined,
+            semiPlates: [],
+          };
+        })
+      );
+      return;
+    }
+
     const config =
       configurations.find((c) => c.code === configCode) ||
-      configurations[0] ||
-      VEHICLE_CONFIGURATIONS[0];
+      VEHICLE_CONFIGURATIONS.find((c) => c.code === configCode);
+
+    if (!config) return;
 
     setRows((prev) =>
       prev.map((row) => {
@@ -662,10 +685,18 @@ const AddTrip = () => {
                       </tr>
                     ) : (
                       rows.map((row, index) => {
-                        const currentConfig: VehicleConfiguration =
-                          configurations.find(
-                            (c) => c.code === row.configurationCode
-                          ) || configurations[0] || VEHICLE_CONFIGURATIONS[0];
+                        const currentConfig: VehicleConfiguration | null =
+                          row.configurationCode
+                            ? configurations.find(
+                                (c) => c.code === row.configurationCode
+                              ) || null
+                            : null;
+
+                        const selectedConfigOption = row.configurationCode
+                          ? configurationOptions.find(
+                              (opt) => opt.value === row.configurationCode
+                            ) || null
+                          : null;
 
                         const isChecked = selectedRowIds.has(row.rowId);
 
@@ -824,99 +855,101 @@ const AddTrip = () => {
                               <div className="d-flex flex-column gap-1">
                                 {/* Configuration Select */}
                                 <Select
-                                  value={{
-                                    value: currentConfig.code,
-                                    label: currentConfig.label,
-                                  }}
+                                  value={selectedConfigOption}
                                   options={configurationOptions}
                                   onChange={(selected: SelectOption | null) => {
-                                    if (selected?.value) {
-                                      handleConfigurationChange(
-                                        row.rowId,
-                                        selected.value
-                                      );
-                                    }
+                                    handleConfigurationChange(
+                                      row.rowId,
+                                      selected?.value || ""
+                                    );
                                   }}
+                                  placeholder="Configuración..."
+                                  isClearable
+                                  isSearchable
                                   styles={tableSelectStyles}
                                   menuPortalTarget={document.body}
                                 />
 
-                                {/* Visual Diagram Badges */}
-                                <div className="d-flex align-items-end my-1 ps-1" style={{ height: "24px" }}>
-                                  {/* Tracto unit silhouette (black) */}
-                                  {currentConfig.tractoUnits > 0 && (
-                                    <img
-                                      src={tractoIcon}
-                                      alt="Tracto"
-                                      title="Tracto"
-                                      style={{
-                                        height: "22px",
-                                        width: "auto",
-                                        objectFit: "contain",
-                                      }}
-                                    />
-                                  )}
-                                  {/* Semirremolque units silhouettes (yellow) */}
-                                  {Array.from({ length: currentConfig.semiUnits }).map(
-                                    (_, semiIdx) => (
-                                      <img
-                                        key={`semi-badge-${semiIdx}`}
-                                        src={semiYellowIcon}
-                                        alt={`Semirremolque ${semiIdx + 1}`}
-                                        title={`Semirremolque ${semiIdx + 1}`}
-                                        style={{
-                                          height: "20px",
-                                          width: "auto",
-                                          marginLeft: "-3px",
-                                          objectFit: "contain",
-                                        }}
-                                      />
-                                    )
-                                  )}
-                                </div>
-
-                                {/* Dynamic Semirremolques Plate Selectors */}
-                                {Array.from({ length: currentConfig.semiUnits }).map(
-                                  (_, semiIdx) => {
-                                    const currentSemiPlate =
-                                      row.semiPlates[semiIdx] || "";
-                                    const selectedOption =
-                                      vehicleOptions.find(
-                                        (opt) => opt.value === currentSemiPlate
-                                      ) || null;
-
-                                    return (
-                                      <div
-                                        key={`semi-row-${semiIdx}`}
-                                        className="d-flex align-items-center gap-2 mt-1"
-                                      >
-                                        <span
-                                          className="text-muted small text-nowrap"
-                                          style={{ fontSize: "12px", width: "95px" }}
-                                        >
-                                          {semiIdx + 1} Semirremolque
-                                        </span>
-                                        <div style={{ flex: 1 }}>
-                                          <Select
-                                            value={selectedOption}
-                                            options={vehicleOptions}
-                                            onChange={(selected: SelectOption | null) =>
-                                              handleUpdateSemiPlate(
-                                                row.rowId,
-                                                semiIdx,
-                                                selected?.value || ""
-                                              )
-                                            }
-                                            placeholder="Placa..."
-                                            isClearable
-                                            isSearchable
-                                            styles={tableSelectStyles}
-                                            menuPortalTarget={document.body}
+                                {currentConfig && (
+                                  <>
+                                    {/* Visual Diagram Badges */}
+                                    <div className="d-flex align-items-end my-1 ps-1" style={{ height: "24px" }}>
+                                      {/* Tracto unit silhouette (black) */}
+                                      {currentConfig.tractoUnits > 0 && (
+                                        <img
+                                          src={tractoIcon}
+                                          alt="Tracto"
+                                          title="Tracto"
+                                          style={{
+                                            height: "22px",
+                                            width: "auto",
+                                            objectFit: "contain",
+                                          }}
+                                        />
+                                      )}
+                                      {/* Semirremolque units silhouettes (yellow) */}
+                                      {Array.from({ length: currentConfig.semiUnits }).map(
+                                        (_, semiIdx) => (
+                                          <img
+                                            key={`semi-badge-${semiIdx}`}
+                                            src={semiYellowIcon}
+                                            alt={`Semirremolque ${semiIdx + 1}`}
+                                            title={`Semirremolque ${semiIdx + 1}`}
+                                            style={{
+                                              height: "20px",
+                                              width: "auto",
+                                              marginLeft: "-3px",
+                                              objectFit: "contain",
+                                            }}
                                           />
-                                        </div>
-                                      </div>
-                                    );
-                                  }
+                                        )
+                                      )}
+                                    </div>
+
+                                    {/* Dynamic Semirremolques Plate Selectors */}
+                                    {Array.from({ length: currentConfig.semiUnits }).map(
+                                      (_, semiIdx) => {
+                                        const currentSemiPlate =
+                                          row.semiPlates[semiIdx] || "";
+                                        const selectedOption =
+                                          vehicleOptions.find(
+                                            (opt) => opt.value === currentSemiPlate
+                                          ) || null;
+
+                                        return (
+                                          <div
+                                            key={`semi-row-${semiIdx}`}
+                                            className="d-flex align-items-center gap-2 mt-1"
+                                          >
+                                            <span
+                                              className="text-muted small text-nowrap"
+                                              style={{ fontSize: "12px", width: "95px" }}
+                                            >
+                                              {semiIdx + 1} Semirremolque
+                                            </span>
+                                            <div style={{ flex: 1 }}>
+                                              <Select
+                                                value={selectedOption}
+                                                options={vehicleOptions}
+                                                onChange={(selected: SelectOption | null) =>
+                                                  handleUpdateSemiPlate(
+                                                    row.rowId,
+                                                    semiIdx,
+                                                    selected?.value || ""
+                                                  )
+                                                }
+                                                placeholder="Placa..."
+                                                isClearable
+                                                isSearchable
+                                                styles={tableSelectStyles}
+                                                menuPortalTarget={document.body}
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </td>
