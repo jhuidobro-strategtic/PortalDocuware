@@ -282,7 +282,7 @@ const TripsPage = () => {
                       <tr>
                         <th style={{ width: "90px" }}>ID</th>
                         <th style={{ width: "150px" }}>{t("Trip Number")}</th>
-                        <th style={{ minWidth: "180px" }}>{t("Vehicle")}</th>
+                        <th style={{ minWidth: "240px" }}>{t("Vehicle")}</th>
                         <th style={{ minWidth: "220px" }}>{t("Driver")}</th>
                         <th style={{ width: "140px" }}>{t("Origin")}</th>
                         <th style={{ width: "140px" }}>{t("Destination")}</th>
@@ -311,9 +311,9 @@ const TripsPage = () => {
                               <td className="fw-semibold">
                                 {trip.tripNumber || "-"}
                               </td>
-                              <td style={{ minWidth: "180px" }}>
+                              <td style={{ minWidth: "240px" }}>
                                 <div className="d-flex flex-column gap-1">
-                                  <div className="d-flex align-items-center gap-1 flex-wrap">
+                                  <div className="d-flex align-items-center gap-1 flex-nowrap text-nowrap">
                                     {trip.configurationCode && (
                                       <span
                                         className="badge bg-primary-subtle text-primary border border-primary-subtle font-size-11 px-1.5 py-0.5"
@@ -328,11 +328,11 @@ const TripsPage = () => {
                                     </span>
                                   </div>
                                   {trip.trailerPlates && trip.trailerPlates.length > 0 && (
-                                    <div className="d-flex flex-wrap gap-1 mt-0.5">
+                                    <div className="d-flex align-items-center gap-1 flex-nowrap text-nowrap mt-0.5">
                                       {trip.trailerPlates.map((plate, pIdx) => (
                                         <span
                                           key={pIdx}
-                                          className="badge bg-light text-secondary border font-size-11"
+                                          className="badge bg-light text-secondary border font-size-11 text-nowrap"
                                           title={`Remolque ${pIdx + 1}`}
                                         >
                                           <i className="ri-roadster-line me-1 text-muted" />
