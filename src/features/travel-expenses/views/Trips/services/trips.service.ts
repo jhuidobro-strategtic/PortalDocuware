@@ -24,6 +24,8 @@ export interface TripItem {
   configurationData?: any;
   units?: any[];
   semiPlates?: string[];
+  tractoPlate?: string;
+  trailerPlates?: string[];
 }
 
 export interface VehicleItem {
@@ -262,6 +264,17 @@ export const mapApiTrip = (item: any): TripItem => {
         .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
     : [];
 
+  const trailerPlates = trailerUnits
+    .map((u: any) => {
+      if (u.vehicle?.no_vehiculo) return String(u.vehicle.no_vehiculo).trim();
+      if (u.no_vehiculo) return String(u.no_vehiculo).trim();
+      if (typeof u.vehicle === "string" && u.vehicle.includes("no_vehiculo=")) {
+        return u.vehicle.split("no_vehiculo=")[1]?.replace(/[}\s]/g, "") || "";
+      }
+      return "";
+    })
+    .filter(Boolean);
+
   const semiPlates = trailerUnits.map((u: any) =>
     String(u.vehicle_id || u.vehicle?.idvehiculo || "")
   );
@@ -272,14 +285,37 @@ export const mapApiTrip = (item: any): TripItem => {
       )
     : null;
 
+  let rawTractoPlate = "";
+  if (tractoUnit) {
+    if (tractoUnit.vehicle?.no_vehiculo) {
+      rawTractoPlate = String(tractoUnit.vehicle.no_vehiculo).trim();
+    } else if (tractoUnit.no_vehiculo) {
+      rawTractoPlate = String(tractoUnit.no_vehiculo).trim();
+    } else if (
+      typeof tractoUnit.vehicle === "string" &&
+      tractoUnit.vehicle.includes("no_vehiculo=")
+    ) {
+      rawTractoPlate =
+        tractoUnit.vehicle.split("no_vehiculo=")[1]?.replace(/[}\s]/g, "") || "";
+    }
+  }
+
+  const initialVehicleRef =
+    mapTripReference(item.vehicle, "idvehiculo", "no_vehiculo");
+
+  const tractoPlate =
+    (item.vehicle?.no_vehiculo ? String(item.vehicle.no_vehiculo).trim() : "") ||
+    rawTractoPlate ||
+    (initialVehicleRef?.label ? String(initialVehicleRef.label).trim() : "");
+
   const vehicleRef =
-    mapTripReference(item.vehicle, "idvehiculo", "no_vehiculo") ||
+    initialVehicleRef ||
     (item.vehicle_id
-      ? { id: Number(item.vehicle_id), label: "" }
+      ? { id: Number(item.vehicle_id), label: tractoPlate }
       : tractoUnit
       ? {
           id: Number(tractoUnit.vehicle_id || tractoUnit.vehicle?.idvehiculo),
-          label: tractoUnit.vehicle?.no_vehiculo || "",
+          label: tractoPlate,
         }
       : null);
 
@@ -321,6 +357,8 @@ export const mapApiTrip = (item: any): TripItem => {
     configurationData: item.configuration_data,
     units: item.units || [],
     semiPlates,
+    tractoPlate,
+    trailerPlates,
   };
 };
 

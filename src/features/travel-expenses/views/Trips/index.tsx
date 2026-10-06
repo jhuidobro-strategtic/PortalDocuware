@@ -20,6 +20,11 @@ import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../../components/common/FloatingAlerts";
 import TableActionsMenu from "../../../../components/common/TableActionsMenu";
+import { buildApiUrl } from "../../../../helpers/api-url";
+import {
+  getAuthHeaders,
+  getCurrentSessionUser,
+} from "../../my-schedule/shared/session";
 import {
   fetchTrips as apiFetchTrips,
   TripItem,
@@ -90,6 +95,54 @@ const TripsPage = () => {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [generatingExpenseTripId, setGeneratingExpenseTripId] = useState<number | null>(null);
+
+  const handleAutoGenerateExpenses = async (trip: TripItem) => {
+    try {
+      setGeneratingExpenseTripId(trip.idTrip);
+      setFeedback(null);
+      const sessionUser = getCurrentSessionUser();
+      const requesterId = trip.driver?.id || sessionUser.id || 7;
+      const createdBy = sessionUser.id || 7;
+
+      const response = await fetch(
+        buildApiUrl("expense-requests/auto-generate/"),
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            id_trip: trip.idTrip,
+            requester_name: requesterId,
+            created_by: createdBy,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || t("Error generating expenses for trip"));
+      }
+
+      setFeedback({
+        type: "success",
+        message: t(
+          "Expenses auto-generated successfully for trip {{tripNumber}} (Total: S/. {{total}}).",
+          {
+            tripNumber: trip.tripNumber || `#${trip.idTrip}`,
+            total: data.data?.total_budget || "0.00",
+          }
+        ),
+      });
+    } catch (err: any) {
+      setFeedback({
+        type: "danger",
+        message: err?.message || t("Error generating expenses for trip"),
+      });
+    } finally {
+      setGeneratingExpenseTripId(null);
+    }
+  };
 
   // Check flash message from navigation state (e.g. from AddTrip)
   useEffect(() => {
@@ -229,13 +282,12 @@ const TripsPage = () => {
                       <tr>
                         <th style={{ width: "90px" }}>ID</th>
                         <th style={{ width: "150px" }}>{t("Trip Number")}</th>
-                        <th style={{ width: "120px" }}>{t("Vehicle")}</th>
+                        <th style={{ minWidth: "180px" }}>{t("Vehicle")}</th>
                         <th style={{ minWidth: "220px" }}>{t("Driver")}</th>
                         <th style={{ width: "140px" }}>{t("Origin")}</th>
                         <th style={{ width: "140px" }}>{t("Destination")}</th>
                         <th style={{ width: "170px" }}>{t("Departure Date")}</th>
                         <th style={{ width: "170px" }}>{t("Return Date")}</th>
-                        <th style={{ minWidth: "240px" }}>{t("Notes")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
                         <th style={{ width: "120px" }} className="text-center">
                           {t("Actions")}
@@ -245,7 +297,7 @@ const TripsPage = () => {
                     <tbody>
                       {paginatedTrips.length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="text-center py-4">
+                          <td colSpan={10} className="text-center py-4">
                             {t("No trips were found.")}
                           </td>
                         </tr>
@@ -259,18 +311,43 @@ const TripsPage = () => {
                               <td className="fw-semibold">
                                 {trip.tripNumber || "-"}
                               </td>
-                              <td>{trip.vehicle?.label || "-"}</td>
+                              <td style={{ minWidth: "180px" }}>
+                                <div className="d-flex flex-column gap-1">
+                                  <div className="d-flex align-items-center gap-1 flex-wrap">
+                                    {trip.configurationCode && (
+                                      <span
+                                        className="badge bg-primary-subtle text-primary border border-primary-subtle font-size-11 px-1.5 py-0.5"
+                                        title={trip.configurationData?.name || trip.configurationCode}
+                                      >
+                                        {trip.configurationCode}
+                                      </span>
+                                    )}
+                                    <span className="fw-semibold text-dark">
+                                      <i className="ri-truck-line text-primary me-1 align-middle" />
+                                      {trip.tractoPlate || trip.vehicle?.label || "-"}
+                                    </span>
+                                  </div>
+                                  {trip.trailerPlates && trip.trailerPlates.length > 0 && (
+                                    <div className="d-flex flex-wrap gap-1 mt-0.5">
+                                      {trip.trailerPlates.map((plate, pIdx) => (
+                                        <span
+                                          key={pIdx}
+                                          className="badge bg-light text-secondary border font-size-11"
+                                          title={`Remolque ${pIdx + 1}`}
+                                        >
+                                          <i className="ri-roadster-line me-1 text-muted" />
+                                          {`R${pIdx + 1}: ${plate}`}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
                               <td>{trip.driver?.label || "-"}</td>
                               <td>{trip.origin?.label || "-"}</td>
                               <td>{trip.destination?.label || "-"}</td>
                               <td>{formatDateTime(trip.departureDate)}</td>
                               <td>{formatDateTime(trip.returnDate)}</td>
-                              <td
-                                className="text-wrap"
-                                style={{ whiteSpace: "normal" }}
-                              >
-                                {trip.notes || "-"}
-                              </td>
                               <td>
                                 <span className={statusMeta.className}>
                                   <i className={statusMeta.icon} />
@@ -291,8 +368,19 @@ const TripsPage = () => {
                                         ),
                                     },
                                     {
+                                      id: `auto-generate-trip-${trip.idTrip}`,
+                                      label:
+                                        generatingExpenseTripId === trip.idTrip
+                                          ? t("Generating...")
+                                          : t("Autogenerate Expenses"),
+                                      icon: "ri-magic-line",
+                                      tone: "warning",
+                                      onClick: () =>
+                                        handleAutoGenerateExpenses(trip),
+                                    },
+                                    {
                                       id: `add-expense-${trip.idTrip}`,
-                                      label: t("Generate Expense Request"),
+                                      label: t("Enter / Adjust Expenses"),
                                       icon: "ri-money-dollar-circle-line",
                                       tone: "success",
                                       onClick: () =>
