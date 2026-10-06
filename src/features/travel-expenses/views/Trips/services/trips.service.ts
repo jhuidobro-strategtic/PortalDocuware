@@ -19,6 +19,11 @@ export interface TripItem {
   notes: string;
   status: boolean;
   createdAt: string;
+  configurationId?: number;
+  configurationCode?: string;
+  configurationData?: any;
+  units?: any[];
+  semiPlates?: string[];
 }
 
 export interface VehicleItem {
@@ -163,6 +168,8 @@ export interface CreateTripPayload {
   status: boolean;
   created_by: number;
   configuration_id?: number;
+  configuration_code?: string;
+  tractor_id?: number;
 }
 
 export interface UpdateTripPayload extends CreateTripPayload {
@@ -243,23 +250,79 @@ export const mapDriverReference = (item: any): TripReference | null => {
   };
 };
 
-export const mapApiTrip = (item: any): TripItem => ({
-  idTrip: Number(item.id_trip ?? 0),
-  tripNumber: String(item.trip_number ?? "").trim(),
-  vehicle: mapTripReference(item.vehicle, "idvehiculo", "no_vehiculo"),
-  driver: mapDriverReference(item.driver),
-  origin: mapTripReference(item.origin_data, "idorigen", "nombre_origen"),
-  destination: mapTripReference(
-    item.destination_data,
-    "idorigen",
-    "nombre_origen"
-  ),
-  departureDate: String(item.departure_date ?? "").trim(),
-  returnDate: String(item.return_date ?? "").trim(),
-  notes: String(item.notes ?? "").trim(),
-  status: Boolean(item.status),
-  createdAt: String(item.created_at ?? "").trim(),
-});
+export const mapApiTrip = (item: any): TripItem => {
+  const trailerUnits = Array.isArray(item.units)
+    ? item.units
+        .filter(
+          (u: any) =>
+            u.unit_type === "REMOLQUE" ||
+            u.unit_type === "SEMIRREMOLQUE" ||
+            (u.position != null && u.position > 0)
+        )
+        .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+    : [];
+
+  const semiPlates = trailerUnits.map((u: any) =>
+    String(u.vehicle_id || u.vehicle?.idvehiculo || "")
+  );
+
+  const tractoUnit = Array.isArray(item.units)
+    ? item.units.find(
+        (u: any) => u.unit_type === "TRACTO" || u.position === 0
+      )
+    : null;
+
+  const vehicleRef =
+    mapTripReference(item.vehicle, "idvehiculo", "no_vehiculo") ||
+    (item.vehicle_id
+      ? { id: Number(item.vehicle_id), label: "" }
+      : tractoUnit
+      ? {
+          id: Number(tractoUnit.vehicle_id || tractoUnit.vehicle?.idvehiculo),
+          label: tractoUnit.vehicle?.no_vehiculo || "",
+        }
+      : null);
+
+  const driverRef =
+    mapDriverReference(item.driver) ||
+    (item.driver_id ? { id: Number(item.driver_id), label: "" } : null);
+
+  const originRef =
+    mapTripReference(item.origin_data, "idorigen", "nombre_origen") ||
+    (item.origin ? { id: Number(item.origin), label: "" } : null);
+
+  const destinationRef =
+    mapTripReference(item.destination_data, "idorigen", "nombre_origen") ||
+    (item.destination ? { id: Number(item.destination), label: "" } : null);
+
+  const configurationId =
+    Number(
+      item.configuration_id ?? item.configuration_data?.id_configuration ?? 0
+    ) || undefined;
+
+  const configurationCode = String(
+    item.configuration_data?.code ?? item.configuration_code ?? ""
+  ).trim();
+
+  return {
+    idTrip: Number(item.id_trip ?? 0),
+    tripNumber: String(item.trip_number ?? "").trim(),
+    vehicle: vehicleRef,
+    driver: driverRef,
+    origin: originRef,
+    destination: destinationRef,
+    departureDate: String(item.departure_date ?? "").trim(),
+    returnDate: String(item.return_date ?? "").trim(),
+    notes: String(item.notes ?? "").trim(),
+    status: Boolean(item.status),
+    createdAt: String(item.created_at ?? "").trim(),
+    configurationId,
+    configurationCode,
+    configurationData: item.configuration_data,
+    units: item.units || [],
+    semiPlates,
+  };
+};
 
 export const mapTripToFormValues = (trip: TripItem): TripFormValues => ({
   tripNumber: trip.tripNumber,
@@ -501,16 +564,18 @@ export const updateTrip = async (
   const payload: UpdateTripPayload = {
     trip_number: values.tripNumber.trim(),
     vehicle_id: Number(values.vehicleId),
+    tractor_id: Number(values.vehicleId),
     driver_id: Number(values.driverId),
     origin: Number(values.origin),
     destination: Number(values.destination),
-    departure_date: moment(values.departureDate, DATE_TIME_INPUT_FORMAT, true).toISOString(),
-    return_date: moment(values.returnDate, DATE_TIME_INPUT_FORMAT, true).toISOString(),
+    departure_date: formatIsoWithOffset(values.departureDate),
+    return_date: formatIsoWithOffset(values.returnDate),
     notes: values.notes.trim(),
     status: values.status,
     created_by: userId,
     id_trip: tripId,
     ...(values.configurationId ? { configuration_id: Number(values.configurationId) } : {}),
+    ...(values.configurationCode ? { configuration_code: values.configurationCode } : {}),
   };
 
   const response = await fetch(buildApiUrl("trips/"), {
@@ -523,6 +588,110 @@ export const updateTrip = async (
 
   if (!response.ok || data?.success === false) {
     throw new Error(data?.message || "Error updating trip");
+  }
+
+  return data;
+};
+
+export interface BulkTripTrailerItem {
+  vehicle_id: number;
+}
+
+export interface BulkTripRowPayload {
+  row_number: number;
+  driver_id: number;
+  origin: number;
+  destination: number;
+  departure_date: string;
+  return_date: string;
+  configuration_code: string;
+  tractor_id: number;
+  trailers: BulkTripTrailerItem[];
+  notes?: string;
+}
+
+export interface BulkCreateTripsPayload {
+  created_by: number;
+  rows: BulkTripRowPayload[];
+}
+
+export interface BulkCreateTripsResultItem {
+  row_number: number;
+  success: boolean;
+  trip_id?: number;
+  trip?: any;
+  errors?: Record<string, string[]>;
+}
+
+export interface BulkCreateTripsResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    batch_id?: string;
+    total_rows?: number;
+    created_rows?: number;
+    failed_rows?: number;
+    results?: BulkCreateTripsResultItem[];
+    rows?: any[];
+  };
+}
+
+export const formatIsoWithOffset = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const m = moment(dateStr, ["YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DDTHH:mm", moment.ISO_8601]);
+  return m.isValid() ? m.format() : dateStr;
+};
+
+export const formatForDateTimeInput = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const m = moment(dateStr);
+  return m.isValid() ? m.format("YYYY-MM-DDTHH:mm") : dateStr.slice(0, 16);
+};
+
+export const createBulkTrips = async (
+  payload: BulkCreateTripsPayload
+): Promise<BulkCreateTripsResponse> => {
+  const response = await fetch(buildApiUrl("trips/bulk/"), {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const data: BulkCreateTripsResponse = await response.json().catch(() => null);
+
+  if (!response.ok || !data || data.success === false) {
+    let detailedMsg = data?.message || "Error al procesar los viajes masivos";
+
+    if (data?.data?.results && Array.isArray(data.data.results)) {
+      const errParts = data.data.results
+        .filter((r) => !r.success && r.errors)
+        .map((r) => {
+          const errList = Object.entries(r.errors!)
+            .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
+            .join("; ");
+          return `Fila #${r.row_number}: ${errList}`;
+        });
+      if (errParts.length > 0) {
+        detailedMsg = `${detailedMsg} (${errParts.join(" | ")})`;
+      }
+    } else if (data?.data?.rows && Array.isArray(data.data.rows)) {
+      const errParts = data.data.rows
+        .map((rowErr: any, idx: number) => {
+          if (rowErr && typeof rowErr === "object") {
+            const errList = Object.entries(rowErr)
+              .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
+              .join("; ");
+            return `Fila #${idx + 1}: ${errList}`;
+          }
+          return null;
+        })
+        .filter(Boolean);
+      if (errParts.length > 0) {
+        detailedMsg = `${detailedMsg} (${errParts.join(" | ")})`;
+      }
+    }
+
+    throw new Error(detailedMsg);
   }
 
   return data;

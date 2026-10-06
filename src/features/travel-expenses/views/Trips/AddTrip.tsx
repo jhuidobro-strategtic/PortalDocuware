@@ -19,10 +19,13 @@ import {
   BatchTripRow,
   createEmptyBatchTripRow,
   createTrip,
+  createBulkTrips,
   DestinationItem,
   DriverItem,
   fetchTripById,
   fetchTripCatalogs,
+  formatForDateTimeInput,
+  formatIsoWithOffset,
   updateTrip,
   VEHICLE_CONFIGURATIONS,
   VehicleConfiguration,
@@ -130,36 +133,68 @@ const AddTrip = () => {
 
           if (tripData) {
             // Edit mode: single row loaded from existing trip
+            const tractoVehicleId =
+              (tripData.vehicle ? String(tripData.vehicle.id) : "") ||
+              ((tripData as any).vehicle_id ? String((tripData as any).vehicle_id) : "");
+
+            const driverId =
+              (tripData.driver ? String(tripData.driver.id) : "") ||
+              ((tripData as any).driver_id ? String((tripData as any).driver_id) : "");
+
+            const originId =
+              (tripData.origin ? String(tripData.origin.id) : "") ||
+              ((tripData as any).origin ? String((tripData as any).origin) : "");
+
+            const destinationId =
+              (tripData.destination ? String(tripData.destination.id) : "") ||
+              ((tripData as any).destination ? String((tripData as any).destination) : "");
+
+            const configCode =
+              tripData.configurationCode ||
+              (tripData as any).configuration_data?.code ||
+              (tripData as any).configuration?.code ||
+              (tripData as any).configuration_code ||
+              "";
+
+            const configId =
+              tripData.configurationId ||
+              (tripData as any).configuration_data?.id_configuration ||
+              (tripData as any).configuration?.id ||
+              undefined;
+
+            let semiPlates: string[] = tripData.semiPlates || [];
+            if (semiPlates.length === 0 && Array.isArray((tripData as any).units)) {
+              const trailerUnits = (tripData as any).units
+                .filter(
+                  (u: any) =>
+                    u.unit_type === "REMOLQUE" ||
+                    u.unit_type === "SEMIRREMOLQUE" ||
+                    (u.position != null && u.position > 0)
+                )
+                .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
+              semiPlates = trailerUnits.map((u: any) =>
+                String(u.vehicle_id || u.vehicle?.idvehiculo || "")
+              );
+            }
+
             const editRow: BatchTripRow = {
               rowId: `edit-${tripData.idTrip}`,
               tripNumber: tripData.tripNumber,
-              driverId: tripData.driver ? String(tripData.driver.id) : "",
-              origin: tripData.origin ? String(tripData.origin.id) : "",
-              destination: tripData.destination
-                ? String(tripData.destination.id)
-                : "",
-              departureDate: tripData.departureDate
-                ? tripData.departureDate.slice(0, 16)
-                : "",
-              returnDate: tripData.returnDate
-                ? tripData.returnDate.slice(0, 16)
-                : "",
-              vehicleId: tripData.vehicle ? String(tripData.vehicle.id) : "",
-              configurationCode:
-                (tripData as any).configuration?.code ||
-                (tripData as any).configuration_code ||
-                "",
-              configurationId:
-                (tripData as any).configurationId ||
-                (tripData as any).configuration?.id ||
-                undefined,
-              semiPlates: (tripData as any).semi_plates || [],
+              driverId,
+              origin: originId,
+              destination: destinationId,
+              departureDate: formatForDateTimeInput(tripData.departureDate),
+              returnDate: formatForDateTimeInput(tripData.returnDate),
+              vehicleId: tractoVehicleId,
+              configurationCode: configCode,
+              configurationId: configId,
+              semiPlates,
               foodCost: "",
               lodgingCost: "",
               costPerAxle: "",
               tollCount: "",
-              notes: tripData.notes,
-              status: tripData.status,
+              notes: tripData.notes || "",
+              status: tripData.status ?? true,
             };
             setRows([editRow]);
           }
@@ -388,13 +423,21 @@ const AddTrip = () => {
     // Validation
     const invalidRows: number[] = [];
     rows.forEach((row, index) => {
+      const config = configurations.find((c) => c.code === row.configurationCode);
+      const neededSemiUnits = config ? config.semiUnits : 0;
+      const validSemiPlatesCount = (row.semiPlates || []).filter(
+        (id) => Boolean(id && !isNaN(Number(id)))
+      ).length;
+
       if (
         !row.driverId ||
         !row.origin ||
         !row.destination ||
         !row.departureDate ||
         !row.returnDate ||
-        !row.vehicleId
+        !row.vehicleId ||
+        !row.configurationCode ||
+        validSemiPlatesCount < neededSemiUnits
       ) {
         invalidRows.push(index + 1);
       }
@@ -402,7 +445,7 @@ const AddTrip = () => {
 
     if (invalidRows.length > 0) {
       setErrorMessage(
-        `Por favor completa los campos requeridos (Conductor, Origen, Destino, Fechas y Tracto) en las filas: ${invalidRows
+        `Por favor completa los campos requeridos (Conductor, Origen, Destino, Fechas, Tracto, Configuración y Semirremolques requeridos) en las filas: ${invalidRows
           .map((n) => `#${String(n).padStart(2, "0")}`)
           .join(", ")}`
       );
@@ -446,45 +489,66 @@ const AddTrip = () => {
           sessionUser.id
         );
 
+        // If additional rows were added, register them via bulk API
+        if (rows.length > 1) {
+          const additionalRows = rows.slice(1);
+          const bulkPayload = {
+            created_by: sessionUser.id,
+            rows: additionalRows.map((row, index) => ({
+              row_number: index + 1,
+              driver_id: Number(row.driverId),
+              origin: Number(row.origin),
+              destination: Number(row.destination),
+              departure_date: formatIsoWithOffset(row.departureDate),
+              return_date: formatIsoWithOffset(row.returnDate),
+              configuration_code: row.configurationCode,
+              tractor_id: Number(row.vehicleId),
+              trailers: (row.semiPlates || [])
+                .filter((plateId) => Boolean(plateId && !isNaN(Number(plateId))))
+                .map((plateId) => ({ vehicle_id: Number(plateId) })),
+              notes: (row.notes || "").trim() || "Viaje creado masivamente",
+            })),
+          };
+          await createBulkTrips(bulkPayload);
+        }
+
         navigate("/travel-expenses/trips", {
           state: {
-            message: t("Trip updated successfully."),
+            message:
+              rows.length > 1
+                ? `Viaje #${activeId} actualizado y ${rows.length - 1} nuevo(s) viaje(s) registrado(s).`
+                : t("Trip updated successfully."),
             type: "success",
           },
         });
       } else {
-        // Create multiple trips in batch
-        const createPromises = rows.map((row) => {
-          const rowConfig = configurations.find(
-            (c) => c.code === row.configurationCode
-          );
-          return createTrip(
-            {
-              tripNumber: row.tripNumber,
-              vehicleId: row.vehicleId,
-              driverId: row.driverId,
-              origin: row.origin,
-              destination: row.destination,
-              departureDate: row.departureDate,
-              returnDate: row.returnDate,
-              notes: row.notes,
-              status: true,
-              configurationId: row.configurationId
-                ? String(row.configurationId)
-                : rowConfig?.id
-                ? String(rowConfig.id)
-                : undefined,
-              configurationCode: row.configurationCode,
-            },
-            sessionUser.id!
-          );
-        });
+        // Create multiple trips in batch using POST /api/trips/bulk/
+        const bulkPayload = {
+          created_by: sessionUser.id,
+          rows: rows.map((row, index) => ({
+            row_number: index + 1,
+            driver_id: Number(row.driverId),
+            origin: Number(row.origin),
+            destination: Number(row.destination),
+            departure_date: formatIsoWithOffset(row.departureDate),
+            return_date: formatIsoWithOffset(row.returnDate),
+            configuration_code: row.configurationCode,
+            tractor_id: Number(row.vehicleId),
+            trailers: (row.semiPlates || [])
+              .filter((plateId) => Boolean(plateId && !isNaN(Number(plateId))))
+              .map((plateId) => ({ vehicle_id: Number(plateId) })),
+            notes: (row.notes || "").trim() || "Viaje creado masivamente",
+          })),
+        };
 
-        await Promise.all(createPromises);
+        const result = await createBulkTrips(bulkPayload);
 
+        const createdCount = result.data?.created_rows ?? rows.length;
         navigate("/travel-expenses/trips", {
           state: {
-            message: `Se registraron exitosamente ${rows.length} viaje(s).`,
+            message:
+              result.message ||
+              `Se registraron exitosamente ${createdCount} viaje(s).`,
             type: "success",
           },
         });
@@ -512,63 +576,60 @@ const AddTrip = () => {
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               {/* Left Group */}
               <div className="d-flex flex-wrap align-items-center gap-2">
-                {!isEditMode && (
-                  <>
-                    <div className="d-flex align-items-center gap-1">
-                      <span className="text-muted small">Agregar filas</span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={rowsToAdd}
-                        onChange={(e) =>
-                          setRowsToAdd(Math.max(1, parseInt(e.target.value) || 1))
-                        }
-                        style={{
-                          width: "60px",
-                          height: "36px",
-                          textAlign: "center",
-                          fontSize: "13px",
-                        }}
-                      />
-                    </div>
+                <div className="d-flex align-items-center gap-1">
+                  <span className="text-muted small">Agregar filas</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={rowsToAdd}
+                    onChange={(e) =>
+                      setRowsToAdd(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                    style={{
+                      width: "60px",
+                      height: "36px",
+                      textAlign: "center",
+                      fontSize: "13px",
+                    }}
+                  />
+                </div>
 
-                    <Button
-                      color="light"
-                      className="border bg-white"
-                      style={{ height: "36px", fontSize: "13px" }}
-                      onClick={handleAddRows}
-                    >
-                      + Agregar {rowsToAdd}
-                    </Button>
+                <Button
+                  color="light"
+                  className="border bg-white"
+                  style={{ height: "36px", fontSize: "13px" }}
+                  onClick={handleAddRows}
+                >
+                  + Agregar {rowsToAdd}
+                </Button>
 
-                    <Button
-                      color="light"
-                      className="border bg-white text-muted"
-                      style={{ height: "36px", fontSize: "13px" }}
-                      onClick={handleDuplicateSelected}
-                      disabled={selectedRowIds.size === 0}
-                    >
-                      Duplicar seleccionados
-                    </Button>
+                <Button
+                  color="light"
+                  className="border bg-white text-muted"
+                  style={{ height: "36px", fontSize: "13px" }}
+                  onClick={handleDuplicateSelected}
+                  disabled={selectedRowIds.size === 0}
+                >
+                  Duplicar seleccionados
+                </Button>
 
-                    <Button
-                      color="light"
-                      className="border"
-                      style={{
-                        height: "36px",
-                        fontSize: "13px",
-                        borderColor: "#fca5a5",
-                        color: "#ef4444",
-                        backgroundColor: "#fff",
-                      }}
-                      onClick={handleDeleteSelected}
-                      disabled={selectedRowIds.size === 0}
-                    >
-                      Eliminar seleccionados
-                    </Button>
-                  </>
-                )}
+                <Button
+                  color="light"
+                  className="border"
+                  style={{
+                    height: "36px",
+                    fontSize: "13px",
+                    borderColor: "#fca5a5",
+                    color: "#ef4444",
+                    backgroundColor: "#fff",
+                  }}
+                  onClick={handleDeleteSelected}
+                  disabled={selectedRowIds.size === 0}
+                >
+                  Eliminar seleccionados
+                </Button>
+
                 {isEditMode && (
                   <span className="badge bg-primary-subtle text-primary px-3 py-2 fs-6">
                     Editando Viaje #{activeId}
@@ -669,17 +730,15 @@ const AddTrip = () => {
                       <th style={{ width: "300px", minWidth: "300px" }} className="align-middle">
                         CONFIGURACIÓN Y UNIDADES
                       </th>
-                      {!isEditMode && (
-                        <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
-                          ACCIONES
-                        </th>
-                      )}
+                      <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
+                        ACCIONES
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={isEditMode ? 9 : 10} className="text-center py-5 text-muted">
+                        <td colSpan={10} className="text-center py-5 text-muted">
                           No hay viajes agregados. Usa el botón "+ Agregar" para añadir filas.
                         </td>
                       </tr>
@@ -955,36 +1014,34 @@ const AddTrip = () => {
                             </td>
 
                             {/* Acciones */}
-                            {!isEditMode && (
-                              <td
-                                style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
-                                className="pt-2 text-center"
+                            <td
+                              style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
+                              className="pt-2 text-center"
+                            >
+                              <div
+                                className="d-flex align-items-center justify-content-center gap-1"
+                                style={{ height: "36px" }}
                               >
-                                <div
-                                  className="d-flex align-items-center justify-content-center gap-1"
-                                  style={{ height: "36px" }}
+                                <Button
+                                  color="light"
+                                  className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                  style={{ width: "32px", height: "32px" }}
+                                  onClick={() => handleAddRowAfter(index)}
+                                  title="Agregar fila debajo"
                                 >
-                                  <Button
-                                    color="light"
-                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                    style={{ width: "32px", height: "32px" }}
-                                    onClick={() => handleAddRowAfter(index)}
-                                    title="Agregar fila debajo"
-                                  >
-                                    <i className="ri-add-line fs-5" />
-                                  </Button>
-                                  <Button
-                                    color="light"
-                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                    style={{ width: "32px", height: "32px" }}
-                                    onClick={() => handleDeleteSingleRow(row.rowId)}
-                                    title="Eliminar fila"
-                                  >
-                                    <i className="ri-close-line fs-5" />
-                                  </Button>
-                                </div>
-                              </td>
-                            )}
+                                  <i className="ri-add-line fs-5" />
+                                </Button>
+                                <Button
+                                  color="light"
+                                  className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                  style={{ width: "32px", height: "32px" }}
+                                  onClick={() => handleDeleteSingleRow(row.rowId)}
+                                  title="Eliminar fila"
+                                >
+                                  <i className="ri-close-line fs-5" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })
