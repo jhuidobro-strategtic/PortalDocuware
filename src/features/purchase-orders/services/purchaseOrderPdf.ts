@@ -52,7 +52,6 @@ interface PurchaseOrderPdfSupplier {
 
 interface GeneratePurchaseOrderPdfParams {
   approvals?: PurchaseOrderApproval[];
-  requesterApprovedAt?: string | null;
   purchaseOrder: PurchaseOrderPdfOrder;
   relatedDocument?: Document | null;
   supplier?: PurchaseOrderPdfSupplier | null;
@@ -271,7 +270,6 @@ const buildPurchaseOrderPdfFileName = (
 
 export const generatePurchaseOrderPdf = async ({
   approvals = [],
-  requesterApprovedAt,
   purchaseOrder,
   relatedDocument,
   supplier,
@@ -725,12 +723,21 @@ export const generatePurchaseOrderPdf = async ({
     approvals
       .filter((approval) => approval.purchaseOrderID === purchaseOrder.purchaseOrderID && approval.approvalLevel === level && moment(approval.signedAt).isValid())
       .sort((left, right) => moment(left.signedAt).valueOf() - moment(right.signedAt).valueOf())[0]?.signedAt;
-  const approvalDates = [requesterApprovedAt, getSignedAt("JR"), getSignedAt("SENIOR")];
+  const approvalDates = [purchaseOrder.createAt, getSignedAt("JR"), getSignedAt("SENIOR")];
   const logTop = footerTop + 26;
   doc.line(signatureStartX, logTop, summaryStartX, logTop);
   const signatureFontSize = doc.getFontSize();
   doc.setFontSize(7);
   approvalDates.forEach((signedAt, index) => {
+    if (index === 0) {
+      const requesterDate = moment(purchaseOrder.createAt);
+      doc.text(
+        requesterDate.isValid() ? requesterDate.format("DD/MM/YYYY") : "Sin registro",
+        signatureStartX + 2,
+        logTop + 5
+      );
+      return;
+    }
     const date = signedAt ? new Date(signedAt) : null;
     const label = date && Number.isFinite(date.getTime())
       ? new Intl.DateTimeFormat("es-PE", {
