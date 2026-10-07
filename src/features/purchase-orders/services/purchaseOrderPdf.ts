@@ -705,14 +705,14 @@ export const generatePurchaseOrderPdf = async ({
   const authLabel = `AUTORIZACIÓN${signatureText} | ${signatureDate}`;
 
   doc.text(authLabel, signatureStartX + 2, footerTop + 4.5);
-  doc.text("VB ÁREA LOGÍSTICA", signatureStartX + 2, footerTop + 10.5);
+  doc.text("SOLICITANTE", signatureStartX + 2, footerTop + 10.5);
   doc.text(
-    "VB JEFATURA",
+    "FIRMANTE JR",
     signatureStartX + signatureColumnWidth + 2,
     footerTop + 10.5
   );
   doc.text(
-    "VB GERENCIA",
+    "FIRMANTE SENIOR",
     signatureStartX + signatureColumnWidth * 2 + 2,
     footerTop + 10.5
   );

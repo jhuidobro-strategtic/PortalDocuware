@@ -50,6 +50,8 @@ interface PurchaseOrderDetail {
   purchaseOrderID: number;
 }
 
+type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
+
 interface PurchaseOrder {
   purchaseOrderID: number;
   orderNo: string;
@@ -70,6 +72,9 @@ interface PurchaseOrder {
   tipoorden: string | null;
   signature: number | null;
   signature2: number | null;
+  approvalStatus: ApprovalStatus;
+  hasSeniorApproval: boolean;
+  canBeApprovedBy: boolean;
   requiredby?: string | null;
   createdBy: number;
   createAt: string;
@@ -120,6 +125,9 @@ interface PurchaseOrderApiItem {
   tipoorden?: string | null;
   signature?: number | null;
   signature2?: number | null;
+  approvalStatus: ApprovalStatus;
+  hasSeniorApproval: boolean;
+  canBeApprovedBy: boolean;
   requiredby?: string | null;
   createdBy: number;
   createAt: string;
@@ -324,6 +332,9 @@ const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
       ? item.signature2
       : null,
   requiredby: String(item.requiredby ?? "").trim() || null,
+  approvalStatus: item.approvalStatus,
+  hasSeniorApproval: item.hasSeniorApproval === true,
+  canBeApprovedBy: item.canBeApprovedBy === true,
   createdBy: item.createdBy,
   createAt: item.createAt,
   updatedBy: item.updatedBy,
@@ -341,11 +352,11 @@ const getCurrentSessionUser = () => {
     const parsedUser = JSON.parse(authUser);
     const sessionData = parsedUser?.data || {};
     const parsedId = Number(
-      sessionData?.userID ?? sessionData?.id ?? sessionData?.profileID ?? ""
+      sessionData?.userID ?? sessionData?.userid ?? sessionData?.user_id ?? sessionData?.id ?? ""
     );
 
     return {
-      id: Number.isFinite(parsedId) ? parsedId : null,
+      id: Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null,
       name:
         sessionData?.fullname ||
         sessionData?.first_name ||
@@ -752,8 +763,12 @@ const PurchaseOrderDetails = () => {
   });
   const getAvailableModalStateOptions = (
     currentState: number,
-    currentStateLabel?: string
+    currentStateLabel?: string,
+    order?: PurchaseOrder
   ) => {
+    if (order && (!order.canBeApprovedBy || order.hasSeniorApproval || order.approvalStatus === "APPROVED")) {
+      return [];
+    }
     const currentStateKind = getPurchaseStateKind(currentState, currentStateLabel);
 
     return modalStateOptions.filter((option) => {
@@ -764,6 +779,10 @@ const PurchaseOrderDetails = () => {
 
       if (isTemporaryState) {
         return false;
+      }
+
+      if (order?.canBeApprovedBy && option.kind === "approved") {
+        return true;
       }
 
       if (currentStateKind === "pending") {
@@ -778,7 +797,7 @@ const PurchaseOrderDetails = () => {
     });
   };
   const visibleModalStateOptions = orderModal
-    ? getAvailableModalStateOptions(orderModal.purchaseState, orderModal.purchaseStateLabel)
+    ? getAvailableModalStateOptions(orderModal.purchaseState, orderModal.purchaseStateLabel, orderModal)
     : [];
   const selectedStateMeta =
     selectedState !== null
@@ -793,7 +812,8 @@ const PurchaseOrderDetails = () => {
   const handleOpenOrderModal = (purchaseOrder: PurchaseOrder) => {
     const availableOptions = getAvailableModalStateOptions(
       purchaseOrder.purchaseState,
-      purchaseOrder.purchaseStateLabel
+      purchaseOrder.purchaseStateLabel,
+      purchaseOrder
     );
 
     if (availableOptions.length === 0) {
@@ -1023,6 +1043,7 @@ const PurchaseOrderDetails = () => {
 
   const handleConfirmOrderState = async () => {
     if (!orderModal || selectedState === null) return;
+    if (!orderModal.canBeApprovedBy || orderModal.hasSeniorApproval || orderModal.approvalStatus === "APPROVED") return;
 
     if (!sessionUser.id) {
       setActionError(
@@ -1087,6 +1108,28 @@ const PurchaseOrderDetails = () => {
           purchaseStateLookup[selectedState]
         ) === "approved"
       ) {
+        const approvalResponse = await fetch(buildApiUrl("purchase-orders/approve/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            purchaseOrderID: orderModal.purchaseOrderID,
+            userID: sessionUser.id,
+            notes: "Aprobado",
+            updatedBy: sessionUser.id,
+          }),
+        });
+        const approvalData = await approvalResponse.json().catch(() => null);
+
+        if (!approvalResponse.ok || approvalData?.success === false) {
+          throw new Error(
+            approvalData?.message || t("Unable to update purchase order status.")
+          );
+        }
+
+        setPurchaseOrders((currentOrders) =>
+          currentOrders.filter((order) => order.purchaseOrderID !== orderModal.purchaseOrderID)
+        );
+
         const relatedDocument =
           documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null;
 
@@ -1199,6 +1242,12 @@ const PurchaseOrderDetails = () => {
         setActionError(null);
         setActionSuccess(null);
 
+        setPurchaseOrders([]);
+        setCurrentPage(1);
+        if (!sessionUser.id) {
+          throw new Error(t("Unable to identify the signed-in user to update this purchase order."));
+        }
+
         const [
           purchaseOrdersResponse,
           documentsResponse,
@@ -1209,7 +1258,7 @@ const PurchaseOrderDetails = () => {
           storeResponse,
           purchaseStateResponse,
         ] = await Promise.all([
-          fetch(buildApiUrl("purchase-orders/")),
+          fetch(buildApiUrl(`purchase-orders/pending-approvals/?userID=${sessionUser.id}`)),
           fetch(buildApiUrl("documents")),
           fetch(buildApiUrl("proveedores")),
           fetch(buildApiUrl("users/")),
@@ -1341,7 +1390,7 @@ const PurchaseOrderDetails = () => {
     };
 
     fetchPurchaseOrders();
-  }, [t]);
+  }, [t, sessionUser.id]);
 
   useEffect(() => {
     const loadSigners = async () => {
@@ -1555,7 +1604,8 @@ const PurchaseOrderDetails = () => {
                             getAvailableModalStateOptions(
                               purchaseOrder.purchaseState,
                               purchaseOrder.purchaseStateLabel ||
-                              purchaseStateLookup[purchaseOrder.purchaseState]
+                              purchaseStateLookup[purchaseOrder.purchaseState],
+                              purchaseOrder
                             ).length === 0;
 
                           return (
