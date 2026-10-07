@@ -4,6 +4,7 @@ import autoTable from "jspdf-autotable";
 
 import logoTransa from "../../../assets/images/logotransa.png";
 import { Document } from "../../documents/types/list.types";
+import type { PurchaseOrderApproval } from "./purchaseOrderApprovals";
 
 interface PurchaseOrderPdfDetail {
   purchaseDetailID: number;
@@ -50,6 +51,8 @@ interface PurchaseOrderPdfSupplier {
 }
 
 interface GeneratePurchaseOrderPdfParams {
+  approvals?: PurchaseOrderApproval[];
+  requesterApprovedAt?: string | null;
   purchaseOrder: PurchaseOrderPdfOrder;
   relatedDocument?: Document | null;
   supplier?: PurchaseOrderPdfSupplier | null;
@@ -267,6 +270,8 @@ const buildPurchaseOrderPdfFileName = (
   ).replace(/[\\/:*?"<>|]/g, "_")}.pdf`;
 
 export const generatePurchaseOrderPdf = async ({
+  approvals = [],
+  requesterApprovedAt,
   purchaseOrder,
   relatedDocument,
   supplier,
@@ -701,8 +706,7 @@ export const generatePurchaseOrderPdf = async ({
   doc.line(signatureStartX, footerTop + 6, summaryStartX, footerTop + 6);
 
   const signatureText = executedByName ? ` ${executedByName}` : "";
-  const signatureDate = moment(purchaseOrder.updatedAt || purchaseOrder.createAt).format("DD/MM/YYYY | HH:mm");
-  const authLabel = `AUTORIZACIÓN${signatureText} | ${signatureDate}`;
+  const authLabel = `AUTORIZACIÓN${signatureText}`;
 
   doc.text(authLabel, signatureStartX + 2, footerTop + 4.5);
   doc.text("SOLICITANTE", signatureStartX + 2, footerTop + 10.5);
@@ -716,6 +720,28 @@ export const generatePurchaseOrderPdf = async ({
     signatureStartX + signatureColumnWidth * 2 + 2,
     footerTop + 10.5
   );
+
+  const getSignedAt = (level: PurchaseOrderApproval["approvalLevel"]) =>
+    approvals
+      .filter((approval) => approval.purchaseOrderID === purchaseOrder.purchaseOrderID && approval.approvalLevel === level && moment(approval.signedAt).isValid())
+      .sort((left, right) => moment(left.signedAt).valueOf() - moment(right.signedAt).valueOf())[0]?.signedAt;
+  const approvalDates = [requesterApprovedAt, getSignedAt("JR"), getSignedAt("SENIOR")];
+  const logTop = footerTop + 26;
+  doc.line(signatureStartX, logTop, summaryStartX, logTop);
+  const signatureFontSize = doc.getFontSize();
+  doc.setFontSize(7);
+  approvalDates.forEach((signedAt, index) => {
+    const date = signedAt ? new Date(signedAt) : null;
+    const label = date && Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat("es-PE", {
+          timeZone: "America/Lima",
+          day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+        }).format(date)
+      : "Sin registro";
+    doc.text(label, signatureStartX + signatureColumnWidth * index + 2, logTop + 5);
+  });
+  doc.setFontSize(signatureFontSize);
 
   doc.rect(summaryStartX, footerTop, summaryWidth, signatureHeight);
   doc.line(summaryStartX + 28, footerTop, summaryStartX + 28, footerTop + signatureHeight);
