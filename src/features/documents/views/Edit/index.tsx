@@ -110,6 +110,7 @@ const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => 
   const normalizeDetail = (detail: DocumentDetail): DocumentDetail => ({
     ...detail,
     vehicle_no: detail.vehicle_no || detail.extracted_plate || "",
+    originalExtractedPlate: detail.extracted_plate ?? "",
     costCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
     costCenter2: detail.centro_costo_2 !== undefined ? detail.centro_costo_2?.centroid ?? null : detail.costCenter2,
     originalCostCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
@@ -578,7 +579,8 @@ const DocumentEditPage: React.FC = () => {
       const original1 = detail.originalCostCenter1 !== undefined ? detail.originalCostCenter1 : documentData.centro_costo_1_id ?? null;
       const original2 = detail.originalCostCenter2 !== undefined ? detail.originalCostCenter2 : documentData.centro_costo_2_id ?? null;
       return normalizeCenterId(current1) !== normalizeCenterId(original1) ||
-        normalizeCenterId(current2) !== normalizeCenterId(original2);
+        normalizeCenterId(current2) !== normalizeCenterId(original2) ||
+        (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
     });
       const persistableDetails = changedDetails.filter((detail) =>
         detail.detailid > 0 || Number.isInteger(parseAmount(detail.quantity))
@@ -591,13 +593,19 @@ const DocumentEditPage: React.FC = () => {
           centro_costo_1_id: detail.costCenter1 !== undefined ? detail.costCenter1 : documentData.centro_costo_1_id ?? null,
           centro_costo_2_id: detail.costCenter2 !== undefined ? detail.costCenter2 : documentData.centro_costo_2_id ?? null,
         };
+        const plateChanged = (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
+        const updatePayload = {
+          ...costCenterPayload,
+          ...(plateChanged ? { extracted_plate: detail.extracted_plate ?? "" } : {}),
+        };
         const createResponse = await fetch(buildApiUrl(
           detail.detailid > 0 ? `documents-detail/${detail.detailid}/` : "documents-detail/"
         ), {
           method: detail.detailid > 0 ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(detail.detailid > 0 ? costCenterPayload : {
+          body: JSON.stringify(detail.detailid > 0 ? updatePayload : {
             ...costCenterPayload,
+            extracted_plate: detail.extracted_plate ?? "",
             document: documentData.documentid,
             documentserial: detail.documentserial,
             documentnumber: detail.documentnumber,
@@ -628,7 +636,9 @@ const DocumentEditPage: React.FC = () => {
           if (index >= 0) {
             const savedCenter1 = createdDetail?.costCenter1 !== undefined ? createdDetail.costCenter1 : costCenterPayload.centro_costo_1_id;
             const savedCenter2 = createdDetail?.costCenter2 !== undefined ? createdDetail.costCenter2 : costCenterPayload.centro_costo_2_id;
+            const savedPlate = createdDetail?.extracted_plate !== undefined ? createdDetail.extracted_plate : detail.extracted_plate ?? "";
             sunatDetails[index] = { ...detail, ...createdDetail,
+              extracted_plate: savedPlate, originalExtractedPlate: savedPlate,
               costCenter1: savedCenter1, costCenter2: savedCenter2,
               originalCostCenter1: savedCenter1, originalCostCenter2: savedCenter2 };
           }

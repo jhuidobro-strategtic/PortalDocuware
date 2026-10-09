@@ -139,7 +139,17 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                           {detail.unit_measure_description}
                         </td>
                         <td>{detail.description}</td>
-                        <td className="text-center">{detail.extracted_plate || "-"}</td>
+                        <td className="text-center">
+                          <Input type="text" value={detail.extracted_plate ?? ""}
+                            disabled={disabled}
+                            aria-label={`${t("Plate")}, ${rowIndex + 1}`}
+                            onChange={(event) => {
+                              const plate = event.target.value;
+                              onDetailsChange((rows) => rows.map((row, index) =>
+                                index === rowIndex ? { ...row, extracted_plate: plate } : row
+                              ));
+                            }} />
+                        </td>
                         <td className="text-center">{detail.quantity}</td>
                         {costColumns.map((field, index) => (
                           <td key={field} className="document-edit-cost-column">

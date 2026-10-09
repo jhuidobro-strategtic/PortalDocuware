@@ -44,6 +44,7 @@ export interface DocumentDetail {
   centro_costo_1?: CentroCosto | null;
   centro_costo_2?: CentroCosto | null;
   extracted_plate?: string | null;
+  originalExtractedPlate?: string | null;
   costCenter1?: number | null;
   costCenter2?: number | null;
   originalCostCenter1?: number | null;
