@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import logoTransa from "../../../assets/images/logotransa.png";
-import { Document } from "../../documents/types/list.types";
+import { Document, DocumentDetail } from "../../documents/types/list.types";
 import type { PurchaseOrderApproval } from "./purchaseOrderApprovals";
 
 interface PurchaseOrderPdfDetail {
@@ -52,6 +52,7 @@ interface PurchaseOrderPdfSupplier {
 
 interface GeneratePurchaseOrderPdfParams {
   approvals?: PurchaseOrderApproval[];
+  invoiceDetails?: DocumentDetail[];
   purchaseOrder: PurchaseOrderPdfOrder;
   relatedDocument?: Document | null;
   supplier?: PurchaseOrderPdfSupplier | null;
@@ -270,6 +271,7 @@ const buildPurchaseOrderPdfFileName = (
 
 export const generatePurchaseOrderPdf = async ({
   approvals = [],
+  invoiceDetails = [],
   purchaseOrder,
   relatedDocument,
   supplier,
@@ -477,18 +479,31 @@ export const generatePurchaseOrderPdf = async ({
   const footerGap = 3;
   const footerBottomMargin = 8;
   const maxFooterTop = pageHeight - footerBottomMargin - signatureHeight;
-  const detailTableBody = purchaseOrder.details.map((detail, index) => [
-    String(index + 1),
-    safeValue(detail.descriptionItem),
-    "-",
-    "-",
-    "-",
-    "-",
-    "Unidad",
-    formatAmount(detail.quantity, numberLocale),
-    formatAmount(detail.unitPrice, numberLocale),
-    formatAmount(detail.total, numberLocale),
-  ]);
+  // Match invoice lines by content, since their order can differ from the purchase order.
+  const remainingInvoiceDetails = [...invoiceDetails];
+  const normalizeDescription = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleUpperCase("es-PE");
+  const detailTableBody = purchaseOrder.details.map((detail, index) => {
+    const invoiceIndex = remainingInvoiceDetails.findIndex((invoiceDetail) =>
+      normalizeDescription(invoiceDetail.description) === normalizeDescription(detail.descriptionItem) &&
+      Number(invoiceDetail.quantity) === Number(detail.quantity) &&
+      Number(invoiceDetail.unit_value).toFixed(2) === Number(detail.unitPrice).toFixed(2)
+    );
+    const invoiceDetail = invoiceIndex >= 0
+      ? remainingInvoiceDetails.splice(invoiceIndex, 1)[0]
+      : undefined;
+    return [
+      String(index + 1),
+      safeValue(detail.descriptionItem),
+      "-",
+      safeValue(invoiceDetail?.centro_costo_1?.centrocodigo),
+      safeValue(invoiceDetail?.centro_costo_2?.centrocodigo),
+      "-",
+      "Unidad",
+      formatAmount(detail.quantity, numberLocale),
+      formatAmount(detail.unitPrice, numberLocale),
+      formatAmount(detail.total, numberLocale),
+    ];
+  });
 
   const renderDetailTable = (
     targetDoc: jsPDF,

@@ -33,6 +33,7 @@ import { fetchSigners } from "../../documents/services/orderC.service";
 import type { SelectOption } from "../../documents/types/orderC.types";
 import { generatePurchaseOrderPdf } from "../services/purchaseOrderPdf";
 import { fetchPurchaseOrderApprovals } from "../services/purchaseOrderApprovals";
+import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoiceDetails";
 import { intelligentSearch } from "../../../helpers/search-utils";
 import PurchaseOrderPdfPreviewModal from "../components/PurchaseOrderPdfPreviewModal";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
@@ -1125,9 +1126,13 @@ const PurchaseOrderDetails = () => {
         setGeneratingOrderId(orderModal.purchaseOrderID);
         setOrderModal(null);
 
-        const approvals = await fetchPurchaseOrderApprovals(updatedOrder.purchaseOrderID);
+        const [approvals, invoiceDetails] = await Promise.all([
+          fetchPurchaseOrderApprovals(updatedOrder.purchaseOrderID),
+          fetchPurchaseOrderInvoiceDetails(relatedDocument),
+        ]);
         const generatedPdf = await generatePurchaseOrderPdf({
           approvals,
+          invoiceDetails,
           purchaseOrder: updatedOrder,
           relatedDocument,
           supplier: supplierDetailsLookup[orderModal.supplierID] ?? null,
