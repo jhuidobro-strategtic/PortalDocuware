@@ -16,6 +16,8 @@ import {
   Notification,
 } from "../../types/programacion.types";
 import { intelligentSearch } from "../../../../helpers/search-utils";
+import AppPagination from "../../../../components/common/Pagination";
+import "../List/Documents.css";
 
 const initialProgramacion: NuevaProgramacion = {
   programacionfecha: moment().format("YYYY-MM-DD"),
@@ -43,6 +45,8 @@ const ProgramacionDiaria: React.FC = () => {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const addNotification = (type: Notification["type"], message: string) => {
     const id = Date.now();
@@ -55,6 +59,7 @@ const ProgramacionDiaria: React.FC = () => {
   const fetchProgramaciones = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(buildApiUrl("programacion-diaria"));
       const data = await res.json();
 
@@ -192,11 +197,17 @@ const ProgramacionDiaria: React.FC = () => {
   };
 
   const handleSearchTermChange = (value: string) => {
+    setCurrentPage(1);
     setSearchTerm(value);
   };
 
   const filteredProgramaciones = programaciones.filter((prog) =>
     intelligentSearch(prog, searchTerm)
+  );
+  const totalPages = Math.ceil(filteredProgramaciones.length / itemsPerPage);
+  const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const paginatedProgramaciones = filteredProgramaciones.slice(
+    (visiblePage - 1) * itemsPerPage, visiblePage * itemsPerPage
   );
 
   if (loading) {
@@ -204,7 +215,8 @@ const ProgramacionDiaria: React.FC = () => {
       <Container fluid>
         <div
           className="d-flex justify-content-center align-items-center"
-          style={{ minHeight: "400px" }}
+          style={{ minHeight: "calc(100vh - 200px)" }}
+          aria-busy="true"
         >
           <Spinner color="primary" />
         </div>
@@ -223,7 +235,7 @@ const ProgramacionDiaria: React.FC = () => {
   }
 
   return (
-    <Container fluid>
+    <Container fluid className="mt-4 small-text">
       <Notifications
         notifications={notifications}
         onRemove={removeNotification}
@@ -240,12 +252,15 @@ const ProgramacionDiaria: React.FC = () => {
               />
 
               <DocumentTable
-                programaciones={filteredProgramaciones}
+                programaciones={paginatedProgramaciones}
                 onEdit={(prog) => {
                   setEditProgramacion(prog);
                   setEditModal(true);
                 }}
               />
+              <AppPagination currentPage={visiblePage} totalPages={totalPages}
+                totalItems={filteredProgramaciones.length} itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage} />
             </CardBody>
           </Card>
         </Col>

@@ -16,23 +16,30 @@ const ProgramacionFilters: React.FC<ProgramacionFiltersProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-      <h4 className="card-title mb-0">{t("Daily Scheduling")}</h4>
-      <div className="d-flex gap-2 align-items-center">
-        <InputGroup style={{ maxWidth: "250px" }}>
+    <div className="document-filters-toolbar mb-4">
+      <div className="document-filters-title">
+        <h4 className="mb-0" style={{ fontSize: "1.2rem" }}>{t("Daily Scheduling")}</h4>
+      </div>
+      <div className="document-filters-controls-row">
+        <div className="document-filters-controls">
+        <InputGroup className="document-filter-control document-filter-control--search">
           <InputGroupText>
             <i className="ri-search-line" />
           </InputGroupText>
           <Input
             placeholder={t("Search...")}
+            aria-label={t("Search...")}
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
           />
         </InputGroup>
-        <Button color="primary" onClick={onCreate}>
-          <i className="ri-add-line align-bottom me-1" />
-          {t("New")}
+        </div>
+        <div className="document-actions-group">
+        <Button color="primary" onClick={onCreate} className="document-action-button">
+          <i className="ri-add-line" />
+          <span>{t("New")}</span>
         </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,19 @@
+.programacion-table > :not(caption) > * > * {
+  padding: 0.35rem 0.75rem;
+}
+
+.programacion-table .table-actions-menu {
+  vertical-align: middle;
+}
+
+.programacion-table .table-actions-menu__trigger {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.programacion-table .table-actions-menu__trigger i {
+  font-size: 0.95rem;
+}
