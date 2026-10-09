@@ -176,6 +176,14 @@ export const useDocumentList = () => {
       matchesDate = (!start || documentDate.isSameOrAfter(start)) && (!end || documentDate.isSameOrBefore(end));
     }
     return matchesSearch && matchesStatus && matchesDate;
+  }).sort((left, right) => {
+    const leftCreatedAt = Date.parse(left.created_at);
+    const rightCreatedAt = Date.parse(right.created_at);
+    const leftTimestamp = Number.isFinite(leftCreatedAt) ? leftCreatedAt : -Infinity;
+    const rightTimestamp = Number.isFinite(rightCreatedAt) ? rightCreatedAt : -Infinity;
+    return rightTimestamp === leftTimestamp
+      ? right.documentid - left.documentid
+      : rightTimestamp - leftTimestamp;
   });
 
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
