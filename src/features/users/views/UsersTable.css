@@ -1,0 +1,19 @@
+.users-table > :not(caption) > * > * {
+  padding: 0.35rem 0.75rem;
+}
+
+.users-table .table-actions-menu {
+  vertical-align: middle;
+}
+
+.users-table .table-actions-menu__trigger {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.users-table .table-actions-menu__trigger i {
+  font-size: 0.95rem;
+}

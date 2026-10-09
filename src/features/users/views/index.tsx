@@ -30,6 +30,7 @@ import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { downloadBlob } from "../../../helpers/download-blob";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
+import "./UsersTable.css";
 
 type SelectOption = { value: string; label: string };
 
@@ -650,7 +651,7 @@ const UsersPage = () => {
             ) : (
               <>
                 <div className="table-responsive">
-                  <Table className="table align-middle table-nowrap mb-0">
+                  <Table className="table align-middle table-nowrap mb-0 users-table">
                     <thead className="table-light">
                       <tr>
                         <th style={{ width: "90px" }}>ID</th>
@@ -682,7 +683,7 @@ const UsersPage = () => {
                               </td>
                               <td>{user.fullName || "-"}</td>
                               <td>
-                                <span className="badge bg-light text-secondary border px-3 py-2">
+                                <span className="badge bg-light text-secondary border px-2 py-1">
                                   {user.profile?.profileName ||
                                     `Perfil ${user.profileID || "-"}`}
                                 </span>
