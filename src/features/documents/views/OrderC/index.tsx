@@ -299,6 +299,7 @@ const DocumentOrderC = () => {
                 </h6>
                 <Row className="g-4">
                   {orderCFields.map((field) => {
+                    if (field.name === "purchaseState") return null;
                     const isCatalogSelect = field.name in CATALOG_ENDPOINTS;
                     const isSupplierSelect = field.name === "supplierID";
                     const isCurrencySelect = field.name === "currency";
