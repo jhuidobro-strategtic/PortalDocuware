@@ -1,13 +1,27 @@
-import React from "react";
-import { Card, CardBody, Spinner, Table } from "reactstrap";
+import React, { useState } from "react";
+import Select from "react-select";
+import { Card, CardBody, Input, Label, Spinner, Table } from "reactstrap";
 import { useTranslation } from "react-i18next";
 import { getNumberLocale } from "../../../../common/locale";
-import { DocumentDetail } from "../../types/list.types";
+import { CentroCosto, DocumentDetail } from "../../types/list.types";
 
 interface DocumentInvoiceDetailsProps {
   loading: boolean;
   details: DocumentDetail[];
+  centrosCostos: CentroCosto[];
+  centrosCostos2: CentroCosto[];
+  onDetailsChange: React.Dispatch<React.SetStateAction<DocumentDetail[]>>;
+  disabled: boolean;
 }
+
+interface CostCenterOption {
+  value: number;
+  label: string;
+}
+
+const costCenterSelectStyles = {
+  menuPortal: (base: Record<string, unknown>) => ({ ...base, zIndex: 9999 }),
+};
 
 const formatAmount = (value: string | number | null | undefined, locale: string) =>
   Number(value || 0).toLocaleString(locale, {
@@ -18,9 +32,45 @@ const formatAmount = (value: string | number | null | undefined, locale: string)
 const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
   loading,
   details,
+  centrosCostos,
+  centrosCostos2,
+  onDetailsChange,
+  disabled,
 }) => {
   const { t, i18n } = useTranslation();
   const numberLocale = getNumberLocale(i18n.language);
+  const [applyAll, setApplyAll] = useState({ costCenter1: false, costCenter2: false });
+  const mapCostOptions = (centers: CentroCosto[]): CostCenterOption[] => centers.map((center) => ({
+    value: Number(center.centroid),
+    label: `${center.centrocodigo} - ${center.descripcion}`,
+  }));
+  const costOptions = {
+    costCenter1: mapCostOptions(centrosCostos),
+    costCenter2: mapCostOptions(centrosCostos2),
+  };
+  const costColumns = ["costCenter1", "costCenter2"] as const;
+  const getSelectedCostCenter = (detail: DocumentDetail, field: typeof costColumns[number]): CostCenterOption | null => {
+    const id = detail[field];
+    if (id === null || id === undefined) return null;
+    const catalogOption = costOptions[field].find((option) => option.value === Number(id));
+    if (catalogOption) return catalogOption;
+    const savedCenter = field === "costCenter1" ? detail.centro_costo_1 : detail.centro_costo_2;
+    return savedCenter && Number(savedCenter.centroid) === Number(id)
+      ? { value: Number(id), label: `${savedCenter.centrocodigo} - ${savedCenter.descripcion}` }
+      : { value: Number(id), label: String(id) };
+  };
+  const changeCostCenter = (rowIndex: number, field: typeof costColumns[number], value: number | null) => {
+    onDetailsChange((rows) => rows.map((row, index) =>
+      applyAll[field] || index === rowIndex ? { ...row, [field]: value } : row
+    ));
+  };
+  const toggleApplyAll = (field: typeof costColumns[number], checked: boolean) => {
+    setApplyAll((previous) => ({ ...previous, [field]: checked }));
+    if (checked) {
+      const firstValue = details[0]?.[field] ?? null;
+      onDetailsChange((rows) => rows.map((row) => ({ ...row, [field]: firstValue })));
+    }
+  };
 
   const subtotal = details.reduce(
     (sum, detail) => sum + parseFloat(detail.total_value || "0"),
@@ -59,6 +109,17 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                   <th className="text-center">{t("Description")}</th>
                   <th className="text-center">{t("Plate")}</th>
                   <th className="text-center">{t("Quantity")}</th>
+                  {costColumns.map((field, index) => (
+                    <th key={field} className="document-edit-cost-column">
+                      <Label className="d-flex align-items-center gap-2 mb-0">
+                        <span>{t("Cost Center {{number}}", { number: index + 1 })}</span>
+                        <Input type="checkbox" className="m-0" checked={applyAll[field]}
+                          aria-label={`${t("Apply to all rows")}: ${t("Cost Center {{number}}", { number: index + 1 })}`}
+                          disabled={disabled || details.length === 0}
+                          onChange={(event) => toggleApplyAll(field, event.target.checked)} />
+                      </Label>
+                    </th>
+                  ))}
                   <th className="text-center">{t("Unit Value")}</th>
                   <th className="text-center">{t("Total")}</th>
                 </tr>
@@ -66,13 +127,13 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
               <tbody>
                 {details.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       {t("No details available")}
                     </td>
                   </tr>
                 ) : (
                   <>
-                    {details.map((detail) => (
+                    {details.map((detail, rowIndex) => (
                       <tr key={detail.detailid}>
                         <td className="text-center">
                           {detail.unit_measure_description}
@@ -80,6 +141,21 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                         <td>{detail.description}</td>
                         <td className="text-center">{detail.vehicle_no || (detail as any).vehicle_nro || "-"}</td>
                         <td className="text-center">{detail.quantity}</td>
+                        {costColumns.map((field, index) => (
+                          <td key={field} className="document-edit-cost-column">
+                            <Select<CostCenterOption> options={costOptions[field]}
+                              value={getSelectedCostCenter(detail, field)}
+                              onChange={(option: CostCenterOption | null) => changeCostCenter(rowIndex, field, option?.value ?? null)}
+                              isDisabled={disabled || (applyAll[field] && rowIndex > 0)}
+                              isClearable isSearchable
+                              aria-label={t("Cost Center {{number}}, row {{row}}", { number: index + 1, row: rowIndex + 1 })}
+                              placeholder={t("Select cost center")}
+                              noOptionsMessage={() => t("No results")}
+                              menuPortalTarget={document.body}
+                              menuPosition="fixed"
+                              styles={costCenterSelectStyles} />
+                          </td>
+                        ))}
                         <td className="text-end">
                           {formatAmount(detail.unit_value, numberLocale)}
                         </td>
@@ -90,7 +166,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                     ))}
 
                     <tr>
-                      <td colSpan={5} className="text-end fw-bold">
+                      <td colSpan={7} className="text-end fw-bold">
                         {t("Subtotal")}:
                       </td>
                       <td className="text-end fw-bold">
@@ -98,7 +174,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={5} className="text-end fw-bold">
+                      <td colSpan={7} className="text-end fw-bold">
                         IGV:
                       </td>
                       <td className="text-end fw-bold">
@@ -106,7 +182,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={5} className="text-end fw-bold">
+                      <td colSpan={7} className="text-end fw-bold">
                         {t("Total")}:
                       </td>
                       <td className="text-end fw-bold">

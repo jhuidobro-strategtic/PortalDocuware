@@ -107,15 +107,23 @@ const parseAmount = (value: unknown) => {
 const toAmountString = (value: unknown) => parseAmount(value).toFixed(2);
 
 const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => {
+  const normalizeDetail = (detail: DocumentDetail): DocumentDetail => ({
+    ...detail,
+    vehicle_no: detail.vehicle_no || detail.extracted_plate || "",
+    costCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
+    costCenter2: detail.centro_costo_2 !== undefined ? detail.centro_costo_2?.centroid ?? null : detail.costCenter2,
+    originalCostCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
+    originalCostCenter2: detail.centro_costo_2 !== undefined ? detail.centro_costo_2?.centroid ?? null : detail.costCenter2,
+  });
   if (Array.isArray(payload)) {
-    return payload as DocumentDetail[];
+    return (payload as DocumentDetail[]).map(normalizeDetail);
   }
 
   if (payload && typeof payload === "object") {
     const typedPayload = payload as { data?: unknown; detailid?: number };
 
     if (Array.isArray(typedPayload.data)) {
-      return typedPayload.data as DocumentDetail[];
+      return (typedPayload.data as DocumentDetail[]).map(normalizeDetail);
     }
 
     if (
@@ -123,11 +131,11 @@ const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => 
       typeof typedPayload.data === "object" &&
       "detailid" in typedPayload.data
     ) {
-      return [typedPayload.data as DocumentDetail];
+      return [normalizeDetail(typedPayload.data as DocumentDetail)];
     }
 
     if ("detailid" in typedPayload) {
-      return [typedPayload as DocumentDetail];
+      return [normalizeDetail(typedPayload as DocumentDetail)];
     }
   }
 
@@ -224,6 +232,7 @@ const DocumentEditPage: React.FC = () => {
   );
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
+  const [centrosCostos2, setCentrosCostos2] = useState<CentroCosto[]>([]);
   const [docDetails, setDocDetails] = useState<DocumentDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -368,7 +377,12 @@ const DocumentEditPage: React.FC = () => {
       );
       syncIgvPercent(nextDocument);
 
-      const sunatDetails = mapSunatItemsToDocumentDetails(sunatPayload);
+      const existingBySignature = new Map(existingDetails.map((detail) => [buildDetailSignature(detail), detail]));
+      const sunatDetails = mapSunatItemsToDocumentDetails(sunatPayload).map((detail) => {
+        const existing = existingBySignature.get(buildDetailSignature(detail));
+        return existing ? { ...existing, ...detail, detailid: existing.detailid,
+          costCenter1: existing.costCenter1, costCenter2: existing.costCenter2 } : detail;
+      });
       if (sunatDetails.length === 0) {
         setDocDetails(existingDetails);
         if (notifyErrors) {
@@ -377,61 +391,10 @@ const DocumentEditPage: React.FC = () => {
         return existingDetails;
       }
 
-      setDocDetails(sunatDetails);
-
-      const existingSignatures = new Set(
-        existingDetails.map((detail) => buildDetailSignature(detail))
-      );
-      const missingDetails = sunatDetails.filter(
-        (detail) => !existingSignatures.has(buildDetailSignature(detail))
-      );
-      const persistableDetails = missingDetails.filter((detail) =>
-        Number.isInteger(parseAmount(detail.quantity))
-      );
-      const skippedDetails = missingDetails.length - persistableDetails.length;
-
-      let failedSyncs = 0;
-      for (const detail of persistableDetails) {
-        const createResponse = await fetch(buildApiUrl("documents-detail/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            documentserial: detail.documentserial,
-            documentnumber: detail.documentnumber,
-            suppliernumber: detail.suppliernumber,
-            unit_measure_description: detail.unit_measure_description,
-            description: detail.description,
-            vehicle_nro: detail.vehicle_no || (detail as any).vehicle_nro,
-            quantity: detail.quantity,
-            unit_value: detail.unit_value,
-            tax_value: detail.tax_value,
-            total_value: detail.total_value,
-            status: detail.status,
-            created_by: detail.created_by,
-            created_at: detail.created_at,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          failedSyncs += 1;
-          console.error(
-            "No se pudo registrar un detalle de SUNAT",
-            await createResponse.text()
-          );
-        }
-      }
+      setDocDetails([...sunatDetails]);
 
       if (notifySuccess) {
-        if (failedSyncs > 0 || skippedDetails > 0) {
-          addNotification(
-            "warning",
-            `${sunatSuccessMessage}. ${t(
-              "Some invoice details could not be saved because the backend only accepts whole-number quantities, but the full detail from SUNAT is shown."
-            )}`
-          );
-        } else {
-          addNotification("success", sunatSuccessMessage);
-        }
+        addNotification("success", sunatSuccessMessage);
       }
 
       return sunatDetails;
@@ -453,15 +416,18 @@ const DocumentEditPage: React.FC = () => {
 
       try {
         setLoading(true);
-        const [documentResponse, tiposResponse, centrosResponse] = await Promise.all([
+        const [documentResponse, tiposResponse, centrosResponse, centros2Response] = await Promise.all([
           fetch(buildApiUrl(`documents/${documentId}/`)),
           fetch(buildApiUrl("tipo-documento")),
           fetch(buildApiUrl("centro-costo")),
+          fetch(buildApiUrl("centro-costo-2/")),
         ]);
 
         const documentPayload = await documentResponse.json();
         const tiposPayload = await tiposResponse.json();
         const centrosPayload = await centrosResponse.json();
+        const centros2Payload = await centros2Response.json();
+        setCentrosCostos2(Array.isArray(centros2Payload) ? centros2Payload : []);
 
         const resolvedDocument =
           documentPayload?.data && !Array.isArray(documentPayload.data)
@@ -501,7 +467,7 @@ const DocumentEditPage: React.FC = () => {
           );
           setDocDetails(details);
 
-          if (getSunatToken()) {
+          if (details.length === 0 && getSunatToken()) {
             try {
               await syncDocumentDetailsFromSunat(normalizedDocument, {
                 existingDetails: details,
@@ -602,6 +568,83 @@ const DocumentEditPage: React.FC = () => {
     }
   };
 
+  const persistDocumentDetails = async (documentData: Document) => {
+    const sunatDetails = [...docDetails];
+    const normalizeCenterId = (value: number | null | undefined) => value == null ? null : Number(value);
+    const changedDetails = sunatDetails.filter((detail) => {
+      if (detail.detailid <= 0) return true;
+      const current1 = detail.costCenter1 !== undefined ? detail.costCenter1 : documentData.centro_costo_1_id ?? null;
+      const current2 = detail.costCenter2 !== undefined ? detail.costCenter2 : documentData.centro_costo_2_id ?? null;
+      const original1 = detail.originalCostCenter1 !== undefined ? detail.originalCostCenter1 : documentData.centro_costo_1_id ?? null;
+      const original2 = detail.originalCostCenter2 !== undefined ? detail.originalCostCenter2 : documentData.centro_costo_2_id ?? null;
+      return normalizeCenterId(current1) !== normalizeCenterId(original1) ||
+        normalizeCenterId(current2) !== normalizeCenterId(original2);
+    });
+      const persistableDetails = changedDetails.filter((detail) =>
+        detail.detailid > 0 || Number.isInteger(parseAmount(detail.quantity))
+      );
+      const skippedDetails = changedDetails.length - persistableDetails.length;
+
+      let failedSyncs = 0;
+      for (const detail of persistableDetails) {
+        const costCenterPayload = {
+          centro_costo_1_id: detail.costCenter1 !== undefined ? detail.costCenter1 : documentData.centro_costo_1_id ?? null,
+          centro_costo_2_id: detail.costCenter2 !== undefined ? detail.costCenter2 : documentData.centro_costo_2_id ?? null,
+        };
+        const createResponse = await fetch(buildApiUrl(
+          detail.detailid > 0 ? `documents-detail/${detail.detailid}/` : "documents-detail/"
+        ), {
+          method: detail.detailid > 0 ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(detail.detailid > 0 ? costCenterPayload : {
+            ...costCenterPayload,
+            document: documentData.documentid,
+            documentserial: detail.documentserial,
+            documentnumber: detail.documentnumber,
+            suppliernumber: detail.suppliernumber,
+            unit_measure_description: detail.unit_measure_description,
+            description: detail.description,
+            vehicle_nro: detail.vehicle_no || (detail as any).vehicle_nro,
+            quantity: detail.quantity,
+            unit_value: detail.unit_value,
+            tax_value: detail.tax_value,
+            total_value: detail.total_value,
+            status: detail.status,
+            created_by: detail.created_by,
+            created_at: detail.created_at,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          failedSyncs += 1;
+          console.error(
+            "No se pudo registrar un detalle de SUNAT",
+            await createResponse.text()
+          );
+        } else {
+          const createdDetails = normalizeDocumentDetailsPayload(await createResponse.json().catch(() => null));
+          const createdDetail = createdDetails.find((item) => buildDetailSignature(item) === buildDetailSignature(detail)) ?? createdDetails[0];
+          const index = sunatDetails.findIndex((item) => item.detailid === detail.detailid);
+          if (index >= 0) {
+            const savedCenter1 = createdDetail?.costCenter1 !== undefined ? createdDetail.costCenter1 : costCenterPayload.centro_costo_1_id;
+            const savedCenter2 = createdDetail?.costCenter2 !== undefined ? createdDetail.costCenter2 : costCenterPayload.centro_costo_2_id;
+            sunatDetails[index] = { ...detail, ...createdDetail,
+              costCenter1: savedCenter1, costCenter2: savedCenter2,
+              originalCostCenter1: savedCenter1, originalCostCenter2: savedCenter2 };
+          }
+        }
+      }
+
+      setDocDetails([...sunatDetails]);
+
+    if (failedSyncs > 0) {
+      throw new Error("No fue posible guardar todos los detalles de la factura.");
+    }
+    if (skippedDetails > 0) {
+      addNotification("warning", t("Some invoice details could not be saved because the backend only accepts whole-number quantities, but the full detail from SUNAT is shown."));
+    }
+  };
+
   const handleSave = async () => {
     if (!editDoc) {
       return;
@@ -613,7 +656,6 @@ const DocumentEditPage: React.FC = () => {
       editDoc.suppliernumber.trim() !== "" &&
       editDoc.suppliername.trim() !== "" &&
       editDoc.documenttype !== null &&
-      editDoc.centercost !== null &&
       editDoc.documentdate.trim() !== "" &&
       parseFloat(editDoc.amount) > 0 &&
       parseFloat(editDoc.taxamount) >= 0 &&
@@ -624,6 +666,17 @@ const DocumentEditPage: React.FC = () => {
       return;
     }
 
+    const costCenter1Values = new Set(docDetails.map((detail) =>
+      detail.costCenter1 !== undefined ? detail.costCenter1 : editDoc.centro_costo_1_id ?? null
+    ));
+    const costCenter2Values = new Set(docDetails.map((detail) =>
+      detail.costCenter2 !== undefined ? detail.costCenter2 : editDoc.centro_costo_2_id ?? null
+    ));
+    const hasSharedCostCenter1 = costCenter1Values.size === 1;
+    const hasSharedCostCenter2 = costCenter2Values.size === 1;
+    const costCenter1 = hasSharedCostCenter1 ? Array.from(costCenter1Values)[0] : editDoc.centro_costo_1_id ?? null;
+    const costCenter2 = hasSharedCostCenter2 ? Array.from(costCenter2Values)[0] : editDoc.centro_costo_2_id ?? null;
+
     setLoadingSave(true);
     try {
       const documentTypeValue =
@@ -631,16 +684,16 @@ const DocumentEditPage: React.FC = () => {
           ? editDoc.documenttype.tipoid
           : editDoc.documenttype;
 
-      const centerCostValue =
-        typeof editDoc.centercost === "object" && editDoc.centercost !== null
-          ? editDoc.centercost.centroid
-          : editDoc.centercost;
-
+      const documentFields: Document & {
+        centercost_id?: number | null;
+      } = { ...editDoc };
+      delete documentFields.centercost_id;
       const updatedDocument = {
-        ...editDoc,
+        ...documentFields,
         status: isValid,
         documenttype_id: documentTypeValue,
-        centercost_id: centerCostValue,
+        ...(hasSharedCostCenter1 ? { centro_costo_1_id: costCenter1 } : {}),
+        ...(hasSharedCostCenter2 ? { centro_costo_2_id: costCenter2 } : {}),
       };
 
       const response = await fetch(buildApiUrl(`documents/${editDoc.documentid}/`), {
@@ -651,9 +704,12 @@ const DocumentEditPage: React.FC = () => {
 
       const payload = await response.json();
 
-      if (payload.success) {
+      if (response.ok && payload.success) {
+        await persistDocumentDetails(editDoc);
         const nextSavedDocument = {
           ...editDoc,
+          centro_costo_1_id: costCenter1,
+          centro_costo_2_id: costCenter2,
           ...(payload.data && typeof payload.data === "object" ? payload.data : {}),
           documenttype: editDoc.documenttype,
           centercost: editDoc.centercost,
@@ -667,7 +723,7 @@ const DocumentEditPage: React.FC = () => {
       }
     } catch (saveError) {
       console.error(saveError);
-      addNotification("danger", t("Error during the update process"));
+      addNotification("danger", saveError instanceof Error ? saveError.message : t("Error during the update process"));
     } finally {
       setLoadingSave(false);
     }
@@ -767,7 +823,6 @@ const DocumentEditPage: React.FC = () => {
                   editIgvPercent={editIgvPercent}
                   setEditIgvPercent={setEditIgvPercent}
                   tiposDocumento={tiposDocumento}
-                  centrosCostos={centrosCostos}
                   loadingRuc={loadingRuc}
                   loadingDocument={loadingDocument}
                   loadingSave={loadingSave}
@@ -783,8 +838,8 @@ const DocumentEditPage: React.FC = () => {
           <Col lg={6} className="d-flex">
             <DocumentEditPreviewPanel
               document={editDoc}
-              previewUrl={getPreviewUrl(editDoc.documenturl)}
-              downloadUrl={getDownloadUrl(editDoc.documenturl)}
+              previewUrl={getPreviewUrl(editDoc.batchFile?.r2Url?.trim() || editDoc.documenturl)}
+              downloadUrl={getDownloadUrl(editDoc.batchFile?.r2Url?.trim() || editDoc.documenturl)}
               rotation={rotation}
               onRotateLeft={() => setRotation((prev) => prev - 90)}
               onRotateRight={() => setRotation((prev) => prev + 90)}
@@ -796,7 +851,15 @@ const DocumentEditPage: React.FC = () => {
           <Col xs={12}>
             <DocumentInvoiceDetails
               loading={loadingDetails}
-              details={docDetails}
+              details={docDetails.map((detail) => ({
+                ...detail,
+                costCenter1: detail.costCenter1 !== undefined ? detail.costCenter1 : editDoc.centro_costo_1_id ?? null,
+                costCenter2: detail.costCenter2 !== undefined ? detail.costCenter2 : editDoc.centro_costo_2_id ?? null,
+              }))}
+              centrosCostos={centrosCostos}
+              centrosCostos2={centrosCostos2}
+              onDetailsChange={setDocDetails}
+              disabled={loadingSave}
             />
           </Col>
         </Row>

@@ -13,30 +13,9 @@ import {
 } from "reactstrap";
 import Flatpickr from "react-flatpickr";
 import moment from "moment";
-import Select from "react-select";
 import { useTranslation } from "react-i18next";
 import CurrencyDropdown from "./CurrencyDropdown";
-import { CentroCosto, Document, TipoDocumento } from "../types/list.types";
-
-type CentroOption = {
-  value: string;
-  label: string;
-};
-
-const selectStyles = {
-  control: (base: Record<string, unknown>) => ({
-    ...base,
-    minHeight: "38px",
-  }),
-  menu: (base: Record<string, unknown>) => ({
-    ...base,
-    zIndex: 9999,
-  }),
-  menuPortal: (base: Record<string, unknown>) => ({
-    ...base,
-    zIndex: 9999,
-  }),
-};
+import { Document, TipoDocumento } from "../types/list.types";
 
 interface DocumentEditorFormProps {
   editDoc: Document | null;
@@ -44,7 +23,6 @@ interface DocumentEditorFormProps {
   editIgvPercent: number;
   setEditIgvPercent: (value: number) => void;
   tiposDocumento: TipoDocumento[];
-  centrosCostos: CentroCosto[];
   loadingRuc: boolean;
   loadingDocument: boolean;
   loadingSave: boolean;
@@ -70,7 +48,6 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   editIgvPercent,
   setEditIgvPercent,
   tiposDocumento,
-  centrosCostos,
   loadingRuc,
   loadingDocument,
   loadingSave,
@@ -112,22 +89,6 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
     });
   };
 
-  const centroOptions: CentroOption[] = centrosCostos.map((centro) => ({
-    value: String(centro.centroid),
-    label: `${centro.centrocodigo} - ${centro.descripcion}`,
-  }));
-
-  const selectedCentro: CentroOption | null = (() => {
-    const currentValue =
-      editDoc.centercost && typeof editDoc.centercost === "object"
-        ? String(editDoc.centercost.centroid)
-        : editDoc.centercost
-          ? String(editDoc.centercost)
-          : null;
-
-    return centroOptions.find((option) => option.value === currentValue) || null;
-  })();
-
   return (
     <Form
       className="document-edit-form"
@@ -140,7 +101,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         <Row className="g-4">
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">RUC</Label>
+              <Label className="form-label">RUC <span className="text-danger">*</span></Label>
               <InputGroup>
                 <Input
                   value={editDoc.suppliernumber ?? ""}
@@ -170,14 +131,14 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={8}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Business Name")}</Label>
+              <Label className="form-label">{t("Business Name")} <span className="text-danger">*</span></Label>
               <Input value={editDoc.suppliername ?? ""} disabled />
             </FormGroup>
           </Col>
 
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Document Type")}</Label>
+              <Label className="form-label">{t("Document Type")} <span className="text-danger">*</span></Label>
               <Input
                 type="select"
                 value={
@@ -206,7 +167,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Series No.")}</Label>
+              <Label className="form-label">{t("Series No.")} <span className="text-danger">*</span></Label>
               <Input
                 value={editDoc.documentserial ?? ""}
                 onChange={(event) =>
@@ -222,7 +183,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Document No.")}</Label>
+              <Label className="form-label">{t("Document No.")} <span className="text-danger">*</span></Label>
               <InputGroup>
                 <Input
                   value={editDoc.documentnumber ?? ""}
@@ -252,7 +213,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Issue date")}</Label>
+              <Label className="form-label">{t("Issue date")} <span className="text-danger">*</span></Label>
               <InputGroup>
                 <InputGroupText>
                   <i className="ri-calendar-line" />
@@ -305,7 +266,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={4}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Subtotal")}</Label>
+              <Label className="form-label">{t("Subtotal")} <span className="text-danger">*</span></Label>
               <Input
                 type="number"
                 value={editDoc.amount ?? ""}
@@ -316,7 +277,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={5}>
             <FormGroup className="mb-0">
-              <Label className="form-label">IGV</Label>
+              <Label className="form-label">IGV <span className="text-danger">*</span></Label>
               <InputGroup className="document-edit-igv-group">
                 <Input
                   type="select"
@@ -339,30 +300,8 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
           <Col md={3}>
             <FormGroup className="mb-0">
-              <Label className="form-label">{t("Total")}</Label>
+              <Label className="form-label">{t("Total")} <span className="text-danger">*</span></Label>
               <Input type="number" value={editDoc.totalamount ?? "0.00"} disabled />
-            </FormGroup>
-          </Col>
-
-          <Col md={12}>
-            <FormGroup className="mb-0">
-              <Label className="form-label">{t("Cost center")}</Label>
-              <Select
-                value={selectedCentro}
-                options={centroOptions}
-                onChange={(selected: CentroOption | null) =>
-                  setEditDoc({
-                    ...editDoc,
-                    centercost: selected ? Number(selected.value) : null,
-                  })
-                }
-                placeholder={t("Select cost center")}
-                isClearable
-                isSearchable
-                noOptionsMessage={() => t("No results")}
-                styles={selectStyles}
-                menuPortalTarget={document.body}
-              />
             </FormGroup>
           </Col>
 

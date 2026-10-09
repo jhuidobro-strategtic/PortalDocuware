@@ -14,6 +14,7 @@ export interface Document {
   taxamount: string;
   totalamount: string;
   documenturl: string;
+  batchFile?: { r2Url?: string | null } | null;
   file_url?: string;
   notes: string;
   status: boolean;
@@ -24,6 +25,8 @@ export interface Document {
   currency: string;
   driver: string;
   centercost: number | { centroid: number; centrocodigo: string; descripcion: string } | null;
+  centro_costo_1_id?: number | null;
+  centro_costo_2_id?: number | null;
 }
 
 export interface TipoDocumento {
@@ -38,6 +41,13 @@ export interface CentroCosto {
 }
 
 export interface DocumentDetail {
+  centro_costo_1?: CentroCosto | null;
+  centro_costo_2?: CentroCosto | null;
+  extracted_plate?: string | null;
+  costCenter1?: number | null;
+  costCenter2?: number | null;
+  originalCostCenter1?: number | null;
+  originalCostCenter2?: number | null;
   detailid: number;
   documentserial: string;
   documentnumber: string;
