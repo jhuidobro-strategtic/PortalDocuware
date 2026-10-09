@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { Card, CardBody, Input, Label, Spinner, Table } from "reactstrap";
 import { useTranslation } from "react-i18next";
 import { getNumberLocale } from "../../../../common/locale";
 import { CentroCosto, DocumentDetail } from "../../types/list.types";
+import { applyVehicleCostCenters, fetchVehicleCostCenters, findVehicleByPlate, VehicleCostCenters } from "../../services/vehicleCostCenters";
 
 interface DocumentInvoiceDetailsProps {
   loading: boolean;
@@ -40,6 +41,22 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
   const { t, i18n } = useTranslation();
   const numberLocale = getNumberLocale(i18n.language);
   const [applyAll, setApplyAll] = useState({ costCenter1: false, costCenter2: false });
+  const [vehicles, setVehicles] = useState<VehicleCostCenters[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [vehicleError, setVehicleError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchVehicleCostCenters(controller.signal)
+      .then(setVehicles)
+      .catch((error) => {
+        if (!controller.signal.aborted) setVehicleError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingVehicles(false);
+      });
+    return () => controller.abort();
+  }, []);
   const mapCostOptions = (centers: CentroCosto[]): CostCenterOption[] => centers.map((center) => ({
     value: Number(center.centroid),
     label: `${center.centrocodigo} - ${center.descripcion}`,
@@ -96,6 +113,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
           </div>
         </div>
 
+        {vehicleError && <p className="text-danger" role="alert">{vehicleError}</p>}
         {loading ? (
           <div className="text-center my-4">
             <Spinner color="primary" />
@@ -141,12 +159,14 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                         <td>{detail.description}</td>
                         <td className="text-center">
                           <Input type="text" value={detail.extracted_plate ?? ""}
-                            disabled={disabled}
+                            disabled={disabled || loadingVehicles}
                             aria-label={`${t("Plate")}, ${rowIndex + 1}`}
                             onChange={(event) => {
                               const plate = event.target.value;
+                              const vehicle = findVehicleByPlate(plate, vehicles);
+                              if (vehicle) setApplyAll({ costCenter1: false, costCenter2: false });
                               onDetailsChange((rows) => rows.map((row, index) =>
-                                index === rowIndex ? { ...row, extracted_plate: plate } : row
+                                index === rowIndex ? applyVehicleCostCenters(row, plate, vehicle) : row
                               ));
                             }} />
                         </td>
