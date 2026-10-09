@@ -66,6 +66,7 @@ export const getOrderCFields = (
       name: "purchaseState",
       labelKey: "Purchase Status",
       placeholderKey: "Select purchase status",
+      readOnly: true,
     },
     {
       name: "requiredby",

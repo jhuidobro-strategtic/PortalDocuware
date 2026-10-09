@@ -26,6 +26,7 @@ import {
   getOrderCurrencyLabel,
   formatListAmount,
   getDetailTotal,
+  requiredFields,
 } from "../../services/orderC.utils";
 
 const DocumentOrderC = () => {
@@ -214,7 +215,9 @@ const DocumentOrderC = () => {
                 </h6>
                 <Row className="g-4 align-items-end">
                   <Col md={4}>
-                    <Label className="form-label">{t("Voucher Type")}</Label>
+                    <Label className="form-label">
+                      {t("Voucher Type")} <span className="text-danger">*</span>
+                    </Label>
                     <Input
                       value={sunatSearchValues.tipoComprobante}
                       onChange={(event) =>
@@ -227,7 +230,9 @@ const DocumentOrderC = () => {
                     />
                   </Col>
                   <Col md={4}>
-                    <Label className="form-label">{t("Series")}</Label>
+                    <Label className="form-label">
+                      {t("Series")} <span className="text-danger">*</span>
+                    </Label>
                     <Input
                       value={sunatSearchValues.serie}
                       onChange={(event) =>
@@ -237,7 +242,9 @@ const DocumentOrderC = () => {
                     />
                   </Col>
                   <Col md={4}>
-                    <Label className="form-label">{t("Number")}</Label>
+                    <Label className="form-label">
+                      {t("Number")} <span className="text-danger">*</span>
+                    </Label>
                     <Input
                       value={sunatSearchValues.numero}
                       onChange={(event) =>
@@ -314,6 +321,9 @@ const DocumentOrderC = () => {
                         <div>
                           <Label className="form-label">
                             {t(field.labelKey)}
+                            {requiredFields.includes(
+                              field.name === "createdByName" ? "createdBy" : field.name
+                            ) && <span className="text-danger ms-1">*</span>}
                           </Label>
                           {isSelect ? (
                             isSupplierSelect ? (
@@ -379,7 +389,8 @@ const DocumentOrderC = () => {
                                   )
                                 }
                                 placeholder={t(field.placeholderKey)}
-                                isClearable
+                                isClearable={!field.readOnly}
+                                isDisabled={field.readOnly}
                                 isLoading={
                                   (isSignerSelect || isRequesterSelect) &&
                                   loadingSigners

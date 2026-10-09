@@ -347,7 +347,7 @@ const getCurrentSessionUser = () => {
   try {
     const authUser = sessionStorage.getItem("authUser");
     if (!authUser) {
-      return { id: null as number | null, name: "" };
+      return { id: null as number | null, name: "", approvalRole: "" };
     }
 
     const parsedUser = JSON.parse(authUser);
@@ -358,6 +358,7 @@ const getCurrentSessionUser = () => {
 
     return {
       id: Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null,
+      approvalRole: String(sessionData.approvalRole ?? sessionData.purchase_approval_role ?? sessionData.permissions?.purchaseApprovalRole ?? "").toUpperCase(),
       name:
         sessionData?.fullname ||
         sessionData?.first_name ||
@@ -366,7 +367,7 @@ const getCurrentSessionUser = () => {
         "",
     };
   } catch {
-    return { id: null as number | null, name: "" };
+    return { id: null as number | null, name: "", approvalRole: "" };
   }
 };
 
@@ -767,6 +768,7 @@ const PurchaseOrderDetails = () => {
     currentStateLabel?: string,
     order?: PurchaseOrder
   ) => {
+    if (sessionUser.approvalRole === "NONE") return [];
     if (order && (!order.canBeApprovedBy || order.hasSeniorApproval || order.approvalStatus === "APPROVED")) {
       return [];
     }
@@ -1060,55 +1062,15 @@ const PurchaseOrderDetails = () => {
       setActionError(null);
       setActionSuccess(null);
 
-      const response = await fetch(buildApiUrl("purchase-orders/status/"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          purchaseOrderID: orderModal.purchaseOrderID,
-          purchaseState: selectedState,
-          updatedBy: sessionUser.id,
-        }),
-      });
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || data?.success === false) {
-        throw new Error(
-          data?.message || t("Unable to update purchase order status.")
-        );
-      }
-
-      statusUpdated = true;
-
-      const updatedOrder = {
-        ...orderModal,
-        purchaseState: selectedState,
-        purchaseStateLabel:
-          purchaseStateLookup[selectedState] ||
-          modalStateOptions.find((option) => option.value === selectedState)?.label,
-        updatedBy: sessionUser.id,
-      };
-
-      setPurchaseOrders((currentOrders) =>
-        currentOrders.map((purchaseOrder) =>
-          purchaseOrder.purchaseOrderID === updatedOrder.purchaseOrderID
-            ? updatedOrder
-            : purchaseOrder
-        )
-      );
-
-      // TODO: llamar API para actualizar estado cuando esté disponible
-      // await fetch(buildApiUrl(`purchase-orders/${orderModal.purchaseOrderID}/state`), {
-      //   method: "PATCH",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ purchaseState: selectedState }),
-      // });
-
       if (
         getPurchaseStateKind(
           selectedState,
           purchaseStateLookup[selectedState]
         ) === "approved"
       ) {
+        if (sessionUser.approvalRole === "NONE") {
+          throw new Error("El usuario no tiene permisos para firmar órdenes de compra.");
+        }
         const approvalResponse = await fetch(buildApiUrl("purchase-orders/approve/"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1127,9 +1089,29 @@ const PurchaseOrderDetails = () => {
           );
         }
 
+        statusUpdated = true;
+
         setPurchaseOrders((currentOrders) =>
           currentOrders.filter((order) => order.purchaseOrderID !== orderModal.purchaseOrderID)
         );
+
+        const ordersResponse = await fetch(buildApiUrl("purchase-orders/"));
+        const ordersData = await ordersResponse.json().catch(() => null);
+        const signedOrder = Array.isArray(ordersData?.data)
+          ? ordersData.data.find((order: PurchaseOrderApiItem) => order.purchaseOrderID === orderModal.purchaseOrderID)
+          : null;
+        if (!ordersResponse.ok || ordersData?.success !== true || !signedOrder) {
+          throw new Error("La firma se registró, pero no fue posible consultar el estado actualizado de la orden.");
+        }
+        const updatedOrder = mapPurchaseOrder(signedOrder);
+        if (updatedOrder.approvalStatus === "JR_SIGNED" && !updatedOrder.hasSeniorApproval) {
+          setActionSuccess("Firma JR registrada. La orden queda pendiente de aprobación Senior.");
+          setOrderModal(null);
+          return;
+        }
+        if (updatedOrder.approvalStatus !== "APPROVED" || !updatedOrder.hasSeniorApproval) {
+          throw new Error("La firma se registró, pero la orden todavía no tiene aprobación final Senior.");
+        }
 
         const relatedDocument =
           documentsByAssociatedNo[orderModal.documentAssociatedNo] ?? null;
@@ -1217,6 +1199,23 @@ const PurchaseOrderDetails = () => {
         );
 
       } else {
+        const response = await fetch(buildApiUrl("purchase-orders/status/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            purchaseOrderID: orderModal.purchaseOrderID,
+            purchaseState: selectedState,
+            updatedBy: sessionUser.id,
+          }),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || data?.success === false) {
+          throw new Error(data?.message || t("Unable to update purchase order status."));
+        }
+        statusUpdated = true;
+        setPurchaseOrders((currentOrders) => currentOrders.filter(
+          (order) => order.purchaseOrderID !== orderModal.purchaseOrderID
+        ));
         setActionSuccess(data?.message || t("Purchase order status updated successfully."));
         setOrderModal(null);
       }
@@ -1795,7 +1794,7 @@ const PurchaseOrderDetails = () => {
             ) : selectedStateMeta?.kind === "approved" ? (
               <>
                 <i className="ri-file-download-line me-1" />
-                {t("Approve & Generate")}
+                {sessionUser.approvalRole === "JR" ? t("Sign JR") : t("Approve & Generate")}
               </>
             ) : (
               t("Confirm")
