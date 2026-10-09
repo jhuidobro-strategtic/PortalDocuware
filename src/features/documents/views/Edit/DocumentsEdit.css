@@ -1,3 +1,10 @@
+.document-edit-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .document-edit-page {
   padding-bottom: 1rem;
 }

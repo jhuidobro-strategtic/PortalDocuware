@@ -768,7 +768,7 @@ const DocumentEditPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="text-center my-5">
+      <div className="page-content document-edit-loading" aria-busy="true">
         <Spinner color="primary" />
       </div>
     );
