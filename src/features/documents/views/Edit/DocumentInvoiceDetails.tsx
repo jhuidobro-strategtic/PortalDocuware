@@ -139,7 +139,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                           {detail.unit_measure_description}
                         </td>
                         <td>{detail.description}</td>
-                        <td className="text-center">{detail.vehicle_no || (detail as any).vehicle_nro || "-"}</td>
+                        <td className="text-center">{detail.extracted_plate || "-"}</td>
                         <td className="text-center">{detail.quantity}</td>
                         {costColumns.map((field, index) => (
                           <td key={field} className="document-edit-cost-column">
