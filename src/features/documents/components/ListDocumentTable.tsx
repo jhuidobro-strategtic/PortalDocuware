@@ -70,12 +70,6 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           <thead className="table-light">
             <tr style={{ textAlign: "center" }}>
               <ResizableHeader
-                width={columnWidths.id}
-                onResize={(w: number) => onResizeColumn("id", w)}
-              >
-                ID
-              </ResizableHeader>
-              <ResizableHeader
                 width={columnWidths.serie}
                 onResize={(w: number) => onResizeColumn("serie", w)}
               >
@@ -159,7 +153,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           <tbody>
             {documents.length === 0 && (
               <tr>
-                <td colSpan={14} className="text-center">
+                <td colSpan={12} className="text-center">
                   {t("No records found")}
                 </td>
               </tr>
@@ -178,15 +172,6 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
 
               return (
                 <tr key={doc.documentid}>
-                  <td
-                    style={{
-                      ...style,
-                      width: columnWidths.id,
-                      textAlign: "center",
-                    }}
-                  >
-                    <b>#{doc.documentid}</b>
-                  </td>
                   <td
                     style={{
                       ...style,
