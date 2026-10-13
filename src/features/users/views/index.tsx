@@ -46,6 +46,11 @@ interface UserItem {
   status: boolean;
   profileID: number;
   profile: UserProfileReference | null;
+  purchaseApprovalRole: string | null;
+  approvalRole: string | null;
+  isPurchaseApprover: boolean;
+  isPurchaseApproverJunior: boolean;
+  isPurchaseApproverSenior: boolean;
 }
 
 interface UserFormValues {
@@ -53,6 +58,7 @@ interface UserFormValues {
   fullname: string;
   password: string;
   profileId: string;
+  purchaseApprovalRole: string;
 }
 
 type UserFormField = keyof UserFormValues;
@@ -75,6 +81,7 @@ const createEmptyUserForm = (): UserFormValues => ({
   fullname: "",
   password: "",
   profileId: "",
+  purchaseApprovalRole: "NONE",
 });
 
 const mapApiUser = (item: any): UserItem => ({
@@ -89,6 +96,11 @@ const mapApiUser = (item: any): UserItem => ({
         profileName: String(item.profile.profileName ?? item.profile.profile_name ?? "").trim(),
       }
     : null,
+  purchaseApprovalRole: String(item.purchase_approval_role ?? item.approvalRole ?? "").trim() || "NONE",
+  approvalRole: String(item.approvalRole ?? item.purchase_approval_role ?? "").trim() || "NONE",
+  isPurchaseApprover: Boolean(item.isPurchaseApprover),
+  isPurchaseApproverJunior: Boolean(item.isPurchaseApproverJunior),
+  isPurchaseApproverSenior: Boolean(item.isPurchaseApproverSenior),
 });
 
 const getStatusMeta = (
@@ -114,6 +126,7 @@ const buildRegisterPayload = (formValues: UserFormValues) => ({
   fullname: formValues.fullname.trim(),
   password: formValues.password,
   profile_id: Number(formValues.profileId),
+  purchase_approval_role: formValues.purchaseApprovalRole || "NONE",
 });
 
 const buildProfileOptions = (users: UserItem[]): SelectOption[] => {
@@ -177,6 +190,15 @@ const UsersPage = () => {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const profileOptions = useMemo(() => buildProfileOptions(users), [users]);
+
+  const approvalRoleOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "NONE", label: t("No approver role") },
+      { value: "JR", label: t("Junior Approver") },
+      { value: "SENIOR", label: t("Senior Approver") },
+    ],
+    [t]
+  );
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -337,12 +359,21 @@ const UsersPage = () => {
   };
 
   const handleOpenEditModal = (user: UserItem) => {
+    const rawRole = (user.purchaseApprovalRole || user.approvalRole || "").trim().toUpperCase();
+    const normalizedRole =
+      rawRole === "JR" || rawRole === "JUNIOR"
+        ? "JR"
+        : rawRole === "SENIOR"
+        ? "SENIOR"
+        : "NONE";
+
     setEditingUser(user);
     setEditFormValues({
       username: user.userName,
       fullname: user.fullName,
       password: "",
       profileId: String(user.profileID || ""),
+      purchaseApprovalRole: normalizedRole,
     });
     setEditFormErrors({});
     setIsEditModalOpen(true);
@@ -409,6 +440,7 @@ const UsersPage = () => {
         username: editFormValues.username.trim(),
         fullname: editFormValues.fullname.trim(),
         profile_id: Number(editFormValues.profileId),
+        purchase_approval_role: editFormValues.purchaseApprovalRole || "NONE",
       };
 
       if (editFormValues.password.trim()) {
@@ -506,6 +538,7 @@ const UsersPage = () => {
         "Usuario",
         "Nombre Completo",
         "Perfil",
+        "Rol de Aprobación",
         "Estado",
       ];
 
@@ -528,11 +561,20 @@ const UsersPage = () => {
       });
 
       filteredUsers.forEach((user) => {
+        const rawRole = (user.purchaseApprovalRole || user.approvalRole || "").trim().toUpperCase();
+        const roleLabel =
+          rawRole === "SENIOR"
+            ? "SENIOR"
+            : rawRole === "JR" || rawRole === "JUNIOR"
+            ? "JR"
+            : "Sin rol";
+
         const row = worksheet.addRow([
           user.userID,
           user.userName || "-",
           user.fullName || "-",
           user.profile?.profileName || `Perfil ${user.profileID || "-"}`,
+          roleLabel,
           user.status ? "Activo" : "Inactivo",
         ]);
 
@@ -544,7 +586,7 @@ const UsersPage = () => {
             right: { style: "thin" },
           };
 
-          if (columnNumber === 5) {
+          if (columnNumber === 6) {
             cell.font = {
               color: { argb: user.status ? "008000" : "FF0000" },
               bold: true,
@@ -558,6 +600,7 @@ const UsersPage = () => {
         { width: 32 },
         { width: 38 },
         { width: 24 },
+        { width: 22 },
         { width: 18 },
       ];
 
@@ -654,12 +697,13 @@ const UsersPage = () => {
                   <Table className="table align-middle table-nowrap mb-0 users-table">
                     <thead className="table-light">
                       <tr>
-                        <th style={{ width: "90px" }}>ID</th>
-                        <th style={{ width: "320px" }}>{t("Username")}</th>
+                        <th style={{ width: "80px" }}>ID</th>
+                        <th style={{ width: "260px" }}>{t("Username")}</th>
                         <th>{t("Full Name")}</th>
-                        <th style={{ width: "220px" }}>{t("Profile")}</th>
-                        <th style={{ width: "160px" }}>{t("Status")}</th>
-                        <th style={{ width: "120px" }} className="text-center">
+                        <th style={{ width: "180px" }}>{t("Profile")}</th>
+                        <th style={{ width: "170px" }}>{t("Approval Role")}</th>
+                        <th style={{ width: "140px" }}>{t("Status")}</th>
+                        <th style={{ width: "110px" }} className="text-center">
                           {t("Actions")}
                         </th>
                       </tr>
@@ -667,7 +711,7 @@ const UsersPage = () => {
                     <tbody>
                       {paginatedUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-4">
+                          <td colSpan={7} className="text-center py-4">
                             {t("No users were found.")}
                           </td>
                         </tr>
@@ -687,6 +731,25 @@ const UsersPage = () => {
                                   {user.profile?.profileName ||
                                     `Perfil ${user.profileID || "-"}`}
                                 </span>
+                              </td>
+                              <td>
+                                {user.purchaseApprovalRole === "SENIOR" ? (
+                                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                    <i className="ri-shield-star-line me-1" />
+                                    SENIOR
+                                  </span>
+                                ) : user.purchaseApprovalRole === "JR" || user.purchaseApprovalRole === "JUNIOR" ? (
+                                  <span className="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                    <i className="ri-shield-user-line me-1" />
+                                    JR
+                                  </span>
+                                ) : user.purchaseApprovalRole && user.purchaseApprovalRole !== "NONE" ? (
+                                  <span className="badge bg-light text-secondary border px-2 py-1">
+                                    {user.purchaseApprovalRole}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
                               </td>
                               <td>
                                 <span className={statusMeta.className}>
@@ -818,6 +881,28 @@ const UsersPage = () => {
                     </div>
                   )}
                 </Col>
+                <Col md={12}>
+                  <Label className="form-label">
+                    {t("Approval Role (Purchase Orders)")}
+                  </Label>
+                  <Select
+                    options={approvalRoleOptions}
+                    value={
+                      approvalRoleOptions.find(
+                        (option) =>
+                          option.value === (createFormValues.purchaseApprovalRole || "NONE")
+                      ) ?? approvalRoleOptions[0]
+                    }
+                    onChange={(selected: SelectOption | null) =>
+                      handleCreateFormValueChange(
+                        "purchaseApprovalRole",
+                        selected ? selected.value : "NONE"
+                      )
+                    }
+                    placeholder={t("Select approval role")}
+                    classNamePrefix="select2-selection"
+                  />
+                </Col>
               </Row>
             </ModalBody>
             <ModalFooter>
@@ -916,6 +1001,28 @@ const UsersPage = () => {
                       {editFormErrors.profileId}
                     </div>
                   )}
+                </Col>
+                <Col md={12}>
+                  <Label className="form-label">
+                    {t("Approval Role (Purchase Orders)")}
+                  </Label>
+                  <Select
+                    options={approvalRoleOptions}
+                    value={
+                      approvalRoleOptions.find(
+                        (option) =>
+                          option.value === (editFormValues.purchaseApprovalRole || "NONE")
+                      ) ?? approvalRoleOptions[0]
+                    }
+                    onChange={(selected: SelectOption | null) =>
+                      handleEditFormValueChange(
+                        "purchaseApprovalRole",
+                        selected ? selected.value : "NONE"
+                      )
+                    }
+                    placeholder={t("Select approval role")}
+                    classNamePrefix="select2-selection"
+                  />
                 </Col>
               </Row>
             </ModalBody>

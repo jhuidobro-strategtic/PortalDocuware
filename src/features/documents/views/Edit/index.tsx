@@ -869,6 +869,7 @@ const DocumentEditPage: React.FC = () => {
               centrosCostos={centrosCostos}
               centrosCostos2={centrosCostos2}
               onDetailsChange={setDocDetails}
+              onPlateNotFound={(plate) => addNotification("warning", `La placa ${plate} no está registrada.`)}
               disabled={loadingSave}
             />
           </Col>

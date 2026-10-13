@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Select from "react-select";
 import { Card, CardBody, Input, Label, Spinner, Table } from "reactstrap";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,7 @@ interface DocumentInvoiceDetailsProps {
   centrosCostos2: CentroCosto[];
   onDetailsChange: React.Dispatch<React.SetStateAction<DocumentDetail[]>>;
   disabled: boolean;
+  onPlateNotFound: (plate: string) => void;
 }
 
 interface CostCenterOption {
@@ -37,6 +38,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
   centrosCostos2,
   onDetailsChange,
   disabled,
+  onPlateNotFound,
 }) => {
   const { t, i18n } = useTranslation();
   const numberLocale = getNumberLocale(i18n.language);
@@ -44,6 +46,11 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
   const [vehicles, setVehicles] = useState<VehicleCostCenters[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [vehicleError, setVehicleError] = useState("");
+  const plateAlertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (plateAlertTimer.current) clearTimeout(plateAlertTimer.current);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -164,7 +171,11 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                             onChange={(event) => {
                               const plate = event.target.value;
                               const vehicle = findVehicleByPlate(plate, vehicles);
-                              if (vehicle) setApplyAll({ costCenter1: false, costCenter2: false });
+                              setApplyAll({ costCenter1: false, costCenter2: false });
+                              if (plateAlertTimer.current) clearTimeout(plateAlertTimer.current);
+                              if (plate.trim() && !vehicle && !vehicleError) {
+                                plateAlertTimer.current = setTimeout(() => onPlateNotFound(plate.trim()), 800);
+                              }
                               onDetailsChange((rows) => rows.map((row, index) =>
                                 index === rowIndex ? applyVehicleCostCenters(row, plate, vehicle) : row
                               ));

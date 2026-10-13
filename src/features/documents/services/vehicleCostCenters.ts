@@ -35,10 +35,8 @@ export const applyVehicleCostCenters = (
 ): DocumentDetail => ({
   ...detail,
   extracted_plate: plate,
-  ...(vehicle ? {
-    costCenter1: vehicle.centro_costo_1?.centroid ?? null,
-    costCenter2: vehicle.centro_costo_2?.centroid ?? null,
-    centro_costo_1: vehicle.centro_costo_1,
-    centro_costo_2: vehicle.centro_costo_2,
-  } : {}),
+  costCenter1: vehicle?.centro_costo_1?.centroid ?? null,
+  costCenter2: vehicle?.centro_costo_2?.centroid ?? null,
+  centro_costo_1: vehicle?.centro_costo_1 ?? null,
+  centro_costo_2: vehicle?.centro_costo_2 ?? null,
 });
