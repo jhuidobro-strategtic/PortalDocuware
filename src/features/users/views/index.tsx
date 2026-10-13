@@ -564,10 +564,10 @@ const UsersPage = () => {
         const rawRole = (user.purchaseApprovalRole || user.approvalRole || "").trim().toUpperCase();
         const roleLabel =
           rawRole === "SENIOR"
-            ? "SENIOR"
+            ? "Aprobador Senior"
             : rawRole === "JR" || rawRole === "JUNIOR"
-            ? "JR"
-            : "Sin rol";
+            ? "Aprobador Junior"
+            : "Sin rol de aprobador";
 
         const row = worksheet.addRow([
           user.userID,
@@ -600,7 +600,7 @@ const UsersPage = () => {
         { width: 32 },
         { width: 38 },
         { width: 24 },
-        { width: 22 },
+        { width: 26 },
         { width: 18 },
       ];
 
@@ -701,7 +701,7 @@ const UsersPage = () => {
                         <th style={{ width: "260px" }}>{t("Username")}</th>
                         <th>{t("Full Name")}</th>
                         <th style={{ width: "180px" }}>{t("Profile")}</th>
-                        <th style={{ width: "170px" }}>{t("Approval Role")}</th>
+                        <th style={{ width: "210px" }}>{t("Approval Role")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
                         <th style={{ width: "110px" }} className="text-center">
                           {t("Actions")}
@@ -736,19 +736,17 @@ const UsersPage = () => {
                                 {user.purchaseApprovalRole === "SENIOR" ? (
                                   <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
                                     <i className="ri-shield-star-line me-1" />
-                                    SENIOR
+                                    {t("Senior Approver")}
                                   </span>
                                 ) : user.purchaseApprovalRole === "JR" || user.purchaseApprovalRole === "JUNIOR" ? (
                                   <span className="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
                                     <i className="ri-shield-user-line me-1" />
-                                    JR
-                                  </span>
-                                ) : user.purchaseApprovalRole && user.purchaseApprovalRole !== "NONE" ? (
-                                  <span className="badge bg-light text-secondary border px-2 py-1">
-                                    {user.purchaseApprovalRole}
+                                    {t("Junior Approver")}
                                   </span>
                                 ) : (
-                                  <span className="text-muted">-</span>
+                                  <span className="badge bg-light text-secondary border px-2 py-1">
+                                    {t("No approver role")}
+                                  </span>
                                 )}
                               </td>
                               <td>
