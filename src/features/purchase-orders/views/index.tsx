@@ -504,13 +504,16 @@ const getPurchaseStateMeta = (
 const getPurchaseStateDescription = (
   purchaseState: number,
   t: (key: string) => string,
-  purchaseStateLabel?: string
+  purchaseStateLabel?: string,
+  isJunior?: boolean
 ) => {
   switch (getPurchaseStateKind(purchaseState, purchaseStateLabel)) {
     case "paid":
       return t("Marks the purchase order as paid.");
     case "approved":
-      return t("Generates the PDF of the purchase order.");
+      return isJunior
+        ? t("Validates the order and forwards it for Senior approval.")
+        : t("Generates the PDF of the purchase order.");
     case "pending":
       return t("Leaves the order pending review.");
     case "rejected":
@@ -566,6 +569,8 @@ const PurchaseOrderDetails = () => {
   const [confirmingState, setConfirmingState] = useState(false);
 
   const sessionUser = getCurrentSessionUser();
+  const isJuniorApprover =
+    sessionUser.approvalRole === "JR" || sessionUser.approvalRole === "JUNIOR";
   const numberLocale = getNumberLocale(i18n.language);
   const formatAmount = (value: string | number) =>
     Number(value || 0).toLocaleString(numberLocale, {
@@ -761,7 +766,12 @@ const PurchaseOrderDetails = () => {
       icon: stateMeta.icon,
       colorClass: stateMeta.colorClass,
       kind: stateMeta.kind,
-      description: getPurchaseStateDescription(option.id, t, option.descripcion),
+      description: getPurchaseStateDescription(
+        option.id,
+        t,
+        option.descripcion,
+        isJuniorApprover
+      ),
     };
   });
   const getAvailableModalStateOptions = (
@@ -1687,8 +1697,12 @@ const PurchaseOrderDetails = () => {
                                     items={[
                                       {
                                         id: `generate-order-${purchaseOrder.purchaseOrderID}`,
-                                        label: t("Generate Order C."),
-                                        icon: "ri-file-text-line",
+                                        label: isJuniorApprover
+                                          ? t("Validate Order")
+                                          : t("Generate Order C."),
+                                        icon: isJuniorApprover
+                                          ? "ri-checkbox-circle-line"
+                                          : "ri-file-text-line",
                                         tone: "primary",
                                         onClick: () =>
                                           handleOpenOrderModal(purchaseOrder),
@@ -1723,7 +1737,9 @@ const PurchaseOrderDetails = () => {
       </div>
       <Modal isOpen={!!orderModal} toggle={handleCloseOrderModal} centered size="sm">
         <ModalHeader toggle={handleCloseOrderModal} className="border-bottom-0 pb-0">
-          <span className="fs-6 fw-semibold">{t("Generate Order C.")}</span>
+          <span className="fs-6 fw-semibold">
+            {isJuniorApprover ? t("Validate Order") : t("Generate Order C.")}
+          </span>
           {orderModal && (
             <div className="text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
               {orderModal.orderNo}
@@ -1798,8 +1814,8 @@ const PurchaseOrderDetails = () => {
               </>
             ) : selectedStateMeta?.kind === "approved" ? (
               <>
-                <i className="ri-file-download-line me-1" />
-                {sessionUser.approvalRole === "JR" ? t("Sign JR") : t("Approve & Generate")}
+                <i className={isJuniorApprover ? "ri-checkbox-circle-line me-1" : "ri-file-download-line me-1"} />
+                {isJuniorApprover ? t("Validate Order") : t("Approve & Generate")}
               </>
             ) : (
               t("Confirm")
