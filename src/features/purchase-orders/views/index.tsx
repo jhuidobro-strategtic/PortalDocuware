@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import Select from "react-select";
@@ -24,7 +24,7 @@ import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
-import { buildApiUrl } from "../../../helpers/api-url";
+import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { Document } from "../../documents/types/list.types";
@@ -36,8 +36,10 @@ import { fetchPurchaseOrderApprovals } from "../services/purchaseOrderApprovals"
 import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoiceDetails";
 import { intelligentSearch } from "../../../helpers/search-utils";
 import PurchaseOrderPdfPreviewModal from "../components/PurchaseOrderPdfPreviewModal";
+import OrderDocumentItem from "../components/OrderDocumentItem";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
+import "../../expedients/views/Expedients.css";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
@@ -50,6 +52,16 @@ interface PurchaseOrderDetail {
   updatedBy: number | null;
   updatedAt: string | null;
   purchaseOrderID: number;
+}
+
+interface OrderAttachment {
+  createat?: string;
+  expedientedocid: number;
+  tipodocumentoid: number;
+  filename: string;
+  file_url?: string;
+  filepath: string;
+  estado: boolean;
 }
 
 type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
@@ -566,6 +578,12 @@ const PurchaseOrderDetails = () => {
   const [invoicePreviewDocument, setInvoicePreviewDocument] =
     useState<Document | null>(null);
   const [selectedState, setSelectedState] = useState<number | null>(null);
+  const [attachmentOrder, setAttachmentOrder] = useState<PurchaseOrder | null>(null);
+  const [attachments, setAttachments] = useState<OrderAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [attachmentError, setAttachmentError] = useState("");
+  const attachmentRequest = useRef(0);
+  const attachmentDrawerRef = useRef<HTMLElement | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
 
   const sessionUser = getCurrentSessionUser();
@@ -780,6 +798,7 @@ const PurchaseOrderDetails = () => {
     order?: PurchaseOrder
   ) => {
     if (sessionUser.approvalRole === "NONE") return [];
+    if (isJuniorApprover && order?.approvalStatus === "JR_SIGNED") return [];
     if (order && (!order.canBeApprovedBy || order.hasSeniorApproval || order.approvalStatus === "APPROVED")) {
       return [];
     }
@@ -838,6 +857,82 @@ const PurchaseOrderDetails = () => {
     setActionError(null);
     setActionSuccess(null);
     setOrderModal(purchaseOrder);
+  };
+
+  const handleOpenAttachments = async (order: PurchaseOrder) => {
+    const request = ++attachmentRequest.current;
+    setAttachmentOrder(order);
+    setAttachments([]);
+    setAttachmentError("");
+    setLoadingAttachments(true);
+    try {
+      const response = await fetch(buildApiUrl("expedientes/"));
+      const payload = await response.json().catch(() => null);
+      const expedients = payload?.data ?? payload;
+      if (!response.ok || payload?.success === false || !Array.isArray(expedients)) {
+        throw new Error("No fue posible obtener los documentos del expediente.");
+      }
+      const files: OrderAttachment[] = expedients
+        .filter((expedient) => Number(expedient.ordencompraid ?? expedient.ordencompra?.purchaseOrderID) === order.purchaseOrderID)
+        .flatMap((expedient) => expedient.expediente_documentos ?? []);
+      if (request === attachmentRequest.current) {
+        setAttachments(files.filter((file) => file.estado !== false &&
+          (Number(file.tipodocumentoid) !== 2 || (order.hasSeniorApproval && order.approvalStatus === "APPROVED"))
+        ));
+      }
+    } catch (error) {
+      if (request === attachmentRequest.current) {
+        setAttachmentError(error instanceof Error ? error.message : "No fue posible obtener los documentos.");
+      }
+    } finally {
+      if (request === attachmentRequest.current) setLoadingAttachments(false);
+    }
+  };
+
+  const closeAttachments = useCallback(() => {
+    attachmentRequest.current += 1;
+    setAttachmentOrder(null);
+  }, []);
+
+  useEffect(() => {
+    if (!attachmentOrder) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    attachmentDrawerRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAttachments();
+      if (event.key === "Tab") {
+        const controls = attachmentDrawerRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], iframe, [tabindex="0"]'
+        );
+        if (!controls?.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === attachmentDrawerRef.current)) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [attachmentOrder, closeAttachments]);
+
+  const getAttachmentUrl = (file: OrderAttachment) => {
+    if (file.file_url?.trim()) return file.file_url.trim();
+    const path = String(file.filepath || "").trim();
+    if (!path) return "";
+    if (/^https?:\/\//i.test(path)) return path;
+    const normalizedPath = path.replace(/^\/+/, "");
+    return new URL(`../${normalizedPath.startsWith("media/") ? normalizedPath : `media/${normalizedPath}`}`, API_BASE_URL).toString();
   };
 
   const handleCloseOrderModal = () => {
@@ -1102,10 +1197,6 @@ const PurchaseOrderDetails = () => {
 
         statusUpdated = true;
 
-        setPurchaseOrders((currentOrders) =>
-          currentOrders.filter((order) => order.purchaseOrderID !== orderModal.purchaseOrderID)
-        );
-
         const ordersResponse = await fetch(buildApiUrl("purchase-orders/"));
         const ordersData = await ordersResponse.json().catch(() => null);
         const signedOrder = Array.isArray(ordersData?.data)
@@ -1115,6 +1206,9 @@ const PurchaseOrderDetails = () => {
           throw new Error("La firma se registró, pero no fue posible consultar el estado actualizado de la orden.");
         }
         const updatedOrder = mapPurchaseOrder(signedOrder);
+        setPurchaseOrders((currentOrders) => currentOrders.map((order) =>
+          order.purchaseOrderID === updatedOrder.purchaseOrderID ? updatedOrder : order
+        ));
         if (updatedOrder.approvalStatus === "JR_SIGNED" && !updatedOrder.hasSeniorApproval) {
           setActionSuccess("Firma JR registrada. La orden queda pendiente de aprobación Senior.");
           setOrderModal(null);
@@ -1122,6 +1216,9 @@ const PurchaseOrderDetails = () => {
         }
         if (updatedOrder.approvalStatus !== "APPROVED" || !updatedOrder.hasSeniorApproval) {
           throw new Error("La firma se registró, pero la orden todavía no tiene aprobación final Senior.");
+        }
+        if (sessionUser.approvalRole !== "SENIOR") {
+          throw new Error("La firma se registró. Solo el firmante Senior puede generar el PDF de la orden.");
         }
 
         const relatedDocument =
@@ -1274,6 +1371,7 @@ const PurchaseOrderDetails = () => {
           currencyResponse,
           storeResponse,
           purchaseStateResponse,
+          signedOrdersResponse,
         ] = await Promise.all([
           fetch(buildApiUrl(`purchase-orders/pending-approvals/?userID=${sessionUser.id}`)),
           fetch(buildApiUrl("documents")),
@@ -1283,6 +1381,7 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER")),
+          isJuniorApprover ? fetch(buildApiUrl("purchase-orders/")) : Promise.resolve(null),
         ]);
         const purchaseOrdersData = await purchaseOrdersResponse
           .json()
@@ -1298,9 +1397,20 @@ const PurchaseOrderDetails = () => {
           );
         }
 
-        setPurchaseOrders(
-          (purchaseOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
-        );
+        const inboxOrders = new Map<number, PurchaseOrder>();
+        (purchaseOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
+          .forEach((order) => inboxOrders.set(order.purchaseOrderID, order));
+        if (signedOrdersResponse) {
+          const signedOrdersData = await signedOrdersResponse.json().catch(() => null);
+          if (!signedOrdersResponse.ok || !signedOrdersData?.success || !Array.isArray(signedOrdersData.data)) {
+            throw new Error("No fue posible consultar las órdenes firmadas del Junior.");
+          }
+          (signedOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
+            .filter((order) => order.signature === sessionUser.id &&
+              (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED"))
+            .forEach((order) => inboxOrders.set(order.purchaseOrderID, order));
+        }
+        setPurchaseOrders(Array.from(inboxOrders.values()));
 
         const documentsData = await documentsResponse.json().catch(() => null);
         const suppliersData = await suppliersResponse.json().catch(() => null);
@@ -1407,7 +1517,7 @@ const PurchaseOrderDetails = () => {
     };
 
     fetchPurchaseOrders();
-  }, [t, sessionUser.id]);
+  }, [t, sessionUser.id, isJuniorApprover]);
 
   useEffect(() => {
     const loadSigners = async () => {
@@ -1655,6 +1765,12 @@ const PurchaseOrderDetails = () => {
                                   <i className={purchaseState.icon} />
                                   <span>{purchaseState.label}</span>
                                 </span>
+                                {purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
+                                  <div className="small text-warning mt-1" role="status">
+                                    <i className="ri-time-line me-1" />
+                                    Firmado por JR · Pendiente de firma Senior
+                                  </div>
+                                )}
                               </td>
                               <td>{purchaseOrder.createdBy}</td>
                               <td>
@@ -1675,6 +1791,11 @@ const PurchaseOrderDetails = () => {
                                 style={{ whiteSpace: "nowrap" }}
                               >
                                 <div className="purchase-order-row-actions">
+                                  <button type="button" className="purchase-order-action-icon"
+                                    title="Ver documentos disponibles" aria-label="Ver documentos disponibles"
+                                    onClick={() => handleOpenAttachments(purchaseOrder)}>
+                                    <i className="ri-folder-open-line" />
+                                  </button>
                                   <button
                                     type="button"
                                     className="purchase-order-action-icon"
@@ -1823,6 +1944,50 @@ const PurchaseOrderDetails = () => {
           </Button>
         </ModalFooter>
       </Modal>
+      <div className={`expedient-drawer-backdrop ${attachmentOrder ? "is-visible" : ""}`}
+        onClick={closeAttachments} aria-hidden="true" />
+      <aside ref={attachmentDrawerRef} tabIndex={-1} role="dialog" aria-modal={attachmentOrder ? true : undefined}
+        aria-hidden={!attachmentOrder} aria-labelledby="order-documents-title"
+        className={`expedient-drawer ${attachmentOrder ? "is-open" : ""}`}>
+        {attachmentOrder && <div className="expedient-drawer-shell purchase-order-documents-panel">
+        <div className="expedient-drawer-header">
+          <div>
+            <span className="expedient-drawer-kicker">{t("Registered Documents")}</span>
+            <h4 className="mb-1" id="order-documents-title">{attachmentOrder?.orderNo}</h4>
+            <p className="text-muted mb-0">{loadingAttachments ? t("Loading...") : `${attachments.length + (attachmentOrder && documentsByAssociatedNo[attachmentOrder.documentAssociatedNo] && !attachments.some((file) => Number(file.tipodocumentoid) === 1) ? 1 : 0)} archivos disponibles.`}</p>
+          </div>
+          <button type="button" className="expedient-drawer-close" onClick={closeAttachments} aria-label={t("Close")}>
+            <i className="ri-close-line" />
+          </button>
+        </div>
+        <div className="expedient-drawer-body">
+          {attachmentOrder && !(attachmentOrder.hasSeniorApproval && attachmentOrder.approvalStatus === "APPROVED") && (
+            <p className="text-muted">El PDF de la orden estará disponible cuando el firmante Senior lo genere.</p>
+          )}
+          <div className="expedient-drawer-list">
+          {attachmentOrder && documentsByAssociatedNo[attachmentOrder.documentAssociatedNo] &&
+            !attachments.some((file) => Number(file.tipodocumentoid) === 1) && (
+            <OrderDocumentItem name={attachmentOrder.documentAssociatedNo} type={t("Invoice")}
+              createdAt={documentsByAssociatedNo[attachmentOrder.documentAssociatedNo].created_at}
+              url={getDocumentPreviewUrl(documentsByAssociatedNo[attachmentOrder.documentAssociatedNo])} />
+          )}
+          {loadingAttachments ? <div className="text-center py-4"><Spinner color="primary" /></div> : attachmentError ? (
+            <p className="text-danger" role="alert">{attachmentError}</p>
+          ) : attachments.length === 0 ? <p className="text-muted">No hay archivos adicionales disponibles.</p> : (
+            <div className="expedient-drawer-list">
+              {attachments.map((file) => (
+                <OrderDocumentItem key={file.expedientedocid} name={file.filename || t("Document")}
+                  type={Number(file.tipodocumentoid) === 1 ? t("Invoice") :
+                    Number(file.tipodocumentoid) === 2 ? t("Purchase Order") : t("Supporting Document")}
+                  url={getAttachmentUrl(file)}
+                  createdAt={file.createat} />
+              ))}
+            </div>
+          )}
+          </div>
+        </div>
+        </div>}
+      </aside>
       <PurchaseOrderPdfPreviewModal
         isOpen={!!invoicePreviewDocument}
         fileName={

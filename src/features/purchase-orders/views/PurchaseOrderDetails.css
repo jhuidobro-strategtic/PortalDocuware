@@ -174,3 +174,12 @@
     align-items: stretch;
   }
 }
+.purchase-order-documents-panel .expedient-document-card {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.purchase-order-documents-panel .expedient-document-card-actions {
+  flex-shrink: 0;
+}
