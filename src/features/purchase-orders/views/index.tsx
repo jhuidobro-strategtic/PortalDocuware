@@ -1237,6 +1237,56 @@ const PurchaseOrderDetails = () => {
           fetchPurchaseOrderApprovals(updatedOrder.purchaseOrderID),
           fetchPurchaseOrderInvoiceDetails(relatedDocument),
         ]);
+
+        const jrApproval = approvals
+          .filter(
+            (a) =>
+              (!a.purchaseOrderID || a.purchaseOrderID === updatedOrder.purchaseOrderID) &&
+              a.approvalLevel === "JR"
+          )
+          .sort(
+            (a, b) => moment(a.signedAt).valueOf() - moment(b.signedAt).valueOf()
+          )[0];
+
+        const seniorApproval = approvals
+          .filter(
+            (a) =>
+              (!a.purchaseOrderID || a.purchaseOrderID === updatedOrder.purchaseOrderID) &&
+              a.approvalLevel === "SENIOR"
+          )
+          .sort(
+            (a, b) => moment(a.signedAt).valueOf() - moment(b.signedAt).valueOf()
+          )[0];
+
+        const solicitanteName =
+          updatedOrder.requiredby ||
+          orderModal.requiredby ||
+          userLookup[updatedOrder.createdBy] ||
+          userLookup[orderModal.createdBy] ||
+          (updatedOrder.createdBy === sessionUser.id ? sessionUser.name : "") ||
+          (orderModal.createdBy === sessionUser.id ? sessionUser.name : "");
+
+        const juniorSignerName =
+          jrApproval?.user?.fullName ||
+          jrApproval?.user?.userName ||
+          (typeof updatedOrder.signature === "number"
+            ? userLookup[updatedOrder.signature]
+            : "") ||
+          (typeof orderModal.signature === "number"
+            ? userLookup[orderModal.signature]
+            : "");
+
+        const seniorSignerName =
+          seniorApproval?.user?.fullName ||
+          seniorApproval?.user?.userName ||
+          (sessionUser.approvalRole === "SENIOR" ? sessionUser.name : "") ||
+          (typeof updatedOrder.signature2 === "number"
+            ? userLookup[updatedOrder.signature2]
+            : "") ||
+          (typeof orderModal.signature2 === "number"
+            ? userLookup[orderModal.signature2]
+            : "");
+
         const generatedPdf = await generatePurchaseOrderPdf({
           approvals,
           invoiceDetails,
@@ -1257,15 +1307,12 @@ const PurchaseOrderDetails = () => {
             orderModal.storeLabel || storeLookup[orderModal.store] || "",
           documentAssociatedTypeLabel:
             orderModal.documentAssociatedTypeLabel || "",
-          requiredByName:
-            orderModal.requiredby ||
-            userLookup[orderModal.createdBy] ||
-            (orderModal.createdBy === sessionUser.id ? sessionUser.name : ""),
-          executedByName:
-            (typeof orderModal.signature === "number"
-              ? userLookup[orderModal.signature]
-              : "") ||
-            (orderModal.signature === sessionUser.id ? sessionUser.name : ""),
+          requiredByName: solicitanteName,
+          solicitanteName,
+          juniorSignerName,
+          seniorSignerName,
+          executedByName: seniorSignerName || sessionUser.name,
+          userLookup,
           numberLocale,
         });
 

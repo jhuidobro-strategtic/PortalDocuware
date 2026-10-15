@@ -26,9 +26,13 @@ interface PurchaseOrderPdfOrder {
   store: number;
   purchaseState: number;
   tipoorden?: string | null;
+  signature?: number | null;
+  signature2?: number | null;
+  requiredby?: string | null;
   createdBy: number;
   createAt: string;
   updatedAt?: string | null;
+  approvals?: PurchaseOrderApproval[];
   details: PurchaseOrderPdfDetail[];
 }
 
@@ -61,6 +65,10 @@ interface GeneratePurchaseOrderPdfParams {
   currencyLabel?: string;
   storeLabel?: string;
   requiredByName?: string;
+  solicitanteName?: string;
+  juniorSignerName?: string;
+  seniorSignerName?: string;
+  userLookup?: Record<number, string>;
   executedByName?: string;
   numberLocale: string;
 }
@@ -280,9 +288,66 @@ export const generatePurchaseOrderPdf = async ({
   currencyLabel,
   storeLabel,
   requiredByName,
+  solicitanteName,
+  juniorSignerName,
+  seniorSignerName,
+  userLookup,
   executedByName,
   numberLocale,
 }: GeneratePurchaseOrderPdfParams): Promise<GeneratedPurchaseOrderPdf> => {
+  const allApprovals =
+    approvals.length > 0 ? approvals : (purchaseOrder.approvals ?? []);
+
+  const getApproval = (level: PurchaseOrderApproval["approvalLevel"]) =>
+    allApprovals
+      .filter(
+        (approval) =>
+          (!approval.purchaseOrderID ||
+            approval.purchaseOrderID === purchaseOrder.purchaseOrderID) &&
+          approval.approvalLevel === level &&
+          moment(approval.signedAt).isValid()
+      )
+      .sort(
+        (left, right) =>
+          moment(left.signedAt).valueOf() - moment(right.signedAt).valueOf()
+      )[0];
+
+  const jrApproval = getApproval("JR");
+  const seniorApproval = getApproval("SENIOR");
+
+  const resolvedSolicitanteName =
+    solicitanteName ||
+    requiredByName ||
+    purchaseOrder.requiredby ||
+    (typeof purchaseOrder.createdBy === "number" && userLookup
+      ? userLookup[purchaseOrder.createdBy]
+      : "") ||
+    "";
+
+  const resolvedJuniorSignerName =
+    juniorSignerName ||
+    jrApproval?.user?.fullName ||
+    jrApproval?.user?.userName ||
+    (typeof purchaseOrder.signature === "number" && userLookup
+      ? userLookup[purchaseOrder.signature]
+      : "") ||
+    "";
+
+  const resolvedSeniorSignerName =
+    seniorSignerName ||
+    seniorApproval?.user?.fullName ||
+    seniorApproval?.user?.userName ||
+    (typeof purchaseOrder.signature2 === "number" && userLookup
+      ? userLookup[purchaseOrder.signature2]
+      : "") ||
+    "";
+
+  const resolvedExecutedByName =
+    executedByName ||
+    resolvedSeniorSignerName ||
+    resolvedJuniorSignerName ||
+    "";
+
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
@@ -396,7 +461,7 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       label: "REQUERIDO POR",
-      value: safeUppercaseValue(requiredByName),
+      value: safeUppercaseValue(resolvedSolicitanteName),
     },
   ];
   const rightFieldRows: FieldGroupRow[] = [
@@ -437,7 +502,7 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       label: "EJECUTADO POR",
-      value: safeUppercaseValue(executedByName),
+      value: safeUppercaseValue(resolvedExecutedByName),
     },
   ];
   const infoHeight =
@@ -718,8 +783,40 @@ export const generatePurchaseOrderPdf = async ({
   );
   doc.line(signatureStartX, footerTop + 6, summaryStartX, footerTop + 6);
 
-  const signatureText = executedByName ? ` ${executedByName}` : "";
-  const authLabel = `AUTORIZACIÓN${signatureText}`;
+  const jrSignedAt = jrApproval?.signedAt;
+  const seniorSignedAt = seniorApproval?.signedAt;
+
+  const authorizationDateSource =
+    seniorSignedAt ||
+    jrSignedAt ||
+    purchaseOrder.updatedAt ||
+    null;
+
+  const formattedAuthorizationDate = authorizationDateSource
+    ? (() => {
+        const date = new Date(authorizationDateSource);
+        return Number.isFinite(date.getTime())
+          ? new Intl.DateTimeFormat("es-PE", {
+              timeZone: "America/Lima",
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hourCycle: "h23",
+            })
+              .format(date)
+              .replace(",", "")
+          : moment(authorizationDateSource).isValid()
+            ? moment(authorizationDateSource).format("DD/MM/YYYY HH:mm:ss")
+            : "";
+      })()
+    : "";
+
+  const authLabel = formattedAuthorizationDate
+    ? `AUTORIZACIÓN: ${formattedAuthorizationDate}`
+    : "AUTORIZACIÓN";
 
   doc.text(authLabel, signatureStartX + 2, footerTop + 4.5);
   doc.text("SOLICITANTE", signatureStartX + 2, footerTop + 10.5);
@@ -734,26 +831,64 @@ export const generatePurchaseOrderPdf = async ({
     footerTop + 10.5
   );
 
-  const getSignedAt = (level: PurchaseOrderApproval["approvalLevel"]) =>
-    approvals
-      .filter((approval) => approval.purchaseOrderID === purchaseOrder.purchaseOrderID && approval.approvalLevel === level && moment(approval.signedAt).isValid())
-      .sort((left, right) => moment(left.signedAt).valueOf() - moment(right.signedAt).valueOf())[0]?.signedAt;
-  const approvalDates = [purchaseOrder.createAt, getSignedAt("JR"), getSignedAt("SENIOR")];
+  const signers = [
+    {
+      title: "SOLICITANTE",
+      name: resolvedSolicitanteName,
+      signedAt: purchaseOrder.createAt,
+      fallbackName: "-",
+    },
+    {
+      title: "FIRMANTE JR",
+      name: resolvedJuniorSignerName,
+      signedAt: jrSignedAt,
+      fallbackName: jrSignedAt ? "FIRMADO" : "PENDIENTE",
+    },
+    {
+      title: "FIRMANTE SENIOR",
+      name: resolvedSeniorSignerName,
+      signedAt: seniorSignedAt,
+      fallbackName: seniorSignedAt ? "FIRMADO" : "PENDIENTE",
+    },
+  ];
+
+  const signatureFontSize = doc.getFontSize();
+
+  // Print Signer Names
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  signers.forEach((signer, index) => {
+    const colX = signatureStartX + signatureColumnWidth * index + 2;
+    const displayName = safeUppercaseValue(
+      signer.name,
+      signer.fallbackName
+    );
+    const wrappedName = doc.splitTextToSize(
+      displayName,
+      signatureColumnWidth - 4
+    );
+    doc.text(wrappedName, colX, footerTop + 16);
+  });
+
+  // Divider line before dates
   const logTop = footerTop + 26;
   doc.line(signatureStartX, logTop, summaryStartX, logTop);
-  const signatureFontSize = doc.getFontSize();
+
+  // Print Dates
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
-  approvalDates.forEach((signedAt, index) => {
+  signers.forEach((signer, index) => {
+    const colX = signatureStartX + signatureColumnWidth * index + 2;
     if (index === 0) {
-      const requesterDate = moment(purchaseOrder.createAt);
+      const requesterDate = moment(signer.signedAt);
       doc.text(
         requesterDate.isValid() ? requesterDate.format("DD/MM/YYYY") : "Sin registro",
-        signatureStartX + 2,
+        colX,
         logTop + 5
       );
       return;
     }
-    const date = signedAt ? new Date(signedAt) : null;
+    const date = signer.signedAt ? new Date(signer.signedAt) : null;
     const label = date && Number.isFinite(date.getTime())
       ? new Intl.DateTimeFormat("es-PE", {
           timeZone: "America/Lima",
@@ -761,7 +896,7 @@ export const generatePurchaseOrderPdf = async ({
           hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
         }).format(date)
       : "Sin registro";
-    doc.text(label, signatureStartX + signatureColumnWidth * index + 2, logTop + 5);
+    doc.text(label, colX, logTop + 5);
   });
   doc.setFontSize(signatureFontSize);
 

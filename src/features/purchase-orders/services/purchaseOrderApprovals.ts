@@ -1,10 +1,23 @@
 import { buildApiUrl } from "../../../helpers/api-url";
 
+export interface PurchaseOrderApprovalUser {
+  userID: number;
+  userName?: string;
+  fullName?: string;
+  status?: boolean;
+  approvalRole?: string;
+  purchase_approval_role?: string;
+}
+
 export interface PurchaseOrderApproval {
   approvalID: number;
   purchaseOrderID: number;
   approvalLevel: "JR" | "SENIOR";
   signedAt: string;
+  user?: PurchaseOrderApprovalUser;
+  createdBy?: number;
+  notes?: string;
+  updatedAt?: string;
 }
 
 export const fetchPurchaseOrderApprovals = async (
