@@ -35,7 +35,6 @@ import { generatePurchaseOrderPdf } from "../services/purchaseOrderPdf";
 import { fetchPurchaseOrderApprovals } from "../services/purchaseOrderApprovals";
 import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoiceDetails";
 import { intelligentSearch } from "../../../helpers/search-utils";
-import PurchaseOrderPdfPreviewModal from "../components/PurchaseOrderPdfPreviewModal";
 import OrderDocumentItem from "../components/OrderDocumentItem";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
@@ -575,8 +574,6 @@ const PurchaseOrderDetails = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [generatingOrderId, setGeneratingOrderId] = useState<number | null>(null);
   const [orderModal, setOrderModal] = useState<PurchaseOrder | null>(null);
-  const [invoicePreviewDocument, setInvoicePreviewDocument] =
-    useState<Document | null>(null);
   const [selectedState, setSelectedState] = useState<number | null>(null);
   const [attachmentOrder, setAttachmentOrder] = useState<PurchaseOrder | null>(null);
   const [attachments, setAttachments] = useState<OrderAttachment[]>([]);
@@ -585,34 +582,18 @@ const PurchaseOrderDetails = () => {
   const attachmentRequest = useRef(0);
   const attachmentDrawerRef = useRef<HTMLElement | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
-  const [orderPdfPreview, setOrderPdfPreview] = useState<{
-    url: string;
-    fileName: string;
-    isBlob: boolean;
-  } | null>(null);
-  const [loadingOrderPdfId, setLoadingOrderPdfId] = useState<number | null>(null);
   const [orderPreviewPdfUrl, setOrderPreviewPdfUrl] = useState<string>("");
   const [loadingOrderPreviewPdf, setLoadingOrderPreviewPdf] = useState(false);
   const orderPreviewBlobUrlRef = useRef<string>("");
 
-  const handleCloseOrderPdfPreview = () => {
-    if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
-      URL.revokeObjectURL(orderPdfPreview.url);
-    }
-    setOrderPdfPreview(null);
-  };
-
   useEffect(() => {
     return () => {
-      if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
-        URL.revokeObjectURL(orderPdfPreview.url);
-      }
       if (orderPreviewBlobUrlRef.current) {
         URL.revokeObjectURL(orderPreviewBlobUrlRef.current);
         orderPreviewBlobUrlRef.current = "";
       }
     };
-  }, [orderPdfPreview]);
+  }, []);
 
   const sessionUser = getCurrentSessionUser();
   const isJuniorApprover =
@@ -1129,42 +1110,6 @@ const PurchaseOrderDetails = () => {
 
     if (alertId === "purchase-orders-action-success") {
       setActionSuccess(null);
-    }
-  };
-
-  const handleOpenInvoicePreview = (document: Document) => {
-    setInvoicePreviewDocument(document);
-  };
-
-  const handleCloseInvoicePreview = () => {
-    setInvoicePreviewDocument(null);
-  };
-
-  const handlePreviewPurchaseOrderPdf = async (order: PurchaseOrder) => {
-    try {
-      setLoadingOrderPdfId(order.purchaseOrderID);
-      setActionError(null);
-
-      const generated = await buildPurchaseOrderPdfBlob(order);
-
-      if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
-        URL.revokeObjectURL(orderPdfPreview.url);
-      }
-
-      setOrderPdfPreview({
-        url: generated.url,
-        fileName: generated.fileName,
-        isBlob: true,
-      });
-    } catch (err) {
-      console.error("Error previewing purchase order PDF:", err);
-      setActionError(
-        err instanceof Error
-          ? err.message
-          : t("Could not generate purchase order preview.")
-      );
-    } finally {
-      setLoadingOrderPdfId(null);
     }
   };
 
@@ -2042,63 +1987,12 @@ const PurchaseOrderDetails = () => {
                                 className="text-center"
                                 style={{ whiteSpace: "nowrap" }}
                               >
-                                <div className="purchase-order-row-actions">
-                                  <button type="button" className="purchase-order-action-icon"
-                                    title="Ver documentos disponibles" aria-label="Ver documentos disponibles"
-                                    onClick={() => handleOpenAttachments(purchaseOrder)}>
-                                    <i className="ri-folder-open-line" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="purchase-order-action-icon"
-                                    onClick={() =>
-                                      relatedDocument &&
-                                      handleOpenInvoicePreview(relatedDocument)
-                                    }
-                                    disabled={!relatedDocument || !invoicePreviewUrl}
-                                    title={t("View invoice")}
-                                    aria-label={t("View invoice")}
-                                  >
-                                    <i className="ri-eye-line" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="purchase-order-action-icon"
-                                    onClick={() => handlePreviewPurchaseOrderPdf(purchaseOrder)}
-                                    disabled={loadingOrderPdfId === purchaseOrder.purchaseOrderID}
-                                    title={
-                                      purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
-                                        ? t("View Purchase Order")
-                                        : t("Preview Purchase Order")
-                                    }
-                                    aria-label={
-                                      purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
-                                        ? t("View Purchase Order")
-                                        : t("Preview Purchase Order")
-                                    }
-                                  >
-                                    {loadingOrderPdfId === purchaseOrder.purchaseOrderID ? (
-                                      <Spinner size="sm" style={{ width: "0.85rem", height: "0.85rem" }} />
-                                    ) : (
-                                      <i className="ri-file-pdf-line" />
-                                    )}
-                                  </button>
+                                <div className="d-flex justify-content-center">
                                   <TableActionsMenu
                                     disabled={
-                                      generatingOrderId ===
-                                      purchaseOrder.purchaseOrderID
+                                      generatingOrderId === purchaseOrder.purchaseOrderID
                                     }
                                     items={[
-                                      {
-                                        id: `preview-order-${purchaseOrder.purchaseOrderID}`,
-                                        label:
-                                          purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
-                                            ? t("View Purchase Order")
-                                            : t("Preview Purchase Order"),
-                                        icon: "ri-file-pdf-line",
-                                        onClick: () =>
-                                          handlePreviewPurchaseOrderPdf(purchaseOrder),
-                                      },
                                       ...(!isActionBlocked
                                         ? [
                                             {
@@ -2115,6 +2009,14 @@ const PurchaseOrderDetails = () => {
                                             },
                                           ]
                                         : []),
+                                      {
+                                        id: `view-expedient-${purchaseOrder.purchaseOrderID}`,
+                                        label: t("View documents"),
+                                        icon: "ri-folder-open-line",
+                                        tone: !isActionBlocked ? ("neutral" as const) : ("primary" as const),
+                                        onClick: () =>
+                                          handleOpenAttachments(purchaseOrder),
+                                      },
                                     ]}
                                   />
                                 </div>
@@ -2352,25 +2254,6 @@ const PurchaseOrderDetails = () => {
           );
         })()}
       </aside>
-      <PurchaseOrderPdfPreviewModal
-        isOpen={!!invoicePreviewDocument}
-        fileName={
-          invoicePreviewDocument
-            ? t("Series {{serial}} - Number {{number}}", {
-              serial: invoicePreviewDocument.documentserial,
-              number: invoicePreviewDocument.documentnumber,
-            })
-            : ""
-        }
-        previewUrl={getDocumentPreviewUrl(invoicePreviewDocument)}
-        onClose={handleCloseInvoicePreview}
-      />
-      <PurchaseOrderPdfPreviewModal
-        isOpen={!!orderPdfPreview}
-        fileName={orderPdfPreview?.fileName || t("Purchase Order")}
-        previewUrl={orderPdfPreview?.url || ""}
-        onClose={handleCloseOrderPdfPreview}
-      />
     </React.Fragment>
   );
 };
