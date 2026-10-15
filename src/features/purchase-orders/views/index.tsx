@@ -585,6 +585,34 @@ const PurchaseOrderDetails = () => {
   const attachmentRequest = useRef(0);
   const attachmentDrawerRef = useRef<HTMLElement | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
+  const [orderPdfPreview, setOrderPdfPreview] = useState<{
+    url: string;
+    fileName: string;
+    isBlob: boolean;
+  } | null>(null);
+  const [loadingOrderPdfId, setLoadingOrderPdfId] = useState<number | null>(null);
+  const [orderPreviewPdfUrl, setOrderPreviewPdfUrl] = useState<string>("");
+  const [loadingOrderPreviewPdf, setLoadingOrderPreviewPdf] = useState(false);
+  const orderPreviewBlobUrlRef = useRef<string>("");
+
+  const handleCloseOrderPdfPreview = () => {
+    if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
+      URL.revokeObjectURL(orderPdfPreview.url);
+    }
+    setOrderPdfPreview(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
+        URL.revokeObjectURL(orderPdfPreview.url);
+      }
+      if (orderPreviewBlobUrlRef.current) {
+        URL.revokeObjectURL(orderPreviewBlobUrlRef.current);
+        orderPreviewBlobUrlRef.current = "";
+      }
+    };
+  }, [orderPdfPreview]);
 
   const sessionUser = getCurrentSessionUser();
   const isJuniorApprover =
@@ -859,38 +887,186 @@ const PurchaseOrderDetails = () => {
     setOrderModal(purchaseOrder);
   };
 
+  const buildPurchaseOrderPdfBlob = async (order: PurchaseOrder) => {
+    const relatedDocument =
+      documentsByAssociatedNo[order.documentAssociatedNo] ?? null;
+
+    const isApproved = Boolean(
+      order.hasSeniorApproval && order.approvalStatus === "APPROVED"
+    );
+
+    const [approvals, invoiceDetails] = await Promise.all([
+      fetchPurchaseOrderApprovals(order.purchaseOrderID).catch(() => []),
+      relatedDocument
+        ? fetchPurchaseOrderInvoiceDetails(relatedDocument).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+
+    const jrApproval = approvals
+      .filter(
+        (a) =>
+          (!a.purchaseOrderID || a.purchaseOrderID === order.purchaseOrderID) &&
+          a.approvalLevel === "JR"
+      )
+      .sort(
+        (a, b) => moment(a.signedAt).valueOf() - moment(b.signedAt).valueOf()
+      )[0];
+
+    const seniorApproval = approvals
+      .filter(
+        (a) =>
+          (!a.purchaseOrderID || a.purchaseOrderID === order.purchaseOrderID) &&
+          a.approvalLevel === "SENIOR"
+      )
+      .sort(
+        (a, b) => moment(a.signedAt).valueOf() - moment(b.signedAt).valueOf()
+      )[0];
+
+    const solicitanteName =
+      order.requiredby ||
+      userLookup[order.createdBy] ||
+      (order.createdBy === sessionUser.id ? sessionUser.name : "");
+
+    const juniorSignerName =
+      jrApproval?.user?.fullName ||
+      jrApproval?.user?.userName ||
+      (typeof order.signature === "number"
+        ? userLookup[order.signature]
+        : "");
+
+    const seniorSignerName =
+      seniorApproval?.user?.fullName ||
+      seniorApproval?.user?.userName ||
+      (typeof order.signature2 === "number"
+        ? userLookup[order.signature2]
+        : "");
+
+    const generatedPdf = await generatePurchaseOrderPdf({
+      approvals,
+      invoiceDetails,
+      purchaseOrder: order,
+      relatedDocument,
+      supplier: supplierDetailsLookup[order.supplierID] ?? null,
+      paymentConditionLabel:
+        order.paymentConditionLabel ||
+        paymentConditionLookup[order.paymentCondition] ||
+        "",
+      currencyLabel:
+        getCurrencyMeta(
+          order.currency,
+          t,
+          order.currencyLabel || currencyLookup[order.currency]
+        ).label ?? "",
+      storeLabel:
+        order.storeLabel || storeLookup[order.store] || "",
+      documentAssociatedTypeLabel:
+        order.documentAssociatedTypeLabel || "",
+      requiredByName: solicitanteName,
+      solicitanteName,
+      juniorSignerName,
+      seniorSignerName,
+      executedByName: seniorSignerName,
+      userLookup,
+      numberLocale,
+      isAuditApproved: isApproved,
+    });
+
+    return {
+      url: URL.createObjectURL(generatedPdf.blob),
+      fileName: generatedPdf.fileName,
+      blob: generatedPdf.blob,
+    };
+  };
+
   const handleOpenAttachments = async (order: PurchaseOrder) => {
     const request = ++attachmentRequest.current;
     setAttachmentOrder(order);
     setAttachments([]);
     setAttachmentError("");
     setLoadingAttachments(true);
+    setLoadingOrderPreviewPdf(true);
+
+    if (orderPreviewBlobUrlRef.current) {
+      URL.revokeObjectURL(orderPreviewBlobUrlRef.current);
+      orderPreviewBlobUrlRef.current = "";
+    }
+    setOrderPreviewPdfUrl("");
+
+    const expedientesPromise = fetch(buildApiUrl("expedientes/"))
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || payload?.success === false) {
+          throw new Error("No fue posible obtener los documentos del expediente.");
+        }
+        return payload?.data ?? payload;
+      })
+      .catch((err) => {
+        console.error("Error fetching expedients:", err);
+        return null;
+      });
+
+    const previewPdfPromise = buildPurchaseOrderPdfBlob(order)
+      .then((res) => res.url)
+      .catch((err) => {
+        console.error("Error generating purchase order PDF preview:", err);
+        return "";
+      });
+
     try {
-      const response = await fetch(buildApiUrl("expedientes/"));
-      const payload = await response.json().catch(() => null);
-      const expedients = payload?.data ?? payload;
-      if (!response.ok || payload?.success === false || !Array.isArray(expedients)) {
-        throw new Error("No fue posible obtener los documentos del expediente.");
+      const [expedients, previewBlobUrl] = await Promise.all([
+        expedientesPromise,
+        previewPdfPromise,
+      ]);
+
+      if (request !== attachmentRequest.current) {
+        if (previewBlobUrl) {
+          URL.revokeObjectURL(previewBlobUrl);
+        }
+        return;
       }
-      const files: OrderAttachment[] = expedients
-        .filter((expedient) => Number(expedient.ordencompraid ?? expedient.ordencompra?.purchaseOrderID) === order.purchaseOrderID)
-        .flatMap((expedient) => expedient.expediente_documentos ?? []);
-      if (request === attachmentRequest.current) {
-        setAttachments(files.filter((file) => file.estado !== false &&
-          (Number(file.tipodocumentoid) !== 2 || (order.hasSeniorApproval && order.approvalStatus === "APPROVED"))
-        ));
+
+      if (previewBlobUrl) {
+        orderPreviewBlobUrlRef.current = previewBlobUrl;
+        setOrderPreviewPdfUrl(previewBlobUrl);
+      }
+
+      if (Array.isArray(expedients)) {
+        const files: OrderAttachment[] = expedients
+          .filter(
+            (expedient) =>
+              Number(
+                expedient.ordencompraid ??
+                  expedient.ordencompra?.purchaseOrderID
+              ) === order.purchaseOrderID
+          )
+          .flatMap((expedient) => expedient.expediente_documentos ?? []);
+
+        setAttachments(files.filter((file) => file.estado !== false));
       }
     } catch (error) {
       if (request === attachmentRequest.current) {
-        setAttachmentError(error instanceof Error ? error.message : "No fue posible obtener los documentos.");
+        setAttachmentError(
+          error instanceof Error
+            ? error.message
+            : "No fue posible obtener los documentos."
+        );
       }
     } finally {
-      if (request === attachmentRequest.current) setLoadingAttachments(false);
+      if (request === attachmentRequest.current) {
+        setLoadingAttachments(false);
+        setLoadingOrderPreviewPdf(false);
+      }
     }
   };
 
   const closeAttachments = useCallback(() => {
     attachmentRequest.current += 1;
+    if (orderPreviewBlobUrlRef.current) {
+      URL.revokeObjectURL(orderPreviewBlobUrlRef.current);
+      orderPreviewBlobUrlRef.current = "";
+    }
+    setOrderPreviewPdfUrl("");
+    setLoadingOrderPreviewPdf(false);
     setAttachmentOrder(null);
   }, []);
 
@@ -962,6 +1138,34 @@ const PurchaseOrderDetails = () => {
 
   const handleCloseInvoicePreview = () => {
     setInvoicePreviewDocument(null);
+  };
+
+  const handlePreviewPurchaseOrderPdf = async (order: PurchaseOrder) => {
+    try {
+      setLoadingOrderPdfId(order.purchaseOrderID);
+      setActionError(null);
+
+      const generated = await buildPurchaseOrderPdfBlob(order);
+
+      if (orderPdfPreview?.isBlob && orderPdfPreview.url) {
+        URL.revokeObjectURL(orderPdfPreview.url);
+      }
+
+      setOrderPdfPreview({
+        url: generated.url,
+        fileName: generated.fileName,
+        isBlob: true,
+      });
+    } catch (err) {
+      console.error("Error previewing purchase order PDF:", err);
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : t("Could not generate purchase order preview.")
+      );
+    } finally {
+      setLoadingOrderPdfId(null);
+    }
   };
 
   const exportToExcel = async () => {
@@ -1314,6 +1518,7 @@ const PurchaseOrderDetails = () => {
           executedByName: seniorSignerName || sessionUser.name,
           userLookup,
           numberLocale,
+          isAuditApproved: true,
         });
 
         const orderPdfFile = createPdfFile(
@@ -1856,25 +2061,60 @@ const PurchaseOrderDetails = () => {
                                   >
                                     <i className="ri-eye-line" />
                                   </button>
+                                  <button
+                                    type="button"
+                                    className="purchase-order-action-icon"
+                                    onClick={() => handlePreviewPurchaseOrderPdf(purchaseOrder)}
+                                    disabled={loadingOrderPdfId === purchaseOrder.purchaseOrderID}
+                                    title={
+                                      purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
+                                        ? t("View Purchase Order")
+                                        : t("Preview Purchase Order")
+                                    }
+                                    aria-label={
+                                      purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
+                                        ? t("View Purchase Order")
+                                        : t("Preview Purchase Order")
+                                    }
+                                  >
+                                    {loadingOrderPdfId === purchaseOrder.purchaseOrderID ? (
+                                      <Spinner size="sm" style={{ width: "0.85rem", height: "0.85rem" }} />
+                                    ) : (
+                                      <i className="ri-file-pdf-line" />
+                                    )}
+                                  </button>
                                   <TableActionsMenu
                                     disabled={
                                       generatingOrderId ===
-                                      purchaseOrder.purchaseOrderID ||
-                                      isActionBlocked
+                                      purchaseOrder.purchaseOrderID
                                     }
                                     items={[
                                       {
-                                        id: `generate-order-${purchaseOrder.purchaseOrderID}`,
-                                        label: isJuniorApprover
-                                          ? t("Validate Order")
-                                          : t("Generate Order C."),
-                                        icon: isJuniorApprover
-                                          ? "ri-checkbox-circle-line"
-                                          : "ri-file-text-line",
-                                        tone: "primary",
+                                        id: `preview-order-${purchaseOrder.purchaseOrderID}`,
+                                        label:
+                                          purchaseOrder.hasSeniorApproval && purchaseOrder.approvalStatus === "APPROVED"
+                                            ? t("View Purchase Order")
+                                            : t("Preview Purchase Order"),
+                                        icon: "ri-file-pdf-line",
                                         onClick: () =>
-                                          handleOpenOrderModal(purchaseOrder),
+                                          handlePreviewPurchaseOrderPdf(purchaseOrder),
                                       },
+                                      ...(!isActionBlocked
+                                        ? [
+                                            {
+                                              id: `generate-order-${purchaseOrder.purchaseOrderID}`,
+                                              label: isJuniorApprover
+                                                ? t("Validate Order")
+                                                : t("Generate Order C."),
+                                              icon: isJuniorApprover
+                                                ? "ri-checkbox-circle-line"
+                                                : "ri-file-text-line",
+                                              tone: "primary" as const,
+                                              onClick: () =>
+                                                handleOpenOrderModal(purchaseOrder),
+                                            },
+                                          ]
+                                        : []),
                                     ]}
                                   />
                                 </div>
@@ -1996,44 +2236,121 @@ const PurchaseOrderDetails = () => {
       <aside ref={attachmentDrawerRef} tabIndex={-1} role="dialog" aria-modal={attachmentOrder ? true : undefined}
         aria-hidden={!attachmentOrder} aria-labelledby="order-documents-title"
         className={`expedient-drawer ${attachmentOrder ? "is-open" : ""}`}>
-        {attachmentOrder && <div className="expedient-drawer-shell purchase-order-documents-panel">
-        <div className="expedient-drawer-header">
-          <div>
-            <span className="expedient-drawer-kicker">{t("Registered Documents")}</span>
-            <h4 className="mb-1" id="order-documents-title">{attachmentOrder?.orderNo}</h4>
-            <p className="text-muted mb-0">{loadingAttachments ? t("Loading...") : `${attachments.length + (attachmentOrder && documentsByAssociatedNo[attachmentOrder.documentAssociatedNo] && !attachments.some((file) => Number(file.tipodocumentoid) === 1) ? 1 : 0)} archivos disponibles.`}</p>
-          </div>
-          <button type="button" className="expedient-drawer-close" onClick={closeAttachments} aria-label={t("Close")}>
-            <i className="ri-close-line" />
-          </button>
-        </div>
-        <div className="expedient-drawer-body">
-          {attachmentOrder && !(attachmentOrder.hasSeniorApproval && attachmentOrder.approvalStatus === "APPROVED") && (
-            <p className="text-muted">El PDF de la orden estará disponible cuando el firmante Senior lo genere.</p>
-          )}
-          <div className="expedient-drawer-list">
-          {attachmentOrder && documentsByAssociatedNo[attachmentOrder.documentAssociatedNo] &&
-            !attachments.some((file) => Number(file.tipodocumentoid) === 1) && (
-            <OrderDocumentItem name={attachmentOrder.documentAssociatedNo} type={t("Invoice")}
-              createdAt={documentsByAssociatedNo[attachmentOrder.documentAssociatedNo].created_at}
-              url={getDocumentPreviewUrl(documentsByAssociatedNo[attachmentOrder.documentAssociatedNo])} />
-          )}
-          {loadingAttachments ? <div className="text-center py-4"><Spinner color="primary" /></div> : attachmentError ? (
-            <p className="text-danger" role="alert">{attachmentError}</p>
-          ) : attachments.length === 0 ? <p className="text-muted">No hay archivos adicionales disponibles.</p> : (
-            <div className="expedient-drawer-list">
-              {attachments.map((file) => (
-                <OrderDocumentItem key={file.expedientedocid} name={file.filename || t("Document")}
-                  type={Number(file.tipodocumentoid) === 1 ? t("Invoice") :
-                    Number(file.tipodocumentoid) === 2 ? t("Purchase Order") : t("Supporting Document")}
-                  url={getAttachmentUrl(file)}
-                  createdAt={file.createat} />
-              ))}
+        {attachmentOrder && (() => {
+          const isApproved = Boolean(
+            attachmentOrder.hasSeniorApproval &&
+            attachmentOrder.approvalStatus === "APPROVED"
+          );
+
+          // 1. Factura
+          const existingInvoiceAttachment = attachments.find(
+            (file) => Number(file.tipodocumentoid) === 1
+          );
+          const relatedInvoiceDoc =
+            documentsByAssociatedNo[attachmentOrder.documentAssociatedNo];
+          const hasInvoice = Boolean(existingInvoiceAttachment || relatedInvoiceDoc);
+          const invoiceName =
+            existingInvoiceAttachment?.filename ||
+            attachmentOrder.documentAssociatedNo ||
+            t("Invoice");
+          const invoiceUrl = existingInvoiceAttachment
+            ? getAttachmentUrl(existingInvoiceAttachment)
+            : getDocumentPreviewUrl(relatedInvoiceDoc);
+          const invoiceCreatedAt =
+            existingInvoiceAttachment?.createat || relatedInvoiceDoc?.created_at;
+
+          // 2. Orden de Compra
+          const existingOrderAttachment = attachments.find(
+            (file) => Number(file.tipodocumentoid) === 2
+          );
+          const orderDocName =
+            (isApproved && existingOrderAttachment?.filename) ||
+            attachmentOrder.orderNo ||
+            t("Purchase Order");
+          const orderDocType = isApproved
+            ? t("Purchase Order")
+            : t("Purchase Order (Preview)");
+          const orderDocUrl =
+            (isApproved && existingOrderAttachment
+              ? getAttachmentUrl(existingOrderAttachment)
+              : "") || orderPreviewPdfUrl;
+          const orderDocPath =
+            (isApproved && existingOrderAttachment?.filepath) ||
+            (attachmentOrder.orderNo
+              ? `ordenes/${attachmentOrder.orderNo}.pdf`
+              : "");
+          const orderDocCreatedAt =
+            existingOrderAttachment?.createat || attachmentOrder.createAt;
+
+          // 3. Documentos de sustento adicionales
+          const otherAttachments = attachments.filter(
+            (file) =>
+              Number(file.tipodocumentoid) !== 1 &&
+              Number(file.tipodocumentoid) !== 2
+          );
+
+          const totalFileCount =
+            (hasInvoice ? 1 : 0) + 1 + otherAttachments.length;
+
+          return (
+            <div className="expedient-drawer-shell purchase-order-documents-panel">
+              <div className="expedient-drawer-header">
+                <div>
+                  <span className="expedient-drawer-kicker">{t("Registered Documents")}</span>
+                  <h4 className="mb-1" id="order-documents-title">{attachmentOrder.orderNo}</h4>
+                  <p className="text-muted mb-0">
+                    {loadingAttachments
+                      ? t("Loading...")
+                      : `${totalFileCount} archivos disponibles.`}
+                  </p>
+                </div>
+                <button type="button" className="expedient-drawer-close" onClick={closeAttachments} aria-label={t("Close")}>
+                  <i className="ri-close-line" />
+                </button>
+              </div>
+              <div className="expedient-drawer-body">
+                <div className="expedient-drawer-list">
+                  {/* 1. Factura */}
+                  {hasInvoice && (
+                    <OrderDocumentItem
+                      name={invoiceName}
+                      type={t("Invoice")}
+                      url={invoiceUrl}
+                      createdAt={invoiceCreatedAt}
+                    />
+                  )}
+
+                  {/* 2. Orden de Compra */}
+                  <OrderDocumentItem
+                    name={orderDocName}
+                    type={orderDocType}
+                    url={orderDocUrl}
+                    path={orderDocPath}
+                    createdAt={orderDocCreatedAt}
+                    loading={loadingOrderPreviewPdf && !orderDocUrl}
+                  />
+
+                  {/* 3. Documentos de sustento */}
+                  {loadingAttachments ? (
+                    <div className="text-center py-4"><Spinner color="primary" /></div>
+                  ) : attachmentError ? (
+                    <p className="text-danger" role="alert">{attachmentError}</p>
+                  ) : (
+                    otherAttachments.map((file) => (
+                      <OrderDocumentItem
+                        key={file.expedientedocid}
+                        name={file.filename || t("Document")}
+                        type={t("Supporting Document")}
+                        url={getAttachmentUrl(file)}
+                        createdAt={file.createat}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-          </div>
-        </div>
-        </div>}
+          );
+        })()}
       </aside>
       <PurchaseOrderPdfPreviewModal
         isOpen={!!invoicePreviewDocument}
@@ -2047,6 +2364,12 @@ const PurchaseOrderDetails = () => {
         }
         previewUrl={getDocumentPreviewUrl(invoicePreviewDocument)}
         onClose={handleCloseInvoicePreview}
+      />
+      <PurchaseOrderPdfPreviewModal
+        isOpen={!!orderPdfPreview}
+        fileName={orderPdfPreview?.fileName || t("Purchase Order")}
+        previewUrl={orderPdfPreview?.url || ""}
+        onClose={handleCloseOrderPdfPreview}
       />
     </React.Fragment>
   );
