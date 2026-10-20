@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Document } from "../types/list.types";
@@ -20,6 +20,7 @@ import {
   fetchCatalog,
   fetchSuppliers,
   fetchSigners,
+  fetchCategorizedSigners,
   createSupplierFromRuc,
   CATALOG_ENDPOINTS,
 } from "../services/orderC.service";
@@ -80,10 +81,20 @@ export const useOrderC = () => {
   });
   const [supplierOptions, setSupplierOptions] = useState<SupplierOptionItem[]>([]);
   const [signerOptions, setSignerOptions] = useState<SelectOption[]>([]);
+  const [juniorSignerOptions, setJuniorSignerOptions] = useState<SelectOption[]>([]);
+  const [seniorSignerOptions, setSeniorSignerOptions] = useState<SelectOption[]>([]);
   const [loadingSigners, setLoadingSigners] = useState(false);
   const [creatingSupplier, setCreatingSupplier] = useState(false);
 
-  const orderCFields = getOrderCFields(signerOptions);
+  const orderCFields = useMemo(
+    () =>
+      getOrderCFields({
+        juniorSigners: juniorSignerOptions,
+        seniorSigners: seniorSignerOptions,
+        signers: signerOptions,
+      }),
+    [juniorSignerOptions, seniorSignerOptions, signerOptions]
+  );
 
   const loadSuppliers = useCallback(
     async (showFeedbackOnError = true) => {
@@ -132,7 +143,11 @@ export const useOrderC = () => {
     const loadSigners = async () => {
       try {
         setLoadingSigners(true);
-        setSignerOptions(await fetchSigners());
+        const { juniorSigners, seniorSigners, allSigners } =
+          await fetchCategorizedSigners();
+        setJuniorSignerOptions(juniorSigners);
+        setSeniorSignerOptions(seniorSigners);
+        setSignerOptions(allSigners);
       } catch (fetchError: any) {
         setFeedback({
           type: "danger",
@@ -589,6 +604,8 @@ export const useOrderC = () => {
     catalogOptions,
     supplierOptions,
     signerOptions,
+    juniorSignerOptions,
+    seniorSignerOptions,
     loadingSigners,
     creatingSupplier,
     orderCFields,

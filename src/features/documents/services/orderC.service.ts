@@ -10,6 +10,7 @@ import {
   SupplierCreationResult,
   SupplierOptionItem,
   SignerApiItem,
+  CategorizedSigners,
 } from "../types/orderC.types";
 
 export const CATALOG_ENDPOINTS: Record<string, string> = {
@@ -116,21 +117,82 @@ export const createSupplierFromRuc = async (
   return mapSupplierApiItem((data?.data ?? data) as SupplierApiItem);
 };
 
-export const fetchSigners = async (): Promise<SelectOption[]> => {
-  const response = await fetch(buildApiUrl("users/?profile=2"));
+const isActiveUser = (item: SignerApiItem): boolean => {
+  if (
+    item.status === false ||
+    (item as any).status === 0 ||
+    (item as any).status === "0"
+  ) {
+    return false;
+  }
+  return true;
+};
+
+export const isJuniorApprover = (item: SignerApiItem): boolean => {
+  if (!isActiveUser(item)) return false;
+  if (Boolean(item.isPurchaseApproverJunior)) return true;
+  const role = String(item.purchase_approval_role ?? item.approvalRole ?? "")
+    .trim()
+    .toUpperCase();
+  return role === "JR" || role === "JUNIOR";
+};
+
+export const isSeniorApprover = (item: SignerApiItem): boolean => {
+  if (!isActiveUser(item)) return false;
+  if (Boolean(item.isPurchaseApproverSenior)) return true;
+  const role = String(item.purchase_approval_role ?? item.approvalRole ?? "")
+    .trim()
+    .toUpperCase();
+  return role === "SENIOR" || role === "SR";
+};
+
+const mapSignerOption = (item: SignerApiItem): SelectOption => {
+  const id = String(item.userID ?? (item as any).userid ?? "");
+  const fullName = String(item.fullName ?? (item as any).fullname ?? "").trim();
+  const userName = String(item.userName ?? (item as any).username ?? "").trim();
+  const label = fullName || userName || id;
+
+  return {
+    value: id,
+    label,
+  };
+};
+
+export const fetchCategorizedSigners = async (): Promise<CategorizedSigners> => {
+  const response = await fetch(buildApiUrl("users/"), {
+    cache: "no-store",
+  });
   const data = await response.json().catch(() => null);
 
   if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
     throw new Error(data?.message || "Error loading signers");
   }
 
-  return (data.data as SignerApiItem[])
-    .map((item) => ({
-      value: String(item.userID),
-      label:
-        [String(item.fullName ?? "").trim()]
-          .filter(Boolean)
-          .join(" - ") || String(item.userID),
-    }))
+  const rawUsers = data.data as SignerApiItem[];
+  const activeUsers = rawUsers.filter(isActiveUser);
+
+  const juniorSigners = activeUsers
+    .filter(isJuniorApprover)
+    .map(mapSignerOption)
     .sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+  const seniorSigners = activeUsers
+    .filter(isSeniorApprover)
+    .map(mapSignerOption)
+    .sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+  const allSigners = activeUsers
+    .map(mapSignerOption)
+    .sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+  return {
+    juniorSigners,
+    seniorSigners,
+    allSigners,
+  };
+};
+
+export const fetchSigners = async (): Promise<SelectOption[]> => {
+  const { allSigners } = await fetchCategorizedSigners();
+  return allSigners;
 };

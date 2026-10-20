@@ -4,13 +4,39 @@ import {
   SessionUser,
 } from "../types/orderC.types";
 
+export interface OrderCFieldOptions {
+  juniorSigners?: SelectOption[];
+  seniorSigners?: SelectOption[];
+  signers?: SelectOption[];
+  requesters?: SelectOption[];
+}
+
 export const getOrderCFields = (
-  signerOptions: SelectOption[] = []
+  options: SelectOption[] | OrderCFieldOptions = []
 ): OrderCFieldConfig[] => {
-  const requesterOptions = signerOptions.map((option) => ({
-    value: option.label,
-    label: option.label,
-  }));
+  let juniorOptions: SelectOption[] = [];
+  let seniorOptions: SelectOption[] = [];
+  let requesterOptions: SelectOption[] = [];
+
+  if (Array.isArray(options)) {
+    juniorOptions = options;
+    seniorOptions = options;
+    requesterOptions = options.map((option) => ({
+      value: option.label,
+      label: option.label,
+    }));
+  } else {
+    juniorOptions = options.juniorSigners ?? options.signers ?? [];
+    seniorOptions = options.seniorSigners ?? options.signers ?? [];
+    requesterOptions =
+      options.requesters ??
+      (options.signers ?? options.seniorSigners ?? options.juniorSigners ?? []).map(
+        (option) => ({
+          value: option.label,
+          label: option.label,
+        })
+      );
+  }
 
   return [
     {
@@ -78,13 +104,13 @@ export const getOrderCFields = (
       name: "signedBy",
       labelKey: "Junior Lawyer",
       placeholderKey: "Select junior lawyer",
-      options: signerOptions,
+      options: juniorOptions,
     },
     {
       name: "signature2",
       labelKey: "Senior Lawyer",
       placeholderKey: "Select senior lawyer",
-      options: signerOptions,
+      options: seniorOptions,
     },
     {
       name: "createdByName",

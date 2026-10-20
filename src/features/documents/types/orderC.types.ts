@@ -86,6 +86,17 @@ export interface SignerApiItem {
     profileID?: number;
     profileName?: string;
   } | null;
+  purchase_approval_role?: string;
+  approvalRole?: string;
+  isPurchaseApprover?: boolean;
+  isPurchaseApproverJunior?: boolean;
+  isPurchaseApproverSenior?: boolean;
+}
+
+export interface CategorizedSigners {
+  juniorSigners: SelectOption[];
+  seniorSigners: SelectOption[];
+  allSigners: SelectOption[];
 }
 
 export interface OrderCSummaryValues {
