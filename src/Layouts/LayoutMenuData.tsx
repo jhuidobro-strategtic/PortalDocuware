@@ -1,3 +1,5 @@
+import { canManageUsers } from "../helpers/user-management-access";
+
 const Navdata = (t: (key: string) => string) => [
     {
         label: t("Menu"),
@@ -117,6 +119,6 @@ const Navdata = (t: (key: string) => string) => [
             },
         ],
     },
-];
+].filter((item) => item.id !== "user-management" || canManageUsers());
 
 export default Navdata;

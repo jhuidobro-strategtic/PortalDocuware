@@ -1,5 +1,6 @@
 import React, { lazy } from "react";
 import { Navigate } from "react-router-dom";
+import { canManageUsers } from "../helpers/user-management-access";
 
 const Login = lazy(() => import("../features/auth/views/Login"));
 const Logout = lazy(() => import("../features/auth/views/Logout"));
@@ -26,6 +27,7 @@ const TravelMyScheduleVoucher = lazy(
 const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports/RendicionReport"));
 const Folders = lazy(() => import("../features/folders/views"));
 const Users = lazy(() => import("../features/users/views"));
+const UsersAccess = () => canManageUsers() ? <Users /> : <Navigate to="/documents" replace />;
 
 const authProtectedRoutes = [
   { path: "/", component: <Navigate to="/documents" replace /> },
@@ -58,7 +60,7 @@ const authProtectedRoutes = [
   { path: "/travel-expenses/reports", component: <TravelReports /> },
   { path: "/reports/rendiciones", component: <TravelReports /> },
   { path: "/procesamiento-archivos", component: <Folders /> },
-  { path: "/users", component: <Users /> },
+  { path: "/users", component: <UsersAccess /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Navigate to="/documents" replace /> },
 ];
