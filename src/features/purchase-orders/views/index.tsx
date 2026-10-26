@@ -1578,7 +1578,8 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER")),
-          isJuniorApprover ? fetch(buildApiUrl("purchase-orders/")) : Promise.resolve(null),
+          isJuniorApprover || sessionUser.approvalRole === "SENIOR"
+            ? fetch(buildApiUrl("purchase-orders/")) : Promise.resolve(null),
         ]);
         const purchaseOrdersData = await purchaseOrdersResponse
           .json()
@@ -1600,11 +1601,14 @@ const PurchaseOrderDetails = () => {
         if (signedOrdersResponse) {
           const signedOrdersData = await signedOrdersResponse.json().catch(() => null);
           if (!signedOrdersResponse.ok || !signedOrdersData?.success || !Array.isArray(signedOrdersData.data)) {
-            throw new Error("No fue posible consultar las órdenes firmadas del Junior.");
+            throw new Error("No fue posible consultar las órdenes firmadas del usuario.");
           }
           (signedOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
-            .filter((order) => order.signature === sessionUser.id &&
-              (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED"))
+            .filter((order) => isJuniorApprover
+              ? order.signature === sessionUser.id &&
+                (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED")
+              : order.signature2 === sessionUser.id && order.hasSeniorApproval &&
+                order.approvalStatus === "APPROVED")
             .forEach((order) => inboxOrders.set(order.purchaseOrderID, order));
         }
         setPurchaseOrders(Array.from(inboxOrders.values()));
@@ -1714,7 +1718,7 @@ const PurchaseOrderDetails = () => {
     };
 
     fetchPurchaseOrders();
-  }, [t, sessionUser.id, isJuniorApprover]);
+  }, [t, sessionUser.id, sessionUser.approvalRole, isJuniorApprover]);
 
   useEffect(() => {
     const loadSigners = async () => {
