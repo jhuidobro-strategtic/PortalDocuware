@@ -888,7 +888,7 @@ const PurchaseOrderDetails = () => {
     );
 
     const [approvals, invoiceDetails] = await Promise.all([
-      fetchPurchaseOrderApprovals(order.purchaseOrderID).catch(() => []),
+      fetchPurchaseOrderApprovals(order.purchaseOrderID),
       relatedDocument
         ? fetchPurchaseOrderInvoiceDetails(relatedDocument).catch(() => [])
         : Promise.resolve([]),

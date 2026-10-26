@@ -554,7 +554,7 @@ export const generatePurchaseOrderPdf = async ({
   const summaryWidth = 58;
   const signatureHeight = 34;
   const footerGap = 3;
-  const footerBottomMargin = 8;
+  const footerBottomMargin = 12;
   const maxFooterTop = pageHeight - footerBottomMargin - signatureHeight;
   // Match invoice lines by content, since their order can differ from the purchase order.
   const remainingInvoiceDetails = [...invoiceDetails];
@@ -853,8 +853,8 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       title: "FIRMANTE JR",
-      name: isApproved ? resolvedJuniorSignerName : "-",
-      signedAt: isApproved ? jrSignedAt : null,
+      name: jrApproval ? resolvedJuniorSignerName : "-",
+      signedAt: jrSignedAt,
       fallbackName: "-",
     },
     {
@@ -901,7 +901,7 @@ export const generatePurchaseOrderPdf = async ({
       );
       return;
     }
-    if (!isApproved || !signer.signedAt) {
+    if (!signer.signedAt) {
       doc.text("-", colX, logTop + 5);
       return;
     }
@@ -943,6 +943,15 @@ export const generatePurchaseOrderPdf = async ({
     });
     doc.setFont("helvetica", "bold");
   });
+
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(80);
+    doc.text(`Página ${page} de ${totalPages}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+  }
 
   return {
     blob: doc.output("blob"),
