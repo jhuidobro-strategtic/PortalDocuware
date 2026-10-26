@@ -66,6 +66,8 @@ interface OrderAttachment {
 type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
 
 interface PurchaseOrder {
+  isCancelled: boolean;
+  cancellationReason?: string;
   purchaseOrderID: number;
   orderNo: string;
   supplierID: number;
@@ -125,6 +127,8 @@ interface SupplierReference {
 }
 
 interface PurchaseOrderApiItem {
+  isCancelled?: boolean;
+  cancellationReason?: string;
   purchaseOrderID: number;
   orderNo: string;
   supplierID: number | SupplierReference;
@@ -319,6 +323,8 @@ const getDocumentTypeLabel = (value: number | DocumentTypeReference) =>
   typeof value === "number" ? "" : value?.tipo ?? "";
 
 const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
+  isCancelled: item.isCancelled === true,
+  cancellationReason: item.cancellationReason,
   purchaseOrderID: item.purchaseOrderID,
   orderNo: item.orderNo,
   supplierID: getSupplierId(item.supplierID),
@@ -582,6 +588,10 @@ const PurchaseOrderDetails = () => {
   const attachmentRequest = useRef(0);
   const attachmentDrawerRef = useRef<HTMLElement | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
+  const [cancelOrder, setCancelOrder] = useState<PurchaseOrder | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [cancelError, setCancelError] = useState("");
   const [orderPreviewPdfUrl, setOrderPreviewPdfUrl] = useState<string>("");
   const [loadingOrderPreviewPdf, setLoadingOrderPreviewPdf] = useState(false);
   const orderPreviewBlobUrlRef = useRef<string>("");
@@ -807,6 +817,7 @@ const PurchaseOrderDetails = () => {
     order?: PurchaseOrder
   ) => {
     if (sessionUser.approvalRole === "NONE") return [];
+    if (order?.isCancelled) return [];
     if (isJuniorApprover && order?.approvalStatus === "JR_SIGNED") return [];
     if (order && (!order.canBeApprovedBy || order.hasSeniorApproval || order.approvalStatus === "APPROVED")) {
       return [];
@@ -1050,6 +1061,31 @@ const PurchaseOrderDetails = () => {
     setLoadingOrderPreviewPdf(false);
     setAttachmentOrder(null);
   }, []);
+
+  const handleCancelOrder = async () => {
+    if (!cancelOrder || !cancelReason.trim() || sessionUser.approvalRole !== "SENIOR") return;
+    setCancellingOrder(true);
+    setCancelError("");
+    try {
+      const response = await fetch(buildApiUrl("purchase-orders/cancel/"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchaseOrderID: cancelOrder.purchaseOrderID,
+          userID: sessionUser.id, updatedBy: sessionUser.id, notes: cancelReason.trim() }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success || !result.data) {
+        throw new Error(result?.message || "No fue posible anular la orden.");
+      }
+      const updatedOrder = mapPurchaseOrder(result.data);
+      setPurchaseOrders((orders) => orders.map((order) => order.purchaseOrderID === updatedOrder.purchaseOrderID ? updatedOrder : order));
+      setCancelOrder(null);
+      setActionSuccess("Orden anulada. El documento está disponible para una nueva OC/OS.");
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "No fue posible anular la orden.");
+    } finally {
+      setCancellingOrder(false);
+    }
+  };
 
   useEffect(() => {
     if (!attachmentOrder) return;
@@ -1301,7 +1337,7 @@ const PurchaseOrderDetails = () => {
 
   const handleConfirmOrderState = async () => {
     if (!orderModal || selectedState === null) return;
-    if (!orderModal.canBeApprovedBy || orderModal.hasSeniorApproval || orderModal.approvalStatus === "APPROVED") return;
+    if (orderModal.isCancelled || !orderModal.canBeApprovedBy || orderModal.hasSeniorApproval || orderModal.approvalStatus === "APPROVED") return;
 
     if (!sessionUser.id) {
       setActionError(
@@ -1607,8 +1643,8 @@ const PurchaseOrderDetails = () => {
             .filter((order) => isJuniorApprover
               ? order.signature === sessionUser.id &&
                 (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED")
-              : order.signature2 === sessionUser.id && order.hasSeniorApproval &&
-                order.approvalStatus === "APPROVED")
+              : order.signature2 === sessionUser.id && (order.isCancelled || (order.hasSeniorApproval &&
+                order.approvalStatus === "APPROVED")))
             .forEach((order) => inboxOrders.set(order.purchaseOrderID, order));
         }
         setPurchaseOrders(Array.from(inboxOrders.values()));
@@ -1962,11 +1998,11 @@ const PurchaseOrderDetails = () => {
                               <td>{purchaseOrder.guideNo}</td>
                               <td>{storeLabel}</td>
                               <td>
-                                <span className={purchaseState.className}>
+                                {purchaseOrder.isCancelled ? <span className="badge bg-danger" title={purchaseOrder.cancellationReason}>Anulada</span> : <span className={purchaseState.className}>
                                   <i className={purchaseState.icon} />
                                   <span>{purchaseState.label}</span>
-                                </span>
-                                {purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
+                                </span>}
+                                {!purchaseOrder.isCancelled && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
                                   <div className="small text-warning mt-1" role="status">
                                     <i className="ri-time-line me-1" />
                                     Firmado por JR · Pendiente de firma Senior
@@ -2021,6 +2057,11 @@ const PurchaseOrderDetails = () => {
                                         onClick: () =>
                                           handleOpenAttachments(purchaseOrder),
                                       },
+                                      ...(sessionUser.approvalRole === "SENIOR" && purchaseOrder.signature2 === sessionUser.id && !purchaseOrder.isCancelled ? [{
+                                        id: `cancel-order-${purchaseOrder.purchaseOrderID}`, label: "Anular orden",
+                                        icon: "ri-close-circle-line", tone: "danger" as const,
+                                        onClick: () => { setCancelOrder(purchaseOrder); setCancelReason(""); setCancelError(""); },
+                                      }] : []),
                                     ]}
                                   />
                                 </div>
@@ -2258,6 +2299,22 @@ const PurchaseOrderDetails = () => {
           );
         })()}
       </aside>
+      <Modal isOpen={!!cancelOrder} toggle={() => !cancellingOrder && setCancelOrder(null)} centered>
+        <ModalHeader toggle={cancellingOrder ? undefined : () => setCancelOrder(null)}>Anular {cancelOrder?.orderNo}</ModalHeader>
+        <ModalBody>
+          <p>La orden conservará su historial. El documento asociado quedará disponible para emitir una nueva OC/OS.</p>
+          <label htmlFor="order-cancellation-reason" className="form-label">Motivo de anulación <span className="text-danger">*</span></label>
+          <Input id="order-cancellation-reason" type="textarea" value={cancelReason} disabled={cancellingOrder}
+            onChange={(event) => setCancelReason(event.target.value)} />
+          {cancelError && <p className="text-danger mt-2" role="alert">{cancelError}</p>}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="light" disabled={cancellingOrder} onClick={() => setCancelOrder(null)}>Volver</Button>
+          <Button color="danger" disabled={cancellingOrder || !cancelReason.trim()} onClick={handleCancelOrder}>
+            {cancellingOrder ? <Spinner size="sm" /> : "Anular orden"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </React.Fragment>
   );
 };

@@ -9,14 +9,13 @@ import { intelligentSearch } from "../../../helpers/search-utils";
 import { downloadBlob } from "../../../helpers/download-blob";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 
-type PurchaseOrderStateValue = number | { id?: number; descripcion?: string; };
-type PurchaseOrderReference = { documentAssociatedNo?: string; purchaseState?: PurchaseOrderStateValue; };
+type PurchaseOrderReference = { documentAssociatedNo?: string; isCancelled?: boolean;
+  supplierID?: { supplierno?: string }; documentAssociatedType?: number | { tipoid: number }; };
 type ImportSummary = { documents_created?: number; documents_updated?: number; details_created?: number; };
 type ExtractDocumentsResultPayload = { message?: string; items?: unknown[]; import_summary?: ImportSummary | null; };
 type ExtractDocumentsJobData = { job_id?: string; status?: string; message?: string; result?: ExtractDocumentsResultPayload | null; };
 type ExtractDocumentsJobResponse = { success?: boolean; message?: string; data?: ExtractDocumentsJobData | null; };
 
-const APPROVED_PURCHASE_STATE_ID = 12;
 const EXTRACT_POLL_INTERVAL_MS = 3000;
 const EXTRACT_MAX_POLLS = 40;
 const EXTRACT_MAX_TRANSIENT_JOB_ERRORS = 8;
@@ -35,18 +34,11 @@ const getAuthHeaders = (): Record<string, string> => {
 };
 
 export const getDocumentAssociatedNo = (document: Document) =>
-  normalizeAssociatedNo(
+  JSON.stringify([document.suppliernumber.trim(),
+    typeof document.documenttype === "object" ? document.documenttype?.tipoid : document.documenttype,
+    normalizeAssociatedNo(
     [document.documentserial, document.documentnumber].filter(Boolean).join("-")
-  );
-
-const isApprovedPurchaseState = (purchaseState: PurchaseOrderStateValue) => {
-  if (typeof purchaseState === "number") {
-    return purchaseState === APPROVED_PURCHASE_STATE_ID;
-  }
-  const stateId = Number(purchaseState?.id ?? 0);
-  const stateDescription = String(purchaseState?.descripcion ?? "").trim().toUpperCase();
-  return stateId === APPROVED_PURCHASE_STATE_ID || stateDescription.includes("APROBADO");
-};
+  )]);
 
 const buildImportSummaryMessage = (baseMessage: string, summary: ImportSummary | null | undefined, t: (key: string) => string) => {
   if (!summary) return baseMessage;
@@ -131,8 +123,10 @@ export const useDocumentList = () => {
       if (purchaseOrdersResponse.ok && purchaseOrdersPayload?.success && Array.isArray(purchaseOrdersPayload?.data)) {
         const approvedOrders = new Set(
           (purchaseOrdersPayload.data as PurchaseOrderReference[])
-            .filter((purchaseOrder) => isApprovedPurchaseState(purchaseOrder.purchaseState ?? 0))
-            .map((purchaseOrder) => normalizeAssociatedNo(String(purchaseOrder.documentAssociatedNo ?? "")))
+            .filter((purchaseOrder) => !purchaseOrder.isCancelled)
+            .map((order) => JSON.stringify([order.supplierID?.supplierno?.trim() ?? "",
+              typeof order.documentAssociatedType === "object" ? order.documentAssociatedType?.tipoid : order.documentAssociatedType,
+              normalizeAssociatedNo(String(order.documentAssociatedNo ?? ""))]))
             .filter(Boolean)
         );
         setApprovedOrderDocumentNos(approvedOrders);
