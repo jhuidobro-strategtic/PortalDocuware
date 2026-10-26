@@ -1606,7 +1606,9 @@ const PurchaseOrderDetails = () => {
           purchaseStateResponse,
           signedOrdersResponse,
         ] = await Promise.all([
-          fetch(buildApiUrl(`purchase-orders/pending-approvals/?userID=${sessionUser.id}`)),
+          isJuniorApprover || sessionUser.approvalRole === "SENIOR"
+            ? fetch(buildApiUrl(`purchase-orders/pending-approvals/?userID=${sessionUser.id}`))
+            : Promise.resolve(null),
           fetch(buildApiUrl("documents")),
           fetch(buildApiUrl("proveedores")),
           fetch(buildApiUrl("users/")),
@@ -1614,15 +1616,14 @@ const PurchaseOrderDetails = () => {
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER")),
-          isJuniorApprover || sessionUser.approvalRole === "SENIOR"
-            ? fetch(buildApiUrl("purchase-orders/")) : Promise.resolve(null),
+          fetch(buildApiUrl("purchase-orders/")),
         ]);
-        const purchaseOrdersData = await purchaseOrdersResponse
-          .json()
-          .catch(() => null);
+        const purchaseOrdersData = purchaseOrdersResponse
+          ? await purchaseOrdersResponse.json().catch(() => null)
+          : { success: true, data: [] };
 
         if (
-          !purchaseOrdersResponse.ok ||
+          (purchaseOrdersResponse && !purchaseOrdersResponse.ok) ||
           !purchaseOrdersData?.success ||
           !Array.isArray(purchaseOrdersData?.data)
         ) {
@@ -1637,15 +1638,17 @@ const PurchaseOrderDetails = () => {
         if (signedOrdersResponse) {
           const signedOrdersData = await signedOrdersResponse.json().catch(() => null);
           if (!signedOrdersResponse.ok || !signedOrdersData?.success || !Array.isArray(signedOrdersData.data)) {
-            throw new Error("No fue posible consultar las órdenes firmadas del usuario.");
+            throw new Error("No fue posible consultar las órdenes creadas o firmadas del usuario.");
           }
           (signedOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
-            .filter((order) => isJuniorApprover
+            .filter((order) => order.createdBy === sessionUser.id || (isJuniorApprover
               ? order.signature === sessionUser.id &&
                 (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED")
-              : order.signature2 === sessionUser.id && (order.isCancelled || (order.hasSeniorApproval &&
-                order.approvalStatus === "APPROVED")))
-            .forEach((order) => inboxOrders.set(order.purchaseOrderID, order));
+              : sessionUser.approvalRole === "SENIOR" && order.signature2 === sessionUser.id && (order.isCancelled || (order.hasSeniorApproval &&
+                order.approvalStatus === "APPROVED"))))
+            .forEach((order) => {
+              if (!inboxOrders.has(order.purchaseOrderID)) inboxOrders.set(order.purchaseOrderID, order);
+            });
         }
         setPurchaseOrders(Array.from(inboxOrders.values()));
 
