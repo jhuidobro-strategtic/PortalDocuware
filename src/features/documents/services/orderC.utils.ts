@@ -128,11 +128,9 @@ export const formatQuantityValue = (value: unknown) => {
     return "1";
   }
 
-  const normalizedValue = Number.isInteger(parsedValue)
+  return Number.isInteger(parsedValue)
     ? String(parsedValue)
-    : parsedValue.toFixed(2);
-
-  return normalizedValue.replace(/\.?0+$/, "");
+    : parsedValue.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
 };
 
 export const getSunatSupplierName = (

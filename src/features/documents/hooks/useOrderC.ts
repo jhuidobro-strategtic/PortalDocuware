@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getApiErrorMessage } from "../../../helpers/api-error-message";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Document } from "../types/list.types";
@@ -568,8 +569,8 @@ export const useOrderC = () => {
 
       const data = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        throw new Error(data?.message || t("Unable to register Order C."));
+      if (!response.ok || data?.success === false) {
+        throw new Error(getApiErrorMessage(data, `${t("Unable to register Order C.")} (HTTP ${response.status})`));
       }
 
       sessionStorage.setItem(

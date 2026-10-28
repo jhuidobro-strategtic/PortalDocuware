@@ -128,7 +128,7 @@ const DocumentOrderC = () => {
     floatingAlerts.push({
       id: "order-c-feedback",
       type: feedback.type,
-      message: feedback.message,
+      message: <span style={{ whiteSpace: "pre-line" }}>{feedback.message}</span>,
       autoDismissMs:
         feedback.type === "success" || feedback.type === "info" ? 5000 : undefined,
     });
