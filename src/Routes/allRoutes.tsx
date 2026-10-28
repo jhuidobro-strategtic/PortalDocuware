@@ -27,6 +27,7 @@ const TravelMyScheduleVoucher = lazy(
 const TravelReports = lazy(() => import("../features/travel-expenses/views/Reports/RendicionReport"));
 const Folders = lazy(() => import("../features/folders/views"));
 const Users = lazy(() => import("../features/users/views"));
+const VehicleManager = lazy(() => import("../features/vehicles/views"));
 const UsersAccess = () => canManageUsers() ? <Users /> : <Navigate to="/documents" replace />;
 
 const authProtectedRoutes = [
@@ -61,6 +62,7 @@ const authProtectedRoutes = [
   { path: "/reports/rendiciones", component: <TravelReports /> },
   { path: "/procesamiento-archivos", component: <Folders /> },
   { path: "/users", component: <UsersAccess /> },
+  { path: "/gestor-vehicular", component: <VehicleManager /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Navigate to="/documents" replace /> },
 ];

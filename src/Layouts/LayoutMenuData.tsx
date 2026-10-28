@@ -64,6 +64,12 @@ const Navdata = (t: (key: string) => string) => [
         ],
     },
     {
+        id: "vehicle-management",
+        label: "Gestor Vehicular",
+        icon: "ri-truck-line",
+        subItems: [{ id: "vehicle-list", label: "Vehículos", link: "/gestor-vehicular" }],
+    },
+    {
         id: "travel-expenses",
         label: t("Travel Expenses"),
         icon: "ri-road-map-line",

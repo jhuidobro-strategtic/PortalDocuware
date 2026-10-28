@@ -177,7 +177,7 @@ export const useOrderC = () => {
     setValues((prev) => ({
       ...prev,
       documentAssociatedType:
-        sunatSearchValues.tipoComprobante.replace(/^0+/, "") ||
+        (document?.sourceKind ? getDocumentTypeId(document) : sunatSearchValues.tipoComprobante.replace(/^0+/, "")) ||
         getDocumentTypeId(document),
       documentAssociatedNo:
         [sunatSearchValues.serie, sunatSearchValues.numero]
@@ -185,6 +185,36 @@ export const useOrderC = () => {
           .join("-") || getDocumentAssociatedNo(document),
     }));
   }, [document, sunatSearchValues]);
+
+  useEffect(() => {
+    if (!document?.sourceKind) return;
+    const controller = new AbortController();
+    const source = document;
+    const loadSavedDetails = async () => {
+      try {
+        setPrefillingFromSunat(true);
+        const query = new URLSearchParams({ suppliernumber: source.suppliernumber,
+          documentserial: source.documentserial, documentnumber: source.documentnumber });
+        const response = await fetch(buildApiUrl(`documents-detail/?${query}`), { signal: controller.signal });
+        const result = await response.json();
+        const rows = Array.isArray(result) ? result : result.data;
+        if (!response.ok || !Array.isArray(rows) || !rows.length) throw new Error("No se encontraron detalles guardados para este comprobante.");
+        setDetails(rows.filter((item) => !item.document || Number(item.document) === source.documentid).map((item) => ({
+          id: String(item.detailid), descriptionItem: item.description || "",
+          quantity: String(Number(item.quantity)), unitPrice: String(item.unit_value),
+          storedTotal: (Number(item.total_value) + Number(item.tax_value)).toFixed(2),
+        })));
+        setSummaryValues({ subtotal: source.amount, igv: source.taxamount, total: source.totalamount });
+        if (source.sourceKind === "RH") setValues((previous) => ({ ...previous, orderType: "S" }));
+      } catch (failure) {
+        if (!controller.signal.aborted) setFeedback({ type: "danger", message: failure instanceof Error ? failure.message : "No fue posible cargar el comprobante." });
+      } finally {
+        if (!controller.signal.aborted) setPrefillingFromSunat(false);
+      }
+    };
+    loadSavedDetails();
+    return () => controller.abort();
+  }, [document]);
 
   useEffect(() => {
     const normalizedSupplierNumber = normalizeSupplierNumber(values.suppliernumber);
@@ -394,7 +424,7 @@ export const useOrderC = () => {
   ].every((value) => String(value || "").trim());
 
   const handleSearchSunat = async () => {
-    if (!document) return;
+    if (!document || document.sourceKind) return;
 
     const sunatToken = getSunatToken();
     if (!sunatToken) {
@@ -495,6 +525,7 @@ export const useOrderC = () => {
 
     const normalizedValues = {
       ...values,
+      orderType: document?.sourceKind === "RH" ? "S" : values.orderType,
       createdBy: sessionUser.id,
       createdByName: sessionUser.name,
     };
@@ -530,7 +561,7 @@ export const useOrderC = () => {
     if (details.length === 0) {
       setFeedback({
         type: "danger",
-        message: t("Load the detail lines from SUNAT before saving."),
+        message: document?.sourceKind ? "Cargue los detalles del comprobante antes de guardar." : t("Load the detail lines from SUNAT before saving."),
       });
       return;
     }
@@ -538,7 +569,7 @@ export const useOrderC = () => {
     if (!summaryValues) {
       setFeedback({
         type: "danger",
-        message: t("Query SUNAT to validate the total amount before saving."),
+        message: document?.sourceKind ? "No fue posible cargar los importes del comprobante." : t("Query SUNAT to validate the total amount before saving."),
       });
       return;
     }

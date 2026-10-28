@@ -1,0 +1,134 @@
+.source-registration-content {
+  max-height: calc(100dvh - 3.5rem);
+  overflow: hidden;
+}
+
+.source-registration-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.source-registration-form .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.source-registration-form .modal-footer {
+  flex-shrink: 0;
+}
+
+.source-registration-content .modal-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.source-registration-content .btn-close {
+  flex-shrink: 0;
+}
+
+.source-registration-form fieldset,
+.source-registration-form .row > * {
+  min-width: 0;
+}
+
+.source-registration-table {
+  min-width: 850px;
+}
+
+.source-registration-table td[data-field="description"] {
+  min-width: 280px;
+}
+
+@media (max-width: 767.98px) {
+  .source-registration-read {
+    width: 100%;
+  }
+
+  .source-registration-table {
+    min-width: 0;
+  }
+
+  .source-registration-table thead {
+    display: none;
+  }
+
+  .source-registration-table tbody {
+    display: block;
+  }
+
+  .source-registration-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.85rem;
+    border: 1px solid var(--vz-border-color, #dee2e6);
+    border-radius: 0.5rem;
+  }
+
+  .source-registration-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .source-registration-table td[data-field="description"],
+  .source-registration-table td[data-field="actions"] {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .source-registration-table td[data-field="actions"] {
+    text-align: right;
+  }
+
+  .source-registration-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .source-registration.modal-dialog {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    margin: 0;
+  }
+
+  .source-registration-content {
+    height: 100%;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .source-registration-content .modal-header,
+  .source-registration-content .modal-body,
+  .source-registration-content .modal-footer {
+    padding: 1rem;
+  }
+
+  .source-registration-content .modal-title {
+    font-size: 1.05rem;
+    line-height: 1.4;
+  }
+
+  .source-registration-form .modal-footer > .btn {
+    width: 100%;
+    margin: 0;
+    white-space: normal;
+  }
+
+  .source-registration-form .modal-footer {
+    gap: 0.5rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}

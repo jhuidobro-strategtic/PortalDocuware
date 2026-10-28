@@ -1,6 +1,9 @@
 import { ReactNode } from "react";
 
 export interface Document {
+  sourceKind?: "BOLETA" | "RH" | "";
+  withholdingamount?: string;
+  netamount?: string;
   documentid: number;
   documentserial: string;
   documentnumber: string;

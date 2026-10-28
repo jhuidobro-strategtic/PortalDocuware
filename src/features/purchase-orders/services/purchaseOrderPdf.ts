@@ -928,10 +928,15 @@ export const generatePurchaseOrderPdf = async ({
 
   const summaryRows: Array<[string, string]> = [
     ["VALOR DE VENTA :", formatAmount(documentSubtotal, numberLocale)],
-    ["IGV (18%) :", formatAmount(documentTax, numberLocale)],
-    ["DESCUENTO :", ""],
+    [relatedDocument?.sourceKind ? "IGV :" : "IGV (18%) :", formatAmount(documentTax, numberLocale)],
+    [relatedDocument?.sourceKind === "RH" ? "RETENCIÓN :" : "DESCUENTO :",
+      relatedDocument?.sourceKind === "RH" ? formatAmount(relatedDocument.withholdingamount || "0", numberLocale) : ""],
     ["IMPORTE TOTAL :", formatAmount(documentTotal, numberLocale)],
   ];
+
+  if (relatedDocument?.sourceKind === "RH") {
+    summaryRows.push(["NETO A PAGAR :", formatAmount(documentTotal - Number(relatedDocument.withholdingamount || 0), numberLocale)]);
+  }
 
   summaryRows.forEach(([label, value], index) => {
     const currentY = footerTop + 4.8 + index * 7;

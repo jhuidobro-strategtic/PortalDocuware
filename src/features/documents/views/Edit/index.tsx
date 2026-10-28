@@ -582,13 +582,8 @@ const DocumentEditPage: React.FC = () => {
         normalizeCenterId(current2) !== normalizeCenterId(original2) ||
         (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
     });
-      const persistableDetails = changedDetails.filter((detail) =>
-        detail.detailid > 0 || Number.isInteger(parseAmount(detail.quantity))
-      );
-      const skippedDetails = changedDetails.length - persistableDetails.length;
-
       let failedSyncs = 0;
-      for (const detail of persistableDetails) {
+      for (const detail of changedDetails) {
         const costCenterPayload = {
           centro_costo_1_id: detail.costCenter1 !== undefined ? detail.costCenter1 : documentData.centro_costo_1_id ?? null,
           centro_costo_2_id: detail.costCenter2 !== undefined ? detail.costCenter2 : documentData.centro_costo_2_id ?? null,
@@ -649,9 +644,6 @@ const DocumentEditPage: React.FC = () => {
 
     if (failedSyncs > 0) {
       throw new Error("No fue posible guardar todos los detalles de la factura.");
-    }
-    if (skippedDetails > 0) {
-      addNotification("warning", t("Some invoice details could not be saved because the backend only accepts whole-number quantities, but the full detail from SUNAT is shown."));
     }
   };
 

@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import SimpleBar from "simplebar-react";
 import { useDropzone } from "react-dropzone";
 import axios from "axios";
+import { buildApiUrl } from "../../../helpers/api-url";
+import { getCurrentSessionUser } from "../../documents/hooks/orderC.form";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Folders.css";
@@ -72,6 +74,7 @@ const Folders = () => {
   const [currentView, setCurrentView] = useState<"folders" | "assets" | "traceability">("folders");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<number | null>(null);
 
   // Traceability States
   const [traceabilityData, setTraceabilityData] = useState<InvoiceImportResponse | null>(null);
@@ -84,7 +87,7 @@ const Folders = () => {
     setLoadingTraceability(true);
     try {
       const response = await axios.get<InvoiceImportResponse>(
-        `https://app-django-docuware.onrender.com/api/invoice-imports/?page=${page}&page_size=20`
+        buildApiUrl(`invoice-imports/?page=${page}&page_size=20`)
       );
       setTraceabilityData(response.data);
       setCurrentPage(page);
@@ -102,6 +105,15 @@ const Folders = () => {
     }
   }, [currentView, traceabilityData, fetchTraceabilityData]);
 
+  useEffect(() => {
+    const active = traceabilityData?.results.some((batch) => batch.jobs.some((job) =>
+      ["uploaded", "uploaded_local", "ocr_processing", "sunat_processing", "persisting"].includes(job.status)
+    ));
+    if (currentView !== "traceability" || !active) return;
+    const timer = window.setTimeout(() => fetchTraceabilityData(currentPage), 4000);
+    return () => window.clearTimeout(timer);
+  }, [currentView, traceabilityData, currentPage, fetchTraceabilityData]);
+
   // Dropzone configuration
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setUploadedFiles(prev => [...prev, ...acceptedFiles]);
@@ -114,6 +126,9 @@ const Folders = () => {
     setIsUploading(true);
 
     const formData = new FormData();
+    const session = getCurrentSessionUser();
+    if (!session.id) { setIsUploading(false); toast.error("No fue posible identificar al usuario. Inicie sesión nuevamente."); return; }
+    formData.append("created_by", String(session.id));
     uploadedFiles.forEach((file) => {
       formData.append("files", file);
     });
@@ -122,7 +137,7 @@ const Folders = () => {
 
     try {
       const response = await axios.post(
-        "https://app-django-docuware.onrender.com/api/invoice-imports/",
+        buildApiUrl("invoice-imports/"),
         formData,
         {
           headers: {
@@ -137,6 +152,9 @@ const Folders = () => {
       toast.success(apiMessage, { autoClose: 8000, theme: "colored" });
       
       setUploadedFiles([]); // clear list on success
+      setCurrentView("traceability");
+      const batchId = response.data?.data?.batch_id;
+      if (batchId) setExpandedBatches((previous) => ({ ...previous, [batchId]: true }));
       
       // Auto refresh traceability if data was loaded
       fetchTraceabilityData(1);
@@ -163,8 +181,23 @@ const Folders = () => {
     }));
   };
 
+  const retryJob = async (jobId: number) => {
+    setRetryingJobId(jobId);
+    try {
+      await axios.post(buildApiUrl(`invoice-imports/jobs/${jobId}/retry/`));
+      toast.success("Archivo enviado a reprocesamiento.");
+      await fetchTraceabilityData(currentPage);
+    } catch {
+      toast.error("No fue posible reprocesar el archivo.");
+    } finally { setRetryingJobId(null); }
+  };
+
   const getBatchStatusBadge = (status: string) => {
     switch (status) {
+      case "needs_review":
+        return <span className="badge bg-warning-subtle text-warning fs-11">Pendiente de reprocesamiento</span>;
+      case "uploaded_local":
+        return <span className="badge bg-info-subtle text-info fs-11">En cola local</span>;
       case "completed":
         return <span className="badge bg-success-subtle text-success fs-12 px-2 py-1"><i className="ri-checkbox-circle-line me-1"></i>Completado</span>;
       case "completed_with_errors":
@@ -401,6 +434,8 @@ const Folders = () => {
                                   </div>
 
                                   <div className="d-flex align-items-center gap-2">
+                                    {(job.status === "needs_review" || job.status.startsWith("failed_")) && <button type="button" className="btn btn-sm btn-light" disabled={retryingJobId !== null} onClick={() => retryJob(job.id)}>{retryingJobId === job.id ? "Reintentando..." : "Reintentar"}</button>}
+                                    {job.documentid && <Link className="btn btn-sm btn-light" to={`/documents/order-c/${job.documentid}`}>Crear OC/OS</Link>}
                                     {job.r2_url && (
                                       <a
                                         href={job.r2_url}
@@ -460,7 +495,7 @@ const Folders = () => {
       <Row className="justify-content-between align-items-center mb-4">
         <Col>
           <h4 className="mb-sm-0 text-primary fw-bold fs-16">Subida de Documentos</h4>
-          <p className="text-muted mb-0 mt-1 fs-13">Sube tus facturas (PDF, Imágenes) para ser procesadas automáticamente.</p>
+          <p className="text-muted mb-0 mt-1 fs-13">Carga facturas, boletas de venta y recibos por honorarios. Al completar el procesamiento aparecerán automáticamente en Documentos para generar su OC/OS.</p>
         </Col>
         <Col className="text-end">
           <button className="btn btn-sm btn-soft-secondary rounded-pill" onClick={() => setCurrentView("folders")}>

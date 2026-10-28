@@ -202,14 +202,16 @@ const DocumentOrderC = () => {
             <div className="mb-4">
               <h5 className="mb-1">{t("Order C. form")}</h5>
               <p className="text-muted mb-0">
-                {t(
+                {document.sourceKind ? "Complete las condiciones y los firmantes usando los datos guardados del comprobante." : t(
                   "Use the selected document as a base, then query SUNAT to auto-fill the general data and detail lines."
                 )}
               </p>
             </div>
 
             <Form onSubmit={handleSubmit}>
-              <div className="mb-4">
+              {document.sourceKind ? <div className="alert alert-info mb-4">
+                Los detalles se cargan desde el comprobante registrado. Revise los importes antes de generar la {document.sourceKind === "RH" ? "OS" : "OC/OS"}.
+              </div> : <div className="mb-4">
                 <h6 className="text-uppercase text-muted mb-3">
                   {t("SUNAT Query")}
                 </h6>
@@ -291,7 +293,7 @@ const DocumentOrderC = () => {
                     </div>
                   </Col>
                 </Row>
-              </div>
+              </div>}
 
               <div className="mb-4">
                 <h6 className="text-uppercase text-muted mb-3">
@@ -391,7 +393,7 @@ const DocumentOrderC = () => {
                                 }
                                 placeholder={t(field.placeholderKey)}
                                 isClearable={!field.readOnly}
-                                isDisabled={field.readOnly}
+                                isDisabled={field.readOnly || (document.sourceKind === "RH" && field.name === "orderType")}
                                 isLoading={
                                   (isSignerSelect || isRequesterSelect) &&
                                   loadingSigners
@@ -533,7 +535,7 @@ const DocumentOrderC = () => {
                 <Button type="button" color="light" onClick={() => navigate(-1)}>
                   {t("Cancel")}
                 </Button>
-                <Button type="submit" color="primary" disabled={submitting}>
+                <Button type="submit" color="primary" disabled={submitting || prefillingFromSunat}>
                   {submitting ? t("Saving...") : t("Save")}
                 </Button>
               </div>

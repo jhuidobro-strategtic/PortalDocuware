@@ -36,6 +36,7 @@ import { fetchPurchaseOrderApprovals } from "../services/purchaseOrderApprovals"
 import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoiceDetails";
 import { intelligentSearch } from "../../../helpers/search-utils";
 import OrderDocumentItem from "../components/OrderDocumentItem";
+import OrderDocumentUpload from "../components/OrderDocumentUpload";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
 import "../../expedients/views/Expedients.css";
@@ -585,6 +586,9 @@ const PurchaseOrderDetails = () => {
   const [attachments, setAttachments] = useState<OrderAttachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [attachmentError, setAttachmentError] = useState("");
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const uploadingAttachmentRef = useRef(false);
   const attachmentRequest = useRef(0);
   const attachmentDrawerRef = useRef<HTMLElement | null>(null);
   const [confirmingState, setConfirmingState] = useState(false);
@@ -971,6 +975,8 @@ const PurchaseOrderDetails = () => {
   };
 
   const handleOpenAttachments = async (order: PurchaseOrder) => {
+    if (uploadingAttachmentRef.current) return;
+    setShowDocumentUpload(false);
     const request = ++attachmentRequest.current;
     setAttachmentOrder(order);
     setAttachments([]);
@@ -1052,6 +1058,8 @@ const PurchaseOrderDetails = () => {
   };
 
   const closeAttachments = useCallback(() => {
+    if (uploadingAttachmentRef.current) return;
+    setShowDocumentUpload(false);
     attachmentRequest.current += 1;
     if (orderPreviewBlobUrlRef.current) {
       URL.revokeObjectURL(orderPreviewBlobUrlRef.current);
@@ -2235,7 +2243,7 @@ const PurchaseOrderDetails = () => {
           // 3. Documentos de sustento adicionales
           const otherAttachments = attachments.filter(
             (file) =>
-              Number(file.tipodocumentoid) !== 1 &&
+              file.expedientedocid !== existingInvoiceAttachment?.expedientedocid &&
               Number(file.tipodocumentoid) !== 2
           );
 
@@ -2254,11 +2262,34 @@ const PurchaseOrderDetails = () => {
                       : `${totalFileCount} archivos disponibles.`}
                   </p>
                 </div>
-                <button type="button" className="expedient-drawer-close" onClick={closeAttachments} aria-label={t("Close")}>
+                <div className="expedient-drawer-header-actions">
+                  <Button color="light" className="expedient-upload-toggle-button" disabled={uploadingAttachment || loadingAttachments || attachmentOrder.isCancelled}
+                    onClick={() => setShowDocumentUpload((current) => !current)}>
+                    <i className={`${showDocumentUpload ? "ri-close-line" : "ri-upload-2-line"} me-2`} />
+                    {showDocumentUpload ? t("Hide uploader") : t("Upload document")}
+                  </Button>
+                <button type="button" className="expedient-drawer-close" disabled={uploadingAttachment} onClick={closeAttachments} aria-label={t("Close")}>
                   <i className="ri-close-line" />
                 </button>
+                </div>
               </div>
               <div className="expedient-drawer-body">
+                {showDocumentUpload && <OrderDocumentUpload key={attachmentOrder.purchaseOrderID}
+                  orderId={attachmentOrder.purchaseOrderID} invoiceId={relatedInvoiceDoc?.documentid}
+                  userId={sessionUser.id}
+                  onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
+                  onUploaded={async () => {
+                    const response = await fetch(buildApiUrl("expedientes/"));
+                    const payload = await response.json().catch(() => null);
+                    const rows = payload?.data ?? payload;
+                    if (!response.ok || payload?.success === false || !Array.isArray(rows)) {
+                      setAttachmentError("El documento se cargó, pero no se pudo actualizar el listado. Cierre y vuelva a abrir el panel.");
+                      return;
+                    }
+                    setAttachments(rows.filter((row) => Number(row.ordencompraid ?? row.ordencompra?.purchaseOrderID) === attachmentOrder.purchaseOrderID)
+                      .flatMap((row) => row.expediente_documentos ?? []).filter((file: OrderAttachment) => file.estado !== false));
+                    setAttachmentError("");
+                  }} />}
                 <div className="expedient-drawer-list">
                   {/* 1. Factura */}
                   {hasInvoice && (
@@ -2290,7 +2321,7 @@ const PurchaseOrderDetails = () => {
                       <OrderDocumentItem
                         key={file.expedientedocid}
                         name={file.filename || t("Document")}
-                        type={t("Supporting Document")}
+                        type={Number(file.tipodocumentoid) === 1 ? t("Invoice") : t("Supporting Document")}
                         url={getAttachmentUrl(file)}
                         createdAt={file.createat}
                       />

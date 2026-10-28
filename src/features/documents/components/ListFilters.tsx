@@ -143,6 +143,7 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
           </div>
 
           <div className="document-actions-group">
+
             <Button
               color="primary"
               onClick={toggleExtractModal}

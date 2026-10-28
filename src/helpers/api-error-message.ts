@@ -1,4 +1,11 @@
 const fieldLabels: Record<string, string> = {
+  no_vehiculo: "Identificador / nombre", placa: "Placa", tipo: "Tipo de vehículo", descripcion: "Descripción",
+  centro_costo_1_id: "Centro de costo 1", centro_costo_2_id: "Centro de costo 2", activo: "Estado",
+  sourceKind: "Tipo de comprobante", suppliernumber: "RUC del emisor", suppliername: "Nombre del emisor",
+  documentserial: "Serie", documentnumber: "Número", documentdate: "Fecha de emisión",
+  totalamount: "Importe total", taxamount: "IGV", withholdingamount: "Retención",
+  items: "Detalles", description: "Descripción", unit_value: "Valor unitario",
+  total_value: "Base", tax_value: "IGV del detalle", created_by: "Usuario creador", file: "Archivo PDF",
   supplierID: "Proveedor", documentAssociatedType: "Tipo de documento",
   documentAssociatedNo: "Documento asociado", paymentCondition: "Condición de pago",
   currency: "Moneda", guideNo: "Guía", store: "Almacén", purchaseState: "Estado de compra",
