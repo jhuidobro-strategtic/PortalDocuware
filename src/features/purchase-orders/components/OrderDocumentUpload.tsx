@@ -59,7 +59,7 @@ const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, onUploaded, on
   return <form className="expedient-upload-panel" onSubmit={upload}>
     <div className="expedient-upload-panel-header"><div>
       <span className="expedient-upload-panel-kicker">Nuevo documento</span><h6 className="mb-1">Subir PDF</h6>
-      <p className="text-muted mb-0">Seleccione el tipo y el archivo que desea adjuntar a esta orden.</p>
+      <p className="text-muted mb-0">Adjunte liquidaciones y otros documentos de sustento vinculados a la factura. No necesita esperar la firma de la orden.</p>
     </div></div>
     {error && <div className="alert alert-danger" role="alert" style={{ whiteSpace: "pre-line" }}>{error}</div>}
     {success && <div className="alert alert-success" role="status">{success}</div>}

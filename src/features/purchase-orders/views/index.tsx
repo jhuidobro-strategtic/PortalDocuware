@@ -976,9 +976,9 @@ const PurchaseOrderDetails = () => {
     };
   };
 
-  const handleOpenAttachments = async (order: PurchaseOrder, previewOrder = false) => {
+  const handleOpenAttachments = async (order: PurchaseOrder, previewOrder = false, uploadDocument = false) => {
     if (uploadingAttachmentRef.current) return;
-    setShowDocumentUpload(false);
+    setShowDocumentUpload(uploadDocument);
     setPreviewOrderAutomatically(previewOrder);
     setOrderPreviewError("");
     const request = ++attachmentRequest.current;
@@ -2068,6 +2068,11 @@ const PurchaseOrderDetails = () => {
                                           ]
                                         : []),
                                       ...(purchaseOrder.createdBy === sessionUser.id && !purchaseOrder.isCancelled && purchaseOrder.approvalStatus !== "APPROVED" ? [{
+                                        id: `attach-support-${purchaseOrder.purchaseOrderID}`,
+                                        label: "Adjuntar documentos",
+                                        icon: "ri-upload-2-line", tone: "neutral" as const,
+                                        onClick: () => handleOpenAttachments(purchaseOrder, false, true),
+                                      }, {
                                         id: `preview-pending-${purchaseOrder.purchaseOrderID}`,
                                         label: "Previsualizar orden pendiente",
                                         icon: "ri-eye-line", tone: "neutral" as const,
