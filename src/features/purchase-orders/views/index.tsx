@@ -598,6 +598,8 @@ const PurchaseOrderDetails = () => {
   const [cancelError, setCancelError] = useState("");
   const [orderPreviewPdfUrl, setOrderPreviewPdfUrl] = useState<string>("");
   const [loadingOrderPreviewPdf, setLoadingOrderPreviewPdf] = useState(false);
+  const [previewOrderAutomatically, setPreviewOrderAutomatically] = useState(false);
+  const [orderPreviewError, setOrderPreviewError] = useState("");
   const orderPreviewBlobUrlRef = useRef<string>("");
 
   useEffect(() => {
@@ -974,9 +976,11 @@ const PurchaseOrderDetails = () => {
     };
   };
 
-  const handleOpenAttachments = async (order: PurchaseOrder) => {
+  const handleOpenAttachments = async (order: PurchaseOrder, previewOrder = false) => {
     if (uploadingAttachmentRef.current) return;
     setShowDocumentUpload(false);
+    setPreviewOrderAutomatically(previewOrder);
+    setOrderPreviewError("");
     const request = ++attachmentRequest.current;
     setAttachmentOrder(order);
     setAttachments([]);
@@ -1007,6 +1011,9 @@ const PurchaseOrderDetails = () => {
       .then((res) => res.url)
       .catch((err) => {
         console.error("Error generating purchase order PDF preview:", err);
+        if (request === attachmentRequest.current) {
+          setOrderPreviewError(err instanceof Error ? err.message : "No fue posible preparar la vista previa de la orden.");
+        }
         return "";
       });
 
@@ -2060,6 +2067,12 @@ const PurchaseOrderDetails = () => {
                                             },
                                           ]
                                         : []),
+                                      ...(purchaseOrder.createdBy === sessionUser.id && !purchaseOrder.isCancelled && purchaseOrder.approvalStatus !== "APPROVED" ? [{
+                                        id: `preview-pending-${purchaseOrder.purchaseOrderID}`,
+                                        label: "Previsualizar orden pendiente",
+                                        icon: "ri-eye-line", tone: "neutral" as const,
+                                        onClick: () => handleOpenAttachments(purchaseOrder, true),
+                                      }] : []),
                                       {
                                         id: `view-expedient-${purchaseOrder.purchaseOrderID}`,
                                         label: t("View documents"),
@@ -2274,6 +2287,12 @@ const PurchaseOrderDetails = () => {
                 </div>
               </div>
               <div className="expedient-drawer-body">
+                {!isApproved && !attachmentOrder.isCancelled && (
+                  <div className="alert alert-info" role="status">
+                    Vista previa de la orden enviada. Está pendiente de aprobación final del firmante Senior.
+                  </div>
+                )}
+                {orderPreviewError && <div className="alert alert-danger" role="alert">{orderPreviewError}</div>}
                 {showDocumentUpload && <OrderDocumentUpload key={attachmentOrder.purchaseOrderID}
                   orderId={attachmentOrder.purchaseOrderID} invoiceId={relatedInvoiceDoc?.documentid}
                   userId={sessionUser.id}
@@ -2303,6 +2322,8 @@ const PurchaseOrderDetails = () => {
 
                   {/* 2. Orden de Compra */}
                   <OrderDocumentItem
+                    key={`order-preview-${attachmentOrder.purchaseOrderID}-${previewOrderAutomatically}`}
+                    initiallyOpen={previewOrderAutomatically}
                     name={orderDocName}
                     type={orderDocType}
                     url={orderDocUrl}

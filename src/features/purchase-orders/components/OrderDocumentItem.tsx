@@ -10,6 +10,7 @@ interface OrderDocumentItemProps {
   path?: string;
   createdAt?: string;
   loading?: boolean;
+  initiallyOpen?: boolean;
 }
 
 const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
@@ -19,9 +20,10 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
   path,
   createdAt,
   loading = false,
+  initiallyOpen = false,
 }) => {
   const { t } = useTranslation();
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(initiallyOpen);
   const displayPath = path || url || "-";
 
   return (
