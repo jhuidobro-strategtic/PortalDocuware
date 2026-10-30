@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Card, CardBody } from "reactstrap";
+import { Button, Card, CardBody, Offcanvas, OffcanvasBody } from "reactstrap";
 import { useTranslation } from "react-i18next";
 import { Document } from "../types/list.types";
 
@@ -25,7 +25,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   const { t } = useTranslation();
 
   return (
-    <Card>
+    <Offcanvas isOpen direction="end" toggle={onClose} aria-label={t("Document preview")}
+      style={{ width: "min(1600px, 96vw)", maxWidth: "100vw" }}>
+    <OffcanvasBody className="p-2 p-md-3">
+    <Card className="mb-0">
       <CardBody>
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h5 className="mb-0 small-text">{t("Document preview")}</h5>
@@ -59,7 +62,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         <div
           style={{
             width: "100%",
-            height: "66vh",
+            height: "calc(100dvh - 115px)",
             overflow: "auto",
             display: "flex",
             justifyContent: "center",
@@ -95,6 +98,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
       </CardBody>
     </Card>
+    </OffcanvasBody>
+    </Offcanvas>
   );
 };
 

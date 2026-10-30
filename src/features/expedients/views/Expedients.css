@@ -43,7 +43,7 @@
   top: 0;
   right: 0;
   height: 100vh;
-  width: min(860px, calc(100vw - 20px));
+  width: min(1400px, calc(100vw - 20px));
   padding: 0.75rem 0.75rem 0.75rem 0;
   transform: translateX(108%);
   opacity: 0;
@@ -448,7 +448,7 @@
 
 .expedient-preview-iframe {
   width: 100%;
-  height: 470px;
+  height: 75vh;
   border: none;
   border-radius: 1rem;
   background: #ffffff;
@@ -739,6 +739,6 @@
   }
 
   .expedient-preview-iframe {
-    height: 280px;
+    height: 65vh;
   }
 }
