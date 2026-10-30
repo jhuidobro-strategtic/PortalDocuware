@@ -12,7 +12,7 @@ import { useDocumentList, getDocumentAssociatedNo } from "../../hooks/useDocumen
 
 const DocumentList: React.FC = () => {
   const {
-    loading, error, selectedDoc, rotation, searchTerm, statusFilter, dateRange,
+    loading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
     setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
     paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount,
@@ -56,6 +56,11 @@ const DocumentList: React.FC = () => {
               <DocumentFilters
                 searchTerm={searchTerm}
                 statusFilter={statusFilter}
+                orderFilter={orderFilter}
+                onOrderChange={(value) => {
+                  setOrderFilter(value);
+                  setCurrentPage(1);
+                }}
                 dateRange={dateRange}
                 onSearchTermChange={(value) => {
                   setSearchTerm(value);

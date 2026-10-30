@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 
 export interface Document {
+  hasActiveOrder?: boolean;
+  activeOrder?: { purchaseOrderID: number; orderNo: string | null; type: "OC" | "OS" } | null;
   sourceKind?: "BOLETA" | "RH" | "";
   withholdingamount?: string;
   netamount?: string;
@@ -77,6 +79,7 @@ export interface Notification {
 }
 
 export type ColumnWidths = {
+  orden: number;
   id: number;
   serie: number;
   numero: number;

@@ -12,7 +12,7 @@ import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 
 type PurchaseOrderReference = { documentAssociatedNo?: string; isCancelled?: boolean;
   supplierID?: { supplierno?: string }; documentAssociatedType?: number | { tipoid: number }; };
-type ImportSummary = { documents_created?: number; documents_updated?: number; details_created?: number; };
+type ImportSummary = { documents_created?: number; documents_updated?: number; details_created?: number; duplicates_skipped?: number; };
 type ExtractDocumentsResultPayload = { message?: string; items?: unknown[]; import_summary?: ImportSummary | null; };
 type ExtractDocumentsJobData = { job_id?: string; status?: string; message?: string; result?: ExtractDocumentsResultPayload | null; };
 type ExtractDocumentsJobResponse = { success?: boolean; message?: string; data?: ExtractDocumentsJobData | null; };
@@ -43,7 +43,7 @@ export const getDocumentAssociatedNo = (document: Document) =>
 
 const buildImportSummaryMessage = (baseMessage: string, summary: ImportSummary | null | undefined, t: (key: string) => string) => {
   if (!summary) return baseMessage;
-  return `${baseMessage}. Creados: ${Number(summary.documents_created ?? 0)}, Actualizados: ${Number(summary.documents_updated ?? 0)}, Detalles: ${Number(summary.details_created ?? 0)}`;
+  return `${baseMessage}. Creados: ${Number(summary.documents_created ?? 0)}, Duplicados omitidos: ${Number(summary.duplicates_skipped ?? 0)}, Detalles: ${Number(summary.details_created ?? 0)}`;
 };
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -66,6 +66,7 @@ export const useDocumentList = () => {
   const rotateRight = () => setRotation((prev) => prev + 90);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [orderFilter, setOrderFilter] = useState("all");
   const [dateRange, setDateRange] = useState<Date[]>([]);
   const [deleteModal, setDeleteModal] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
@@ -78,7 +79,7 @@ export const useDocumentList = () => {
   const endDate = dateRange[1];
 
   const [columnWidths, setColumnWidths] = useColumnWidths<ColumnWidths>("documents", {
-    id: 80, serie: 100, numero: 100, ruc: 130, razon: 200, tipo: 150, driver: 120, fecha: 130, moneda: 100, subtotal: 110, igv: 100, total: 120, estado: 120, acciones: 120,
+    id: 80, serie: 100, numero: 100, ruc: 130, razon: 200, tipo: 150, driver: 120, fecha: 130, moneda: 100, subtotal: 110, igv: 100, total: 120, estado: 120, orden: 180, acciones: 120,
   });
 
   const addNotification = (type: Notification["type"], message: Notification["message"]) => {
@@ -161,6 +162,8 @@ export const useDocumentList = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
+    const hasOrder = doc.hasActiveOrder ?? approvedOrderDocumentNos.has(getDocumentAssociatedNo(doc));
+    if ((orderFilter === "with" && !hasOrder) || (orderFilter === "without" && hasOrder)) return false;
     const matchesSearch = intelligentSearch(doc, searchTerm);
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" && doc.status) || (statusFilter === "pending" && !doc.status);
     let matchesDate = true;
@@ -220,6 +223,10 @@ export const useDocumentList = () => {
   };
 
   const handleOpenOrderC = (doc: Document) => {
+    if (doc.hasActiveOrder) {
+      addNotification("warning", `Este documento ya tiene una ${doc.activeOrder?.type || "OC/OS"} vigente: ${doc.activeOrder?.orderNo || "pendiente de correlativo"}.`);
+      return;
+    }
     navigate(`/documents/order-c/${doc.documentid}`, { state: { document: doc } });
   };
 
@@ -361,7 +368,7 @@ export const useDocumentList = () => {
   };
 
   return {
-    documents, loading, error, selectedDoc, rotation, searchTerm, statusFilter, dateRange,
+    documents, loading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
     setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
     paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount: filteredDocuments.length,

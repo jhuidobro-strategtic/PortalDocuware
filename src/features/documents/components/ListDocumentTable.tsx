@@ -142,6 +142,9 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               >
                 {t("Status")}
               </ResizableHeader>
+              <ResizableHeader width={columnWidths.orden} onResize={(width) => onResizeColumn("orden", width)}>
+                OC / OS
+              </ResizableHeader>
               <ResizableHeader
                 width={columnWidths.acciones}
                 onResize={(w: number) => onResizeColumn("acciones", w)}
@@ -154,13 +157,13 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           <tbody>
             {documents.length === 0 && (
               <tr>
-                <td colSpan={12} className="text-center">
+                <td colSpan={13} className="text-center">
                   {t("No records found")}
                 </td>
               </tr>
             )}
             {documents.map((doc) => {
-              const hasApprovedPurchaseOrder = approvedOrderDocumentNos.has(
+              const hasApprovedPurchaseOrder = doc.hasActiveOrder ?? approvedOrderDocumentNos.has(
                 getDocumentAssociatedNo(doc)
               );
               const style = {
@@ -278,6 +281,12 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     }}
                   >
                     <DocumentStatusBadge status={doc.status} />
+                  </td>
+                  <td style={{ ...style, width: columnWidths.orden, textAlign: "center" }}
+                    title={hasApprovedPurchaseOrder ? `${doc.activeOrder?.type || "OC/OS"}: ${doc.activeOrder?.orderNo || "Pendiente de correlativo"}` : "Sin orden vigente"}>
+                    <span className={`badge ${hasApprovedPurchaseOrder ? "bg-primary-subtle text-primary" : "bg-secondary-subtle text-secondary"}`}>
+                      {hasApprovedPurchaseOrder ? doc.activeOrder?.orderNo || `${doc.activeOrder?.type || "OC/OS"} registrada` : "Sin orden"}
+                    </span>
                   </td>
                   <td
                     style={{

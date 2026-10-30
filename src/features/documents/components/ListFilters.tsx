@@ -21,6 +21,8 @@ import "flatpickr/dist/themes/material_blue.css";
 interface DocumentFiltersProps {
   searchTerm: string;
   statusFilter: string;
+  orderFilter: string;
+  onOrderChange: (value: string) => void;
   dateRange: Date[];
   onSearchTermChange: (value: string) => void;
   onStatusChange: (value: string) => void;
@@ -35,6 +37,8 @@ interface DocumentFiltersProps {
 const DocumentFilters: React.FC<DocumentFiltersProps> = ({
   searchTerm,
   statusFilter,
+  orderFilter,
+  onOrderChange,
   dateRange,
   onSearchTermChange,
   onStatusChange,
@@ -123,6 +127,13 @@ const DocumentFilters: React.FC<DocumentFiltersProps> = ({
               <option value="all">{t("All")}</option>
               <option value="active">{t("Active")}</option>
               <option value="pending">{t("Pending")}</option>
+            </Input>
+
+            <Input type="select" value={orderFilter} onChange={(event) => onOrderChange(event.target.value)}
+              aria-label="Filtrar por OC/OS" className="document-filter-control document-filter-control--status">
+              <option value="all">Con y sin OC/OS</option>
+              <option value="with">Con OC/OS</option>
+              <option value="without">Sin OC/OS</option>
             </Input>
 
             <InputGroup className="document-filter-control document-filter-control--date">
