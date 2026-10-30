@@ -1573,8 +1573,12 @@ const PurchaseOrderDetails = () => {
           throw new Error(data?.message || t("Unable to update purchase order status."));
         }
         statusUpdated = true;
-        setPurchaseOrders((currentOrders) => currentOrders.filter(
-          (order) => order.purchaseOrderID !== orderModal.purchaseOrderID
+        setPurchaseOrders((currentOrders) => currentOrders.map((order) =>
+          order.purchaseOrderID === orderModal.purchaseOrderID
+            ? { ...order, purchaseState: selectedState, purchaseStateLabel: purchaseStateLookup[selectedState] ||
+                modalStateOptions.find((option) => option.value === selectedState)?.label || "",
+                updatedBy: sessionUser.id, updatedAt: moment().format("YYYY-MM-DD") }
+            : order
         ));
         setActionSuccess(data?.message || t("Purchase order status updated successfully."));
         setOrderModal(null);
@@ -1658,8 +1662,10 @@ const PurchaseOrderDetails = () => {
           (signedOrdersData.data as PurchaseOrderApiItem[]).map(mapPurchaseOrder)
             .filter((order) => order.createdBy === sessionUser.id || (isJuniorApprover
               ? order.signature === sessionUser.id &&
-                (order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED")
-              : sessionUser.approvalRole === "SENIOR" && order.signature2 === sessionUser.id && (order.isCancelled || (order.hasSeniorApproval &&
+                (order.isCancelled || getPurchaseStateKind(order.purchaseState, order.purchaseStateLabel) === "rejected" ||
+                  order.approvalStatus === "JR_SIGNED" || order.approvalStatus === "APPROVED")
+              : sessionUser.approvalRole === "SENIOR" && order.signature2 === sessionUser.id && (order.isCancelled ||
+                getPurchaseStateKind(order.purchaseState, order.purchaseStateLabel) === "rejected" || (order.hasSeniorApproval &&
                 order.approvalStatus === "APPROVED"))))
             .forEach((order) => {
               if (!inboxOrders.has(order.purchaseOrderID)) inboxOrders.set(order.purchaseOrderID, order);
@@ -2020,7 +2026,7 @@ const PurchaseOrderDetails = () => {
                                   <i className={purchaseState.icon} />
                                   <span>{purchaseState.label}</span>
                                 </span>}
-                                {!purchaseOrder.isCancelled && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
+                                {!purchaseOrder.isCancelled && getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) !== "rejected" && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
                                   <div className="small text-warning mt-1" role="status">
                                     <i className="ri-time-line me-1" />
                                     Firmado por JR · Pendiente de firma Senior
@@ -2074,7 +2080,8 @@ const PurchaseOrderDetails = () => {
                                         onClick: () => handleOpenAttachments(purchaseOrder, false, true),
                                       }, {
                                         id: `preview-pending-${purchaseOrder.purchaseOrderID}`,
-                                        label: "Previsualizar orden pendiente",
+                                        label: getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) === "rejected"
+                                          ? "Previsualizar orden rechazada" : "Previsualizar orden pendiente",
                                         icon: "ri-eye-line", tone: "neutral" as const,
                                         onClick: () => handleOpenAttachments(purchaseOrder, true),
                                       }] : []),
@@ -2294,7 +2301,9 @@ const PurchaseOrderDetails = () => {
               <div className="expedient-drawer-body">
                 {!isApproved && !attachmentOrder.isCancelled && (
                   <div className="alert alert-info" role="status">
-                    Vista previa de la orden enviada. Está pendiente de aprobación final del firmante Senior.
+                    {getPurchaseStateKind(attachmentOrder.purchaseState, attachmentOrder.purchaseStateLabel) === "rejected"
+                      ? "Orden rechazada. Se conservan la orden y sus documentos para consultar el historial."
+                      : "Vista previa de la orden enviada. Está pendiente de aprobación final del firmante Senior."}
                   </div>
                 )}
                 {orderPreviewError && <div className="alert alert-danger" role="alert">{orderPreviewError}</div>}
