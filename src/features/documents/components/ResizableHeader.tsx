@@ -100,10 +100,10 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({
             position: "absolute",
             right: 0,
             top: 0,
-            width: "1px",
+            width: "6px",
             height: "100%",
             cursor: "col-resize",
-            background: "rgba(0, 0, 0, 0.1)",
+            background: "linear-gradient(to right, transparent 5px, rgba(0, 0, 0, 0.1) 5px)",
             zIndex: 100,
           }}
         />

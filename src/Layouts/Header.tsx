@@ -15,7 +15,8 @@ import ProfileDropdown from '../components/common/ProfileDropdown';
 import LightDark from '../components/common/LightDark';
 import { useTranslation } from "react-i18next";
 
-import { changeSidebarVisibility } from '../slices/layouts/thunk';
+import { changeSidebarVisibility, changeLeftsidebarSizeType } from '../slices/layouts/thunk';
+import { writeUiPreference } from '../helpers/ui-preferences';
 import { useSelector, useDispatch } from "react-redux";
 
 const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
@@ -34,6 +35,16 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
     const toogleMenuBtn = () => {
         var windowSize = document.documentElement.clientWidth;
         const humberIcon = document.querySelector(".hamburger-icon") as HTMLElement | null;
+        const layout = document.documentElement.getAttribute('data-layout');
+        if (windowSize > 767 && (layout === "vertical" || layout === "semibox")) {
+            const size = document.documentElement.getAttribute('data-sidebar-size') === 'sm' ? 'lg' : 'sm';
+            document.body.classList.remove('vertical-sidebar-enable');
+            dispatch(changeSidebarVisibility("show"));
+            dispatch(changeLeftsidebarSizeType(size));
+            writeUiPreference("sidebar-size", size);
+            humberIcon?.classList.toggle('open', size === 'sm');
+            return;
+        }
         dispatch(changeSidebarVisibility("show"));
 
         if (windowSize > 767 && humberIcon)
@@ -53,7 +64,7 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                 document.body.classList.remove('vertical-sidebar-enable');
                 (document.documentElement.getAttribute('data-sidebar-size') === 'lg') ? document.documentElement.setAttribute('data-sidebar-size', 'sm') : document.documentElement.setAttribute('data-sidebar-size', 'lg');
             } else if (windowSize <= 767) {
-                document.body.classList.add('vertical-sidebar-enable');
+                document.body.classList.toggle('vertical-sidebar-enable');
                 document.documentElement.setAttribute('data-sidebar-size', 'lg');
             }
         }
@@ -95,6 +106,8 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass } : any) => {
                             <button
                                 onClick={toogleMenuBtn}
                                 type="button"
+                                aria-label="Expandir o minimizar menú lateral"
+                                title="Expandir o minimizar menú lateral"
                                 className="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger"
                                 id="topnav-hamburger-icon">
                                 <span className="hamburger-icon">

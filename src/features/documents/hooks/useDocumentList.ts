@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import { buildApiUrl } from "../../../helpers/api-url";
+import { useColumnWidths } from "../../../helpers/use-column-widths";
 import { ColumnWidths, Document, Notification, TipoDocumento } from "../types/list.types";
 import { DOCUMENTS_FLASH_NOTIFICATION_KEY } from "../services/document.utils";
 import { intelligentSearch } from "../../../helpers/search-utils";
@@ -76,7 +77,7 @@ export const useDocumentList = () => {
   const startDate = dateRange[0];
   const endDate = dateRange[1];
 
-  const [columnWidths, setColumnWidths] = useState<ColumnWidths>({
+  const [columnWidths, setColumnWidths] = useColumnWidths<ColumnWidths>("documents", {
     id: 80, serie: 100, numero: 100, ruc: 130, razon: 200, tipo: 150, driver: 120, fecha: 130, moneda: 100, subtotal: 110, igv: 100, total: 120, estado: 120, acciones: 120,
   });
 

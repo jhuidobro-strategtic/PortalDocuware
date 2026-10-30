@@ -65,7 +65,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
       >
         <Table
           className="table align-middle table-nowrap mb-0"
-          style={{ tableLayout: "fixed", width: "100%", minWidth: "1620px" }}
+          style={{ tableLayout: "fixed", width: Object.entries(columnWidths).reduce((total, [key, width]) =>
+            key === "id" || key === "driver" ? total : total + width, 0) }}
         >
           <thead className="table-light">
             <tr style={{ textAlign: "center" }}>

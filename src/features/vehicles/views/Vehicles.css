@@ -8,7 +8,7 @@
 .vehicle-manager-search { width: 320px; max-width: 100%; }
 .vehicle-manager-status { width: 180px; }
 .vehicle-manager-loading { display: grid; place-items: center; min-height: calc(100vh - 300px); }
-.vehicle-manager-table { min-width: 1200px; table-layout: fixed; font-size: 0.8rem; }
+.vehicle-manager-table { table-layout: fixed; font-size: 0.8rem; }
 .vehicle-manager-table > :not(caption) > * > * { padding: 0.35rem 0.75rem; }
 .vehicle-manager-table .table-actions-menu { vertical-align: middle; }
 .vehicle-manager-table .table-actions-menu__trigger { width: 28px; height: 28px; padding: 0; border-radius: 8px; box-shadow: none; }

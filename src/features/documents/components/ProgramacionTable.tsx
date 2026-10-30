@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
+import { useColumnWidths } from "../../../helpers/use-column-widths";
 import { Table } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
@@ -17,14 +18,14 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
   onEdit,
 }) => {
   const { t } = useTranslation();
-  const [widths, setWidths] = useState({ date: 160, vehicle: 260, driver: 380, actions: 120 });
+  const [widths, setWidths] = useColumnWidths("document-programation", { date: 160, vehicle: 260, driver: 380, actions: 120 });
   const resize = (column: keyof typeof widths, width: number) =>
     setWidths((previous) => ({ ...previous, [column]: width }));
 
   return (
     <div className="table-responsive" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
       <Table className="table align-middle table-nowrap mb-0 programacion-table"
-        style={{ tableLayout: "fixed", width: "100%", minWidth: "920px" }}>
+        style={{ tableLayout: "fixed", width: Object.values(widths).reduce((total, width) => total + width, 0) }}>
         <thead className="table-light">
           <tr style={{ textAlign: "center" }}>
             <ResizableHeader className="text-center" width={widths.date} onResize={(width) => resize("date", width)}>

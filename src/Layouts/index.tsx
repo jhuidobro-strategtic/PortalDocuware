@@ -7,7 +7,8 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
 import PwaBottomNav from '../components/common/PwaBottomNav';
-import { changeLayoutMode } from "../slices/layouts/thunk";
+import { changeLayoutMode, changeLeftsidebarSizeType } from "../slices/layouts/thunk";
+import { getPreferenceUserId, readUiPreference } from "../helpers/ui-preferences";
 import { changeHTMLAttribute } from "../slices/layouts/utils";
 
 //redux
@@ -16,6 +17,18 @@ import { useSelector, useDispatch } from "react-redux";
 const Layout = (props : any) => {
     const [headerClass, setHeaderClass] = useState("");
     const dispatch : any = useDispatch();
+    const preferenceUserId = getPreferenceUserId();
+    useEffect(() => {
+        const restoreSidebar = () => {
+            const saved = readUiPreference("sidebar-size");
+            const size = window.innerWidth <= 767 ? "lg" : saved === "sm" ? "sm" : "lg";
+            dispatch(changeLeftsidebarSizeType(size));
+        };
+        restoreSidebar();
+        const mobile = window.matchMedia("(max-width: 767px)");
+        mobile.addEventListener("change", restoreSidebar);
+        return () => mobile.removeEventListener("change", restoreSidebar);
+    }, [dispatch, preferenceUserId]);
     const {
         layoutType,
         leftSidebarType,

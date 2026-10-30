@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useColumnWidths } from "../../../helpers/use-column-widths";
 import { Button, Card, CardBody, Container, Input, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, Table } from "reactstrap";
 import BreadCrumb from "../../../components/common/BreadCrumb";
 import AppPagination from "../../../components/common/Pagination";
@@ -28,7 +29,7 @@ const VehicleManager = () => {
   const [stateError, setStateError] = useState("");
   const [success, setSuccess] = useState("");
   const [exporting, setExporting] = useState(false);
-  const [widths, setWidths] = useState({ name: 240, plate: 110, type: 150, center1: 300, center2: 300, status: 100, actions: 90 });
+  const [widths, setWidths] = useColumnWidths("vehicles", { name: 240, plate: 110, type: 150, center1: 300, center2: 300, status: 100, actions: 90 });
   const pageSize = 20;
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -119,7 +120,8 @@ const VehicleManager = () => {
         </div>
       </div>
       {loading ? <div className="vehicle-manager-loading" aria-busy="true"><Spinner color="primary" /></div> : <>
-        <div className="table-responsive"><Table className="table table-nowrap align-middle mb-0 vehicle-manager-table">
+        <div className="table-responsive"><Table className="table table-nowrap align-middle mb-0 vehicle-manager-table"
+          style={{ width: Object.values(widths).reduce((total, width) => total + width, 0) }}>
           <thead className="table-light"><tr>{columns.map((column) => <ResizableHeader key={column.key} width={widths[column.key]}
             onResize={(width) => setWidths((previous) => ({ ...previous, [column.key]: width }))}>{column.label}</ResizableHeader>)}</tr></thead>
           <tbody>{rows.length === 0 ? <tr><td colSpan={7} className="text-center py-4">No se encontraron vehículos.</td></tr> : rows.map((vehicle) => <tr key={vehicle.idvehiculo}>
