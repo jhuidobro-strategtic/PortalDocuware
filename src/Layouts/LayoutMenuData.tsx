@@ -29,12 +29,12 @@ const Navdata = (t: (key: string) => string) => [
     },
     {
         id: "purchase-orders",
-        label: t("Purchase Orders"),
+        label: t("Order Generation"),
         icon: "ri-shopping-bag-3-line",
         subItems: [
             {
                 id: "purchase-order-details",
-                label: t("Purchase Order Details"),
+                label: t("Order Generation"),
                 link: "/purchase-order-details",
             },
         ],

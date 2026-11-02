@@ -280,6 +280,9 @@ const TripsPage = () => {
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: "120px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
                         <th style={{ width: "90px" }}>ID</th>
                         <th style={{ width: "150px" }}>{t("Trip Number")}</th>
                         <th style={{ minWidth: "240px" }}>{t("Vehicle")}</th>
@@ -289,9 +292,6 @@ const TripsPage = () => {
                         <th style={{ width: "170px" }}>{t("Departure Date")}</th>
                         <th style={{ width: "170px" }}>{t("Return Date")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
-                        <th style={{ width: "120px" }} className="text-center">
-                          {t("Actions")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -307,6 +307,43 @@ const TripsPage = () => {
 
                           return (
                             <tr key={trip.idTrip}>
+                              <td className="text-center">
+                                <TableActionsMenu
+                                  items={[
+                                    {
+                                      id: `edit-trip-${trip.idTrip}`,
+                                      label: t("Edit"),
+                                      icon: "ri-edit-line",
+                                      tone: "neutral",
+                                      onClick: () =>
+                                        navigate(
+                                          `/travel-expenses/trips/${trip.idTrip}/edit`
+                                        ),
+                                    },
+                                    {
+                                      id: `auto-generate-trip-${trip.idTrip}`,
+                                      label:
+                                        generatingExpenseTripId === trip.idTrip
+                                          ? t("Generating...")
+                                          : t("Autogenerate Expenses"),
+                                      icon: "ri-magic-line",
+                                      tone: "warning",
+                                      onClick: () =>
+                                        handleAutoGenerateExpenses(trip),
+                                    },
+                                    {
+                                      id: `add-expense-${trip.idTrip}`,
+                                      label: t("Enter / Adjust Expenses"),
+                                      icon: "ri-money-dollar-circle-line",
+                                      tone: "success",
+                                      onClick: () =>
+                                        navigate(
+                                          `/travel-expenses/trips/${trip.idTrip}/add-expense`
+                                        ),
+                                    },
+                                  ]}
+                                />
+                              </td>
                               <td>#{trip.idTrip}</td>
                               <td className="fw-semibold">
                                 {trip.tripNumber || "-"}
@@ -353,43 +390,6 @@ const TripsPage = () => {
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
                                 </span>
-                              </td>
-                              <td className="text-center">
-                                <TableActionsMenu
-                                  items={[
-                                    {
-                                      id: `edit-trip-${trip.idTrip}`,
-                                      label: t("Edit"),
-                                      icon: "ri-edit-line",
-                                      tone: "neutral",
-                                      onClick: () =>
-                                        navigate(
-                                          `/travel-expenses/trips/${trip.idTrip}/edit`
-                                        ),
-                                    },
-                                    {
-                                      id: `auto-generate-trip-${trip.idTrip}`,
-                                      label:
-                                        generatingExpenseTripId === trip.idTrip
-                                          ? t("Generating...")
-                                          : t("Autogenerate Expenses"),
-                                      icon: "ri-magic-line",
-                                      tone: "warning",
-                                      onClick: () =>
-                                        handleAutoGenerateExpenses(trip),
-                                    },
-                                    {
-                                      id: `add-expense-${trip.idTrip}`,
-                                      label: t("Enter / Adjust Expenses"),
-                                      icon: "ri-money-dollar-circle-line",
-                                      tone: "success",
-                                      onClick: () =>
-                                        navigate(
-                                          `/travel-expenses/trips/${trip.idTrip}/add-expense`
-                                        ),
-                                    },
-                                  ]}
-                                />
                               </td>
                             </tr>
                           );

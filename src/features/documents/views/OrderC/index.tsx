@@ -84,7 +84,7 @@ const DocumentOrderC = () => {
               },
             ]}
           />
-          <BreadCrumb title="Order C." pageTitle="Documents" />
+          <BreadCrumb title="Order Generation" pageTitle="Documents" />
           <Button color="light" onClick={() => navigate("/documents")}>
             {t("Back to Documents")}
           </Button>
@@ -141,7 +141,7 @@ const DocumentOrderC = () => {
           alerts={floatingAlerts}
           onRemove={handleRemoveFloatingAlert}
         />
-        <BreadCrumb title="Order C." pageTitle="Documents" />
+        <BreadCrumb title="Order Generation" pageTitle="Documents" />
 
         <Card className="border-0 shadow-sm mb-4">
           <CardBody>
@@ -200,7 +200,7 @@ const DocumentOrderC = () => {
         <Card className="border-0 shadow-sm">
           <CardBody className="p-4">
             <div className="mb-4">
-              <h5 className="mb-1">{t("Order C. form")}</h5>
+              <h5 className="mb-1">{t("Order Generation")}</h5>
               <p className="text-muted mb-0">
                 {document.sourceKind ? "Complete las condiciones y los firmantes usando los datos guardados del comprobante." : t(
                   "Use the selected document as a base, then query SUNAT to auto-fill the general data and detail lines."

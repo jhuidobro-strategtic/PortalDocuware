@@ -697,15 +697,15 @@ const UsersPage = () => {
                   <Table className="table align-middle table-nowrap mb-0 users-table">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: "110px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
                         <th style={{ width: "80px" }}>ID</th>
                         <th style={{ width: "260px" }}>{t("Username")}</th>
                         <th>{t("Full Name")}</th>
                         <th style={{ width: "180px" }}>{t("Profile")}</th>
                         <th style={{ width: "210px" }}>{t("Approval Role")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
-                        <th style={{ width: "110px" }} className="text-center">
-                          {t("Actions")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -721,6 +721,27 @@ const UsersPage = () => {
 
                           return (
                             <tr key={user.userID}>
+                              <td className="text-center">
+                                <TableActionsMenu
+                                  items={[
+                                    {
+                                      id: `edit-${user.userID}`,
+                                      label: t("Edit"),
+                                      icon: "ri-edit-line",
+                                      tone: "neutral",
+                                      onClick: () => handleOpenEditModal(user),
+                                    },
+                                    {
+                                      id: `disable-${user.userID}`,
+                                      label: t("Disable"),
+                                      icon: "ri-user-unfollow-line",
+                                      tone: "danger",
+                                      disabled: !user.status,
+                                      onClick: () => handleOpenDisableModal(user),
+                                    },
+                                  ]}
+                                />
+                              </td>
                               <td>#{user.userID}</td>
                               <td className="fw-semibold">
                                 {user.userName || "-"}
@@ -754,27 +775,6 @@ const UsersPage = () => {
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
                                 </span>
-                              </td>
-                              <td className="text-center">
-                                <TableActionsMenu
-                                  items={[
-                                    {
-                                      id: `edit-${user.userID}`,
-                                      label: t("Edit"),
-                                      icon: "ri-edit-line",
-                                      tone: "neutral",
-                                      onClick: () => handleOpenEditModal(user),
-                                    },
-                                    {
-                                      id: `disable-${user.userID}`,
-                                      label: t("Disable"),
-                                      icon: "ri-user-unfollow-line",
-                                      tone: "danger",
-                                      disabled: !user.status,
-                                      onClick: () => handleOpenDisableModal(user),
-                                    },
-                                  ]}
-                                />
                               </td>
                             </tr>
                           );

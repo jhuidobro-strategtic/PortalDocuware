@@ -28,6 +28,9 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
         style={{ tableLayout: "fixed", width: Object.values(widths).reduce((total, width) => total + width, 0) }}>
         <thead className="table-light">
           <tr style={{ textAlign: "center" }}>
+            <ResizableHeader className="text-center" width={widths.actions} onResize={(width) => resize("actions", width)}>
+              {t("Actions")}
+            </ResizableHeader>
             <ResizableHeader className="text-center" width={widths.date} onResize={(width) => resize("date", width)}>
               {t("Date")}
             </ResizableHeader>
@@ -36,9 +39,6 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
             </ResizableHeader>
             <ResizableHeader width={widths.driver} onResize={(width) => resize("driver", width)}>
               {t("Driver")}
-            </ResizableHeader>
-            <ResizableHeader className="text-center" width={widths.actions} onResize={(width) => resize("actions", width)}>
-              {t("Actions")}
             </ResizableHeader>
           </tr>
         </thead>
@@ -53,11 +53,6 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
             programaciones.map((prog) => (
               <tr key={prog.programacionid}>
                 <td className="text-center">
-                  {moment(prog.programacionfecha).format("DD/MM/YYYY")}
-                </td>
-                <td className="text-center">{prog.vehiculo.no_vehiculo}</td>
-                <td>{prog.conductor.conductor_nm}</td>
-                <td className="text-center">
                   <TableActionsMenu
                     items={[
                       {
@@ -70,6 +65,11 @@ const ProgramacionTable: React.FC<ProgramacionTableProps> = ({
                     ]}
                   />
                 </td>
+                <td className="text-center">
+                  {moment(prog.programacionfecha).format("DD/MM/YYYY")}
+                </td>
+                <td className="text-center">{prog.vehiculo.no_vehiculo}</td>
+                <td>{prog.conductor.conductor_nm}</td>
               </tr>
             ))
           )}

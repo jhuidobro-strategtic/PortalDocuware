@@ -107,6 +107,9 @@ export const MyScheduleDesktopView = ({
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: "120px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
                         <th style={{ width: "90px" }}>ID</th>
                         <th style={{ minWidth: "220px" }}>{t("Trip Number")}</th>
                         <th style={{ width: "140px" }}>{t("Vehicle")}</th>
@@ -116,9 +119,6 @@ export const MyScheduleDesktopView = ({
                         <th style={{ width: "170px" }}>{t("Departure Date")}</th>
                         <th style={{ width: "170px" }}>{t("Return Date")}</th>
                         <th style={{ width: "140px" }}>{t("Status")}</th>
-                        <th style={{ width: "120px" }} className="text-center">
-                          {t("Actions")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -134,6 +134,19 @@ export const MyScheduleDesktopView = ({
 
                           return (
                             <tr key={trip.idTrip}>
+                              <td className="text-center">
+                                <TableActionsMenu
+                                  items={[
+                                    {
+                                      id: `view-schedule-${trip.idTrip}`,
+                                      label: t("View"),
+                                      icon: "ri-eye-line",
+                                      tone: "neutral",
+                                      onClick: () => onOpenTripDetail(trip.idTrip),
+                                    },
+                                  ]}
+                                />
+                              </td>
                               <td>#{trip.idTrip}</td>
                               <td className="fw-semibold">
                                 {trip.tripNumber || "-"}
@@ -149,19 +162,6 @@ export const MyScheduleDesktopView = ({
                                   <i className={statusMeta.icon} />
                                   <span>{statusMeta.label}</span>
                                 </span>
-                              </td>
-                              <td className="text-center">
-                                <TableActionsMenu
-                                  items={[
-                                    {
-                                      id: `view-schedule-${trip.idTrip}`,
-                                      label: t("View"),
-                                      icon: "ri-eye-line",
-                                      tone: "neutral",
-                                      onClick: () => onOpenTripDetail(trip.idTrip),
-                                    },
-                                  ]}
-                                />
                               </td>
                             </tr>
                           );

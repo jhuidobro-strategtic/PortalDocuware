@@ -8,6 +8,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
   en: {
     "Programming": "Programming",
     "Purchase Orders": "Purchase Orders",
+    "Order Generation": "Order Generation",
     "Purchase Order Details": "Purchase Order Details",
     "Suppliers": "Suppliers",
     "Supplier List": "Supplier List",
@@ -568,6 +569,7 @@ const appTranslations: Record<AppLanguage, TranslationMap> = {
   sp: {
     "Programming": "Programación",
     "Purchase Orders": "Órdenes Creadas",
+    "Order Generation": "Generación de orden",
     "Purchase Order Details": "Detalle de Orden",
     "Suppliers": "Proveedores",
     "Supplier List": "Lista de Proveedores",

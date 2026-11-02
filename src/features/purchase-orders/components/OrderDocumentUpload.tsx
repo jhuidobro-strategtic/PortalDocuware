@@ -8,11 +8,12 @@ interface Props {
   invoiceId?: number;
   userId: number | null;
   token?: string | null;
+  disabled?: boolean;
   onUploaded: () => Promise<void>;
   onBusyChange: (busy: boolean) => void;
 }
 
-const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, onUploaded, onBusyChange }: Props) => {
+const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, disabled = false, onUploaded, onBusyChange }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState("3");
   const [busy, setBusy] = useState(false);
@@ -21,7 +22,7 @@ const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, onUploaded, on
   const input = useRef<HTMLInputElement>(null);
   const upload = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (busy || disabled) return;
     setError(""); setSuccess("");
     if (!file) { setError("Seleccione un archivo PDF."); return; }
     if (!userId) { setError("No fue posible identificar al usuario. Inicie sesión nuevamente."); return; }
@@ -65,23 +66,23 @@ const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, onUploaded, on
     {success && <div className="alert alert-success" role="status">{success}</div>}
     <div className="expedient-upload-grid">
       <div className="expedient-upload-field"><label htmlFor="order-upload-type" className="expedient-upload-label">Tipo de documento <span className="text-danger">*</span></label>
-        <select id="order-upload-type" className="form-select" value={type} disabled={busy} onChange={(event) => setType(event.target.value)}>
-          <option value="3">Documento de sustento</option><option value="1">Factura</option>
+        <select id="order-upload-type" className="form-select" value={type} disabled={busy || disabled} onChange={(event) => setType(event.target.value)}>
+          <option value="3">Documento de sustento</option>
         </select>
       </div>
       <div className="expedient-upload-field expedient-upload-field-file"><label className="expedient-upload-label" htmlFor="order-upload-file">Archivo PDF <span className="text-danger">*</span></label>
-        <input ref={input} id="order-upload-file" type="file" accept="application/pdf,.pdf" className="d-none" disabled={busy} onChange={(event) => {
+        <input ref={input} id="order-upload-file" type="file" accept="application/pdf,.pdf" className="d-none" disabled={busy || disabled} onChange={(event) => {
           const selected = event.target.files?.[0] ?? null; setError(""); setSuccess("");
           if (selected && selected.type !== "application/pdf" && !/\.pdf$/i.test(selected.name)) {
             setFile(null); event.target.value = ""; setError("Solo se permiten archivos PDF.");
           } else setFile(selected);
         }} />
-        <button type="button" className="expedient-upload-dropzone" disabled={busy} onClick={() => input.current?.click()}>
+        <button type="button" className="expedient-upload-dropzone" disabled={busy || disabled} onClick={() => input.current?.click()}>
           <span className="expedient-upload-dropzone-icon"><i className="ri-file-upload-line" /></span>
           <span className="expedient-upload-dropzone-copy"><strong>{file?.name || "Seleccionar archivo PDF"}</strong><small>{file ? `${(file.size / 1024).toFixed(1)} KB` : "Haga clic para buscar el archivo."}</small></span>
         </button>
       </div>
-      <div className="expedient-upload-actions"><Button color="primary" type="submit" className="expedient-upload-submit-button" disabled={busy || !file}>
+      <div className="expedient-upload-actions"><Button color="primary" type="submit" className="expedient-upload-submit-button" disabled={busy || disabled || !file}>
         {busy ? <Spinner size="sm" className="me-2" /> : <i className="ri-upload-cloud-2-line me-2" />}{busy ? "Subiendo..." : "Subir documento"}
       </Button></div>
     </div>

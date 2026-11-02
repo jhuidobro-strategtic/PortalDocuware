@@ -969,6 +969,7 @@ const RequestsPage = () => {
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: "130px" }} className="text-center">{t("Actions")}</th>
                         <th style={{ width: "170px" }}>{t("Request Number")}</th>
                         <th style={{ minWidth: "220px" }}>{t("Reason")}</th>
                         <th style={{ width: "160px" }}>{t("Requested by")}</th>
@@ -982,7 +983,6 @@ const RequestsPage = () => {
                           </th>
                         ))}
                         <th style={{ width: "150px" }} className="text-end">{t("Total Budget")}</th>
-                        <th style={{ width: "130px" }} className="text-center">{t("Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -995,6 +995,33 @@ const RequestsPage = () => {
                       ) : (
                         paginatedRequests.map((request) => (
                           <tr key={request.idRequest}>
+                            <td className="text-center">
+                                <TableActionsMenu
+                                  items={[
+                                    {
+                                      id: `view-request-${request.idRequest}`,
+                                      label: t("View"),
+                                      icon: "ri-eye-line",
+                                      tone: "neutral",
+                                      onClick: () => setSelectedRequest(request),
+                                    },
+                                    {
+                                      id: `edit-request-${request.idRequest}`,
+                                      label: t("Edit"),
+                                      icon: "ri-edit-line",
+                                      tone: "neutral",
+                                      onClick: () => handleOpenEditModal(request),
+                                    },
+                                    {
+                                      id: `add-anticipo-${request.idRequest}`,
+                                      label: t("Generar Anticipo"),
+                                      icon: "ri-file-add-line",
+                                      tone: "primary",
+                                      onClick: () => navigate(`/travel-expenses/requests/${request.idRequest}/add-anticipo`),
+                                    },
+                                  ]}
+                                />
+                              </td>
                             <td className="fw-semibold">
                               {request.requestNumber || "-"}
                             </td>
@@ -1028,33 +1055,6 @@ const RequestsPage = () => {
                             <td className="fw-semibold text-end text-success">
                               {formatAmount(request.totalBudget)}
                             </td>
-                              <td className="text-center">
-                                <TableActionsMenu
-                                  items={[
-                                    {
-                                      id: `view-request-${request.idRequest}`,
-                                      label: t("View"),
-                                      icon: "ri-eye-line",
-                                      tone: "neutral",
-                                      onClick: () => setSelectedRequest(request),
-                                    },
-                                    {
-                                      id: `edit-request-${request.idRequest}`,
-                                      label: t("Edit"),
-                                      icon: "ri-edit-line",
-                                      tone: "neutral",
-                                      onClick: () => handleOpenEditModal(request),
-                                    },
-                                    {
-                                      id: `add-anticipo-${request.idRequest}`,
-                                      label: t("Generar Anticipo"),
-                                      icon: "ri-file-add-line",
-                                      tone: "primary",
-                                      onClick: () => navigate(`/travel-expenses/requests/${request.idRequest}/add-anticipo`),
-                                    },
-                                  ]}
-                                />
-                              </td>
                             </tr>
                         ))
                       )}

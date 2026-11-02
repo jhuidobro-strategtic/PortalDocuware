@@ -136,12 +136,12 @@ export const MyScheduleDetailDesktopView = ({
                               <Table className="table align-middle table-nowrap mb-0">
                                 <thead className="table-light">
                                   <tr>
-                                    <th>{t("Concept")}</th>
-                                    <th style={{ width: "160px" }}>{t("Budget")}</th>
-                                    <th>{t("Notes")}</th>
                                     <th style={{ width: "240px" }} className="text-end">
                                       {t("Actions")}
                                     </th>
+                                    <th>{t("Concept")}</th>
+                                    <th style={{ width: "160px" }}>{t("Budget")}</th>
+                                    <th>{t("Notes")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -154,16 +154,6 @@ export const MyScheduleDetailDesktopView = ({
                                   ) : (
                                     request.details.map((detail) => (
                                       <tr key={detail.expenseDetailId}>
-                                        <td>{detail.conceptLabel || "-"}</td>
-                                        <td>{formatAmount(detail.budgetedAmount)}</td>
-                                        <td>
-                                          <div>{detail.notes || "-"}</div>
-                                          {detail.expenseVouchers.length > 0 ? (
-                                            <div className="small text-muted mt-1">
-                                              {detail.expenseVouchers.length} {t("Registered vouchers")}
-                                            </div>
-                                          ) : null}
-                                        </td>
                                         <td className="text-end">
                                           <div className="d-inline-flex flex-column align-items-end gap-2">
                                             <Button
@@ -206,6 +196,16 @@ export const MyScheduleDetailDesktopView = ({
                                               </Button>
                                             ))}
                                           </div>
+                                        </td>
+                                        <td>{detail.conceptLabel || "-"}</td>
+                                        <td>{formatAmount(detail.budgetedAmount)}</td>
+                                        <td>
+                                          <div>{detail.notes || "-"}</div>
+                                          {detail.expenseVouchers.length > 0 ? (
+                                            <div className="small text-muted mt-1">
+                                              {detail.expenseVouchers.length} {t("Registered vouchers")}
+                                            </div>
+                                          ) : null}
                                         </td>
                                       </tr>
                                     ))

@@ -7,7 +7,7 @@ import DocumentFilters from "../../components/ListFilters";
 import DocumentTable from "../../components/ListDocumentTable";
 import DocumentPreview from "../../components/DocumentPreview";
 import DeleteDocumentModal from "../../components/DeleteDocumentModal";
-import { getDownloadUrl, getPreviewUrl } from "../../services/document.utils";
+import { getDocumentSourceUrl, getDownloadUrl, getPreviewUrl } from "../../services/document.utils";
 import { useDocumentList, getDocumentAssociatedNo } from "../../hooks/useDocumentList";
 
 const DocumentList: React.FC = () => {
@@ -104,8 +104,8 @@ const DocumentList: React.FC = () => {
         <DocumentPreview
           document={selectedDoc}
           rotation={rotation}
-          previewUrl={getPreviewUrl(selectedDoc.documenturl)}
-          downloadUrl={getDownloadUrl(selectedDoc.documenturl)}
+          previewUrl={getPreviewUrl(getDocumentSourceUrl(selectedDoc))}
+          downloadUrl={getDownloadUrl(getDocumentSourceUrl(selectedDoc))}
           onRotateLeft={rotateLeft}
           onRotateRight={rotateRight}
           onClose={handleClosePreview}

@@ -1421,6 +1421,7 @@ const AddExpensePage = () => {
                 <Table className="table align-middle mb-0" style={{ minWidth: "1160px" }}>
                   <thead className="table-light">
                     <tr>
+                      <th style={{ width: "60px" }} className="text-center">{t("Acción")}</th>
                       <th style={{ width: "40px" }} className="text-center">#</th>
                       <th style={{ width: "240px", minWidth: "240px" }}>
                         {t("Concept")} <span className="text-danger">*</span>
@@ -1438,7 +1439,6 @@ const AddExpensePage = () => {
                         {t("Presupuesto")} (S/.) <span className="text-danger">*</span>
                       </th>
                       <th style={{ minWidth: "250px" }}>{t("Notas")}</th>
-                      <th style={{ width: "60px" }} className="text-center">{t("Acción")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1455,6 +1455,24 @@ const AddExpensePage = () => {
 
                       return (
                         <tr key={`expense-detail-${detailIndex}`}>
+                          {/* Acciones */}
+                          <td className="text-center">
+                            <Button
+                              color="danger"
+                              type="button"
+                              outline
+                              style={{ height: "38px", width: "38px" }}
+                              className="d-inline-flex align-items-center justify-content-center p-0"
+                              onClick={() => handleRemoveDetail(detailIndex)}
+                              disabled={
+                                creatingExpenseRequest ||
+                                createFormValues.details.length === 1
+                              }
+                              title={t("Remove")}
+                            >
+                              <i className="ri-delete-bin-line fs-5" />
+                            </Button>
+                          </td>
                           <td className="text-center fw-medium text-muted">
                             {detailIndex + 1}
                           </td>
@@ -1583,31 +1601,13 @@ const AddExpensePage = () => {
                             />
                           </td>
 
-                          {/* Acciones */}
-                          <td className="text-center">
-                            <Button
-                              color="danger"
-                              type="button"
-                              outline
-                              style={{ height: "38px", width: "38px" }}
-                              className="d-inline-flex align-items-center justify-content-center p-0"
-                              onClick={() => handleRemoveDetail(detailIndex)}
-                              disabled={
-                                creatingExpenseRequest ||
-                                createFormValues.details.length === 1
-                              }
-                              title={t("Remove")}
-                            >
-                              <i className="ri-delete-bin-line fs-5" />
-                            </Button>
-                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot className="table-light">
                     <tr>
-                      <td colSpan={5} className="text-end fw-bold">
+                      <td colSpan={6} className="text-end fw-bold">
                         {t("Total Calculado:")}
                       </td>
                       <td className="text-end fw-bold fs-6 text-primary">
@@ -1618,7 +1618,7 @@ const AddExpensePage = () => {
                           )
                         )}
                       </td>
-                      <td colSpan={2}></td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </Table>

@@ -28,7 +28,7 @@ import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { Document } from "../../documents/types/list.types";
-import { getPreviewUrl } from "../../documents/services/document.utils";
+import { getDocumentSourceUrl, getPreviewUrl, getUploadedDocumentUrl } from "../../documents/services/document.utils";
 import { fetchSigners } from "../../documents/services/orderC.service";
 import type { SelectOption } from "../../documents/types/orderC.types";
 import { generatePurchaseOrderPdf } from "../services/purchaseOrderPdf";
@@ -37,6 +37,7 @@ import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoi
 import { intelligentSearch } from "../../../helpers/search-utils";
 import OrderDocumentItem from "../components/OrderDocumentItem";
 import OrderDocumentUpload from "../components/OrderDocumentUpload";
+import CommercialInvoice from "../components/CommercialInvoice";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
 import "../../expedients/views/Expedients.css";
@@ -62,6 +63,12 @@ interface OrderAttachment {
   file_url?: string;
   filepath: string;
   estado: boolean;
+}
+
+interface OrderExpedient {
+  ordencompraid?: number;
+  ordencompra?: { purchaseOrderID?: number };
+  expediente_documentos?: OrderAttachment[];
 }
 
 type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
@@ -163,75 +170,11 @@ interface UserApiItem {
 const getDocumentAssociatedNo = (document: Document) =>
   [document.documentserial, document.documentnumber].filter(Boolean).join("-");
 
-const sanitizeFileNamePart = (value: unknown, fallback: string) => {
-  const normalizedValue = String(value ?? "")
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "_");
-
-  return normalizedValue || fallback;
-};
-
 const createPdfFile = (blob: Blob, fileName: string) =>
   new File([blob], fileName, {
     type: blob.type || "application/pdf",
     lastModified: Date.now(),
   });
-
-const buildInvoicePdfFileName = (document: Document) =>
-  `${sanitizeFileNamePart(
-    [document.documentserial, document.documentnumber]
-      .filter(Boolean)
-      .join("-") || document.documentid,
-    "Factura"
-  )}.pdf`;
-
-const isGoogleDriveUrl = (value: string) =>
-  /(^https?:\/\/)?(www\.)?drive\.google\.com\//i.test(String(value || "").trim());
-
-const fetchRelatedInvoicePdfFile = async (
-  document: Document
-): Promise<File | null> => {
-  const publicFileUrl = String(document.file_url || "").trim();
-  const directDocumentUrl = String(document.documenturl || "").trim();
-  const candidateUrls = [publicFileUrl, directDocumentUrl]
-    .filter(Boolean)
-    .filter((url, index, urls) => urls.indexOf(url) === index)
-    .filter((url) => !isGoogleDriveUrl(url));
-
-  for (const candidateUrl of candidateUrls) {
-    try {
-      const response = await fetch(candidateUrl);
-
-      if (!response.ok) {
-        continue;
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType && !contentType.toLowerCase().includes("pdf")) {
-        continue;
-      }
-
-      const blob = await response.blob();
-      if (blob.size === 0) {
-        continue;
-      }
-
-      const blobType = (blob.type || contentType).toLowerCase();
-      if (blobType && !blobType.includes("pdf")) {
-        continue;
-      }
-
-      return createPdfFile(blob, buildInvoicePdfFileName(document));
-    } catch {
-      // Try the next candidate URL.
-    }
-  }
-
-  return null;
-};
-
-const getDocumentSourceUrl = (document?: Document | null) =>
-  String(document?.file_url || document?.documenturl || "").trim();
 
 const getDocumentPreviewUrl = (document?: Document | null) => {
   const sourceUrl = getDocumentSourceUrl(document);
@@ -243,25 +186,15 @@ const parseAmountNumber = (value: unknown) => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
-const buildExpedientDocumentsPayload = (
-  createdBy: number,
-  includeInvoiceFile: boolean
-) =>
+const buildExpedientDocumentsPayload = (createdBy: number) =>
   JSON.stringify(
     [
-      includeInvoiceFile
-        ? {
-          tipodocumentoid: 1,
-          file_field: "factura_file",
-          createdby: createdBy,
-        }
-        : null,
       {
         tipodocumentoid: 2,
         file_field: "orden_file",
         createdby: createdBy,
       },
-    ].filter(Boolean)
+    ]
   );
 
 const mapCatalogLookup = (items: CatalogItem[]) =>
@@ -1017,10 +950,25 @@ const PurchaseOrderDetails = () => {
         return "";
       });
 
+    const invoice = documentsByAssociatedNo[order.documentAssociatedNo];
+    const invoicePromise: Promise<Document | null> = invoice
+      ? fetch(buildApiUrl(`documents/${invoice.documentid}/`)).then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.success || !result.data?.documentid) {
+          throw new Error("No se pudo actualizar la factura comercial. Cierre y vuelva a abrir el panel.");
+        }
+        return result.data;
+      }).catch((error) => {
+        if (request === attachmentRequest.current) setAttachmentError(error.message);
+        return null;
+      })
+      : Promise.resolve(null);
+
     try {
-      const [expedients, previewBlobUrl] = await Promise.all([
+      const [expedients, previewBlobUrl, freshInvoice] = await Promise.all([
         expedientesPromise,
         previewPdfPromise,
+        invoicePromise,
       ]);
 
       if (request !== attachmentRequest.current) {
@@ -1033,6 +981,11 @@ const PurchaseOrderDetails = () => {
       if (previewBlobUrl) {
         orderPreviewBlobUrlRef.current = previewBlobUrl;
         setOrderPreviewPdfUrl(previewBlobUrl);
+      }
+      if (freshInvoice) {
+        setDocumentsByAssociatedNo((previous) => ({
+          ...previous, [order.documentAssociatedNo]: freshInvoice,
+        }));
       }
 
       if (Array.isArray(expedients)) {
@@ -1521,7 +1474,6 @@ const PurchaseOrderDetails = () => {
           generatedPdf.blob,
           generatedPdf.fileName
         );
-        const invoicePdfFile = await fetchRelatedInvoicePdfFile(relatedDocument);
         const expedientePayload = new FormData();
 
         expedientePayload.append("facturaid", String(relatedDocument.documentid));
@@ -1532,13 +1484,9 @@ const PurchaseOrderDetails = () => {
         expedientePayload.append("createdby", String(sessionUser.id));
         expedientePayload.append("orden_file", orderPdfFile);
 
-        if (invoicePdfFile) {
-          expedientePayload.append("factura_file", invoicePdfFile);
-        }
-
         expedientePayload.append(
           "expediente_documentos",
-          buildExpedientDocumentsPayload(sessionUser.id, !!invoicePdfFile)
+          buildExpedientDocumentsPayload(sessionUser.id)
         );
 
         const expedienteResponse = await fetch(buildApiUrl("expedientes/"), {
@@ -1599,7 +1547,7 @@ const PurchaseOrderDetails = () => {
   };
 
   useEffect(() => {
-    document.title = `${t("Purchase Order Details")} | Docuware`;
+    document.title = `${t("Order Generation")} | Docuware`;
 
     const fetchPurchaseOrders = async () => {
       try {
@@ -1806,15 +1754,15 @@ const PurchaseOrderDetails = () => {
             onRemove={handleRemoveFloatingAlert}
           />
           <BreadCrumb
-            title="Purchase Order Details"
-            pageTitle="Purchase Orders"
+            title="Order Generation"
+            pageTitle="Order Generation"
           />
 
           <Card className="border-0 shadow-sm">
             <CardBody>
               <div className="purchase-order-filters-toolbar mb-4">
                 <div className="purchase-order-filters-title">
-                  <h5 className="mb-1">{t("Purchase Order List")}</h5>
+                  <h5 className="mb-1">{t("Order Generation")}</h5>
                   <p className="text-muted mb-0">
                     {t("Latest registered orders.")}
                   </p>
@@ -1929,6 +1877,12 @@ const PurchaseOrderDetails = () => {
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th
+                          className="text-center"
+                          style={{ minWidth: "110px", whiteSpace: "nowrap" }}
+                        >
+                          {t("Actions")}
+                        </th>
                         <th>ID</th>
                         <th>{t("Order Number")}</th>
                         <th>{t("Supplier ID")}</th>
@@ -1942,12 +1896,6 @@ const PurchaseOrderDetails = () => {
                         <th>{t("Date")}</th>
                         <th className="text-center">{t("Items")}</th>
                         <th className="text-end">{t("Order Total")}</th>
-                        <th
-                          className="text-center"
-                          style={{ minWidth: "110px", whiteSpace: "nowrap" }}
-                        >
-                          {t("Actions")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1998,55 +1946,6 @@ const PurchaseOrderDetails = () => {
 
                           return (
                             <tr key={purchaseOrder.purchaseOrderID}>
-                              <td>#{purchaseOrder.purchaseOrderID}</td>
-                              <td>{purchaseOrder.orderNo}</td>
-                              <td>{supplierLabel}</td>
-                              <td>{purchaseOrder.documentAssociatedNo}</td>
-                              <td>{paymentConditionLabel}</td>
-                              <td>
-                                <div className="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-pill bg-light border">
-                                  {currency.imageUrl && (
-                                    <img
-                                      src={currency.imageUrl}
-                                      alt={currency.alt}
-                                      width={20}
-                                      height={15}
-                                      className="rounded-1 flex-shrink-0"
-                                    />
-                                  )}
-                                  <span className="fw-semibold text-body">
-                                    {currency.label}
-                                  </span>
-                                </div>
-                              </td>
-                              <td>{purchaseOrder.guideNo}</td>
-                              <td>{storeLabel}</td>
-                              <td>
-                                {purchaseOrder.isCancelled ? <span className="badge bg-danger" title={purchaseOrder.cancellationReason}>Anulada</span> : <span className={purchaseState.className}>
-                                  <i className={purchaseState.icon} />
-                                  <span>{purchaseState.label}</span>
-                                </span>}
-                                {!purchaseOrder.isCancelled && getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) !== "rejected" && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
-                                  <div className="small text-warning mt-1" role="status">
-                                    <i className="ri-time-line me-1" />
-                                    Firmado por JR · Pendiente de firma Senior
-                                  </div>
-                                )}
-                              </td>
-                              <td>{purchaseOrder.createdBy}</td>
-                              <td>
-                                {moment(purchaseOrder.createAt).format(
-                                  "DD/MM/YYYY"
-                                )}
-                              </td>
-                              <td className="text-center">
-                                {purchaseOrder.details.length}
-                              </td>
-                              <td className="text-end fw-semibold">
-                                {formatAmount(
-                                  getPurchaseOrderDisplayTotal(purchaseOrder)
-                                )}
-                              </td>
                               <td
                                 className="text-center"
                                 style={{ whiteSpace: "nowrap" }}
@@ -2101,6 +2000,55 @@ const PurchaseOrderDetails = () => {
                                     ]}
                                   />
                                 </div>
+                              </td>
+                              <td>#{purchaseOrder.purchaseOrderID}</td>
+                              <td>{purchaseOrder.orderNo}</td>
+                              <td>{supplierLabel}</td>
+                              <td>{purchaseOrder.documentAssociatedNo}</td>
+                              <td>{paymentConditionLabel}</td>
+                              <td>
+                                <div className="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-pill bg-light border">
+                                  {currency.imageUrl && (
+                                    <img
+                                      src={currency.imageUrl}
+                                      alt={currency.alt}
+                                      width={20}
+                                      height={15}
+                                      className="rounded-1 flex-shrink-0"
+                                    />
+                                  )}
+                                  <span className="fw-semibold text-body">
+                                    {currency.label}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>{purchaseOrder.guideNo}</td>
+                              <td>{storeLabel}</td>
+                              <td>
+                                {purchaseOrder.isCancelled ? <span className="badge bg-danger" title={purchaseOrder.cancellationReason}>Anulada</span> : <span className={purchaseState.className}>
+                                  <i className={purchaseState.icon} />
+                                  <span>{purchaseState.label}</span>
+                                </span>}
+                                {!purchaseOrder.isCancelled && getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) !== "rejected" && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
+                                  <div className="small text-warning mt-1" role="status">
+                                    <i className="ri-time-line me-1" />
+                                    Firmado por JR · Pendiente de firma Senior
+                                  </div>
+                                )}
+                              </td>
+                              <td>{purchaseOrder.createdBy}</td>
+                              <td>
+                                {moment(purchaseOrder.createAt).format(
+                                  "DD/MM/YYYY"
+                                )}
+                              </td>
+                              <td className="text-center">
+                                {purchaseOrder.details.length}
+                              </td>
+                              <td className="text-end fw-semibold">
+                                {formatAmount(
+                                  getPurchaseOrderDisplayTotal(purchaseOrder)
+                                )}
                               </td>
                             </tr>
                           );
@@ -2232,13 +2180,17 @@ const PurchaseOrderDetails = () => {
           const relatedInvoiceDoc =
             documentsByAssociatedNo[attachmentOrder.documentAssociatedNo];
           const hasInvoice = Boolean(existingInvoiceAttachment || relatedInvoiceDoc);
+          const originalInvoiceUrl = getUploadedDocumentUrl(relatedInvoiceDoc);
           const invoiceName =
+            (originalInvoiceUrl && relatedInvoiceDoc?.batchFile?.originalFilename) ||
             existingInvoiceAttachment?.filename ||
             attachmentOrder.documentAssociatedNo ||
             t("Invoice");
-          const invoiceUrl = existingInvoiceAttachment
-            ? getAttachmentUrl(existingInvoiceAttachment)
-            : getDocumentPreviewUrl(relatedInvoiceDoc);
+          const invoiceUrl = originalInvoiceUrl
+            ? getPreviewUrl(originalInvoiceUrl)
+            : existingInvoiceAttachment
+              ? getAttachmentUrl(existingInvoiceAttachment)
+              : getDocumentPreviewUrl(relatedInvoiceDoc);
           const invoiceCreatedAt =
             existingInvoiceAttachment?.createat || relatedInvoiceDoc?.created_at;
 
@@ -2308,6 +2260,7 @@ const PurchaseOrderDetails = () => {
                 )}
                 {orderPreviewError && <div className="alert alert-danger" role="alert">{orderPreviewError}</div>}
                 {showDocumentUpload && <OrderDocumentUpload key={attachmentOrder.purchaseOrderID}
+                  disabled={uploadingAttachment}
                   orderId={attachmentOrder.purchaseOrderID} invoiceId={relatedInvoiceDoc?.documentid}
                   userId={sessionUser.id}
                   onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
@@ -2326,11 +2279,32 @@ const PurchaseOrderDetails = () => {
                 <div className="expedient-drawer-list">
                   {/* 1. Factura */}
                   {hasInvoice && (
-                    <OrderDocumentItem
+                    <CommercialInvoice
+                      key={`commercial-invoice-${attachmentOrder.purchaseOrderID}`}
+                      orderId={attachmentOrder.purchaseOrderID}
+                      invoiceId={relatedInvoiceDoc?.documentid}
+                      userId={sessionUser.id}
                       name={invoiceName}
-                      type={t("Invoice")}
                       url={invoiceUrl}
                       createdAt={invoiceCreatedAt}
+                      disabled={uploadingAttachment || loadingAttachments}
+                      canReplace={!attachmentOrder.isCancelled && attachmentOrder.approvalStatus === "PENDING" &&
+                        !attachmentOrder.hasSeniorApproval && !!sessionUser.id &&
+                        [attachmentOrder.createdBy, attachmentOrder.signature, attachmentOrder.signature2].includes(sessionUser.id)}
+                      onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
+                      onReplaced={async (updatedDocument) => {
+                        setDocumentsByAssociatedNo((previous) => ({
+                          ...previous, [attachmentOrder.documentAssociatedNo]: updatedDocument,
+                        }));
+                        const response = await fetch(buildApiUrl("expedientes/"));
+                        const payload = await response.json().catch(() => null);
+                        if (!response.ok || payload?.success === false || !Array.isArray(payload?.data)) {
+                          throw new Error("No se pudo actualizar el expediente.");
+                        }
+                        const rows: OrderExpedient[] = payload.data;
+                        setAttachments(rows.filter((row) => Number(row.ordencompraid ?? row.ordencompra?.purchaseOrderID) === attachmentOrder.purchaseOrderID)
+                          .flatMap((row) => row.expediente_documentos ?? []).filter((file) => file.estado !== false));
+                      }}
                     />
                   )}
 

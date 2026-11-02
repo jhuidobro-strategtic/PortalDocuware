@@ -1350,6 +1350,12 @@ const Expedients = () => {
                   >
                     <thead className="table-light">
                       <tr>
+                        <th
+                          className="text-center expedients-registered-documents-column"
+                          style={{ minWidth: "120px" }}
+                        >
+                          {t("Registered Documents")}
+                        </th>
                         <th className="text-center" style={{ minWidth: "56px" }}>
                           <Input
                             type="checkbox"
@@ -1379,12 +1385,6 @@ const Expedients = () => {
                         <th className="text-center" style={{ minWidth: "160px" }}>
                           {t("Created")}
                         </th>
-                        <th
-                          className="text-center expedients-registered-documents-column"
-                          style={{ minWidth: "120px" }}
-                        >
-                          {t("Registered Documents")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1411,6 +1411,40 @@ const Expedients = () => {
 
                           return (
                             <tr key={expedient.expedienteid}>
+                              <td
+                                className="text-center expedients-registered-documents-cell"
+                                style={{ whiteSpace: "normal" }}
+                              >
+                                <div className="d-flex justify-content-center">
+                                  <TableActionsMenu
+                                    disabled={
+                                      closingExpedient &&
+                                      expedientToClose?.expedienteid ===
+                                        expedient.expedienteid
+                                    }
+                                    items={[
+                                      {
+                                        id: `view-documents-${expedient.expedienteid}`,
+                                        label: t("View documents"),
+                                        icon: "ri-file-list-3-line",
+                                        tone: "primary",
+                                        hidden:
+                                          !expedient.expediente_documentos?.length,
+                                        onClick: () => setSelectedExpedient(expedient),
+                                      },
+                                      {
+                                        id: `close-expedient-${expedient.expedienteid}`,
+                                        label: t("Close Expedient"),
+                                        icon: "ri-folder-close-line",
+                                        tone: "danger",
+                                        disabled: isExpedientClosedByStatus,
+                                        onClick: () =>
+                                          handleOpenCloseExpedientModal(expedient),
+                                      },
+                                    ]}
+                                  />
+                                </div>
+                              </td>
                               <td className="text-center">
                                 <Input
                                   type="checkbox"
@@ -1503,40 +1537,6 @@ const Expedients = () => {
                                   {moment(expedient.createat).format(
                                     "DD/MM/YYYY HH:mm"
                                   )}
-                                </div>
-                              </td>
-                              <td
-                                className="text-center expedients-registered-documents-cell"
-                                style={{ whiteSpace: "normal" }}
-                              >
-                                <div className="d-flex justify-content-center">
-                                  <TableActionsMenu
-                                    disabled={
-                                      closingExpedient &&
-                                      expedientToClose?.expedienteid ===
-                                        expedient.expedienteid
-                                    }
-                                    items={[
-                                      {
-                                        id: `view-documents-${expedient.expedienteid}`,
-                                        label: t("View documents"),
-                                        icon: "ri-file-list-3-line",
-                                        tone: "primary",
-                                        hidden:
-                                          !expedient.expediente_documentos?.length,
-                                        onClick: () => setSelectedExpedient(expedient),
-                                      },
-                                      {
-                                        id: `close-expedient-${expedient.expedienteid}`,
-                                        label: t("Close Expedient"),
-                                        icon: "ri-folder-close-line",
-                                        tone: "danger",
-                                        disabled: isExpedientClosedByStatus,
-                                        onClick: () =>
-                                          handleOpenCloseExpedientModal(expedient),
-                                      },
-                                    ]}
-                                  />
                                 </div>
                               </td>
                             </tr>

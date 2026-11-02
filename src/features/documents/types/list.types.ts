@@ -19,7 +19,10 @@ export interface Document {
   taxamount: string;
   totalamount: string;
   documenturl: string;
-  batchFile?: { r2Url?: string | null } | null;
+  uploadedDocumentUrl?: string | null;
+  displayDocumentUrl?: string | null;
+  sunatDocumentUrl?: string | null;
+  batchFile?: { r2Url?: string | null; originalFilename?: string } | null;
   file_url?: string;
   notes: string;
   status: boolean;

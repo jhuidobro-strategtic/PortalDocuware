@@ -91,9 +91,9 @@ const VehicleManager = () => {
     } catch { setLoadError("No fue posible exportar el listado de vehículos."); }
     finally { setExporting(false); }
   };
-  const columns: Array<{ key: keyof typeof widths; label: string }> = [{ key: "name", label: "Identificador / nombre" },
+  const columns: Array<{ key: keyof typeof widths; label: string }> = [{ key: "actions", label: "Acciones" }, { key: "name", label: "Identificador / nombre" },
     { key: "plate", label: "Placa" }, { key: "type", label: "Tipo" }, { key: "center1", label: "Centro de costo 1" },
-    { key: "center2", label: "Centro de costo 2" }, { key: "status", label: "Estado" }, { key: "actions", label: "Acciones" }];
+    { key: "center2", label: "Centro de costo 2" }, { key: "status", label: "Estado" }];
 
   return <div className="page-content"><Container fluid>
     <BreadCrumb title="Gestor Vehicular" pageTitle="Vehículos" />
@@ -125,16 +125,16 @@ const VehicleManager = () => {
           <thead className="table-light"><tr>{columns.map((column) => <ResizableHeader key={column.key} width={widths[column.key]}
             onResize={(width) => setWidths((previous) => ({ ...previous, [column.key]: width }))}>{column.label}</ResizableHeader>)}</tr></thead>
           <tbody>{rows.length === 0 ? <tr><td colSpan={7} className="text-center py-4">No se encontraron vehículos.</td></tr> : rows.map((vehicle) => <tr key={vehicle.idvehiculo}>
-            <td className="text-truncate" title={vehicle.descripcion || vehicle.no_vehiculo}>{vehicle.no_vehiculo}</td><td>{vehicle.placa || "-"}</td>
-            <td className="text-truncate" title={vehicle.tipo || ""}>{vehicle.tipo || "-"}</td>
-            <td className="text-truncate" title={centerLabel(vehicle.centro_costo_1)}>{centerLabel(vehicle.centro_costo_1)}</td>
-            <td className="text-truncate" title={centerLabel(vehicle.centro_costo_2)}>{centerLabel(vehicle.centro_costo_2)}</td>
-            <td><span className={`badge ${vehicle.activo ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}`}>{vehicle.activo ? "Activo" : "Inactivo"}</span></td>
             <td className="text-center"><TableActionsMenu items={[
               { id: `edit-${vehicle.idvehiculo}`, label: "Editar", icon: "ri-edit-line", tone: "neutral", onClick: () => setForm({ vehicle }) },
               { id: `state-${vehicle.idvehiculo}`, label: vehicle.activo ? "Desactivar" : "Activar", icon: vehicle.activo ? "ri-forbid-line" : "ri-checkbox-circle-line", tone: vehicle.activo ? "danger" : "success",
                 onClick: () => { setStateError(""); setStateOrder(vehicle); } },
             ]} /></td>
+            <td className="text-truncate" title={vehicle.descripcion || vehicle.no_vehiculo}>{vehicle.no_vehiculo}</td><td>{vehicle.placa || "-"}</td>
+            <td className="text-truncate" title={vehicle.tipo || ""}>{vehicle.tipo || "-"}</td>
+            <td className="text-truncate" title={centerLabel(vehicle.centro_costo_1)}>{centerLabel(vehicle.centro_costo_1)}</td>
+            <td className="text-truncate" title={centerLabel(vehicle.centro_costo_2)}>{centerLabel(vehicle.centro_costo_2)}</td>
+            <td><span className={`badge ${vehicle.activo ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}`}>{vehicle.activo ? "Activo" : "Inactivo"}</span></td>
           </tr>)}</tbody>
         </Table></div>
         <div className="text-muted small mt-3">{filtered.length} vehículo(s)</div>

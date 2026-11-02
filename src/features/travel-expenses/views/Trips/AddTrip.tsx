@@ -700,6 +700,11 @@ const AddTrip = () => {
                 <Table className="table align-top mb-0" style={{ minWidth: "1600px" }}>
                   <thead className="table-light">
                     <tr>
+                      {!isEditMode && (
+                        <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
+                          ACCIONES
+                        </th>
+                      )}
                       <th style={{ width: "45px", minWidth: "45px" }} className="text-center align-middle">
                         <Input
                           type="checkbox"
@@ -732,11 +737,6 @@ const AddTrip = () => {
                       <th style={{ width: "300px", minWidth: "300px" }} className="align-middle">
                         CONFIGURACIÓN Y UNIDADES
                       </th>
-                      {!isEditMode && (
-                        <th style={{ width: "95px", minWidth: "95px" }} className="align-middle text-center">
-                          ACCIONES
-                        </th>
-                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -770,6 +770,37 @@ const AddTrip = () => {
                               backgroundColor: isChecked ? "#f8fafc" : undefined,
                             }}
                           >
+                            {/* Acciones */}
+                            {!isEditMode && (
+                              <td
+                                style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
+                                className="pt-2 text-center"
+                              >
+                                <div
+                                  className="d-flex align-items-center justify-content-center gap-1"
+                                  style={{ height: "36px" }}
+                                >
+                                  <Button
+                                    color="light"
+                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                    style={{ width: "32px", height: "32px" }}
+                                    onClick={() => handleAddRowAfter(index)}
+                                    title="Agregar fila debajo"
+                                  >
+                                    <i className="ri-add-line fs-5" />
+                                  </Button>
+                                  <Button
+                                    color="light"
+                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
+                                    style={{ width: "32px", height: "32px" }}
+                                    onClick={() => handleDeleteSingleRow(row.rowId)}
+                                    title="Eliminar fila"
+                                  >
+                                    <i className="ri-close-line fs-5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
                             {/* Checkbox */}
                             <td style={{ width: "45px", minWidth: "45px" }} className="text-center pt-3">
                               <Input
@@ -1017,37 +1048,6 @@ const AddTrip = () => {
                               </div>
                             </td>
 
-                            {/* Acciones */}
-                            {!isEditMode && (
-                              <td
-                                style={{ width: "95px", minWidth: "95px", verticalAlign: "top" }}
-                                className="pt-2 text-center"
-                              >
-                                <div
-                                  className="d-flex align-items-center justify-content-center gap-1"
-                                  style={{ height: "36px" }}
-                                >
-                                  <Button
-                                    color="light"
-                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                    style={{ width: "32px", height: "32px" }}
-                                    onClick={() => handleAddRowAfter(index)}
-                                    title="Agregar fila debajo"
-                                  >
-                                    <i className="ri-add-line fs-5" />
-                                  </Button>
-                                  <Button
-                                    color="light"
-                                    className="border bg-white text-muted p-0 d-flex align-items-center justify-content-center"
-                                    style={{ width: "32px", height: "32px" }}
-                                    onClick={() => handleDeleteSingleRow(row.rowId)}
-                                    title="Eliminar fila"
-                                  >
-                                    <i className="ri-close-line fs-5" />
-                                  </Button>
-                                </div>
-                              </td>
-                            )}
                           </tr>
                         );
                       })

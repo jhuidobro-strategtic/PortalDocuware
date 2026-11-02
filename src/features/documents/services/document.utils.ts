@@ -1,4 +1,20 @@
+import type { Document } from "../types/list.types";
+
 const DOCUMENTS_FLASH_NOTIFICATION_KEY = "documents-flash-notification";
+
+type DocumentFileSource = Pick<Document,
+  "uploadedDocumentUrl" | "displayDocumentUrl" | "batchFile" | "file_url" | "documenturl"
+>;
+
+const getUploadedDocumentUrl = (document?: DocumentFileSource | null) =>
+  String(document?.uploadedDocumentUrl || "").trim() ||
+  String(document?.batchFile?.r2Url || "").trim();
+
+const getDocumentSourceUrl = (document?: DocumentFileSource | null) =>
+  getUploadedDocumentUrl(document) ||
+  String(document?.displayDocumentUrl || "").trim() ||
+  String(document?.file_url || "").trim() ||
+  String(document?.documenturl || "").trim();
 
 const extractDriveId = (url: string) => {
   const match = url.match(/\/d\/(.*?)\//);
@@ -39,6 +55,8 @@ const getViewerUrl = (url: string) => {
 
 export {
   DOCUMENTS_FLASH_NOTIFICATION_KEY,
+  getUploadedDocumentUrl,
+  getDocumentSourceUrl,
   extractDriveId,
   getPreviewUrl,
   getDownloadUrl,

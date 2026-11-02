@@ -11,6 +11,7 @@ interface OrderDocumentItemProps {
   createdAt?: string;
   loading?: boolean;
   initiallyOpen?: boolean;
+  previewLabel?: string;
 }
 
 const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
@@ -21,6 +22,7 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
   createdAt,
   loading = false,
   initiallyOpen = false,
+  previewLabel,
 }) => {
   const { t } = useTranslation();
   const [previewOpen, setPreviewOpen] = useState(initiallyOpen);
@@ -48,16 +50,17 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
             )}
           </span>
           <div className="expedient-document-card-actions">
-        <button type="button" className={`expedient-document-icon-button ${previewOpen ? "is-active" : ""}`}
+        <button type="button" className={`${previewLabel ? "expedient-document-card-link btn btn-link p-0" : "expedient-document-icon-button"} ${previewOpen ? "is-active" : ""}`}
           disabled={!url || loading} onClick={() => setPreviewOpen((open) => !open)} aria-expanded={previewOpen}
-          title={t("Preview PDF")} aria-label={`${t("Preview PDF")}: ${name}`}>
+          title={previewLabel || t("Preview PDF")} aria-label={`${previewLabel || t("Preview PDF")}: ${name}`}>
           {loading ? (
             <span className="spinner-border spinner-border-sm" role="status" style={{ width: "0.75rem", height: "0.75rem" }} />
           ) : (
             <i className="ri-eye-line" aria-hidden="true" />
           )}
+          {previewLabel && <span className="ms-1">{previewLabel}</span>}
         </button>
-        {url && !loading && <a className="expedient-document-card-link" href={url} target="_blank" rel="noopener noreferrer"
+        {url && !loading && !previewLabel && <a className="expedient-document-card-link" href={url} target="_blank" rel="noopener noreferrer"
           aria-label={`${t("Open PDF")}: ${name}`}>
           <i className="ri-external-link-line me-1" aria-hidden="true" />{t("Open PDF")}
         </a>}

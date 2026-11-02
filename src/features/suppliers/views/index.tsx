@@ -613,6 +613,9 @@ const SuppliersPage = () => {
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: "120px" }} className="text-center">
+                          {t("Actions")}
+                        </th>
                         <th style={{ width: "90px" }}>ID</th>
                         <th style={{ width: "140px" }}>{t("RUC")}</th>
                         <th>{t("Supplier")}</th>
@@ -621,9 +624,6 @@ const SuppliersPage = () => {
                         <th style={{ width: "220px" }}>{t("Bank 2")}</th>
                         <th style={{ width: "190px" }}>{t("Created")}</th>
                         <th style={{ width: "190px" }}>{t("Updated")}</th>
-                        <th style={{ width: "120px" }} className="text-center">
-                          {t("Actions")}
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -636,6 +636,19 @@ const SuppliersPage = () => {
                       ) : (
                         paginatedSuppliers.map((supplier) => (
                           <tr key={supplier.supplierID}>
+                            <td className="text-center">
+                              <TableActionsMenu
+                                items={[
+                                  {
+                                    id: `edit-${supplier.supplierID}`,
+                                    label: t("Edit"),
+                                    icon: "ri-edit-line",
+                                    tone: "neutral",
+                                    onClick: () => handleOpenEditModal(supplier),
+                                  },
+                                ]}
+                              />
+                            </td>
                             <td>#{supplier.supplierID}</td>
                             <td className="fw-semibold">{supplier.supplierNo}</td>
                             <td>
@@ -671,19 +684,6 @@ const SuppliersPage = () => {
                                 supplier.updatedBy,
                                 "Updated by"
                               )}
-                            </td>
-                            <td className="text-center">
-                              <TableActionsMenu
-                                items={[
-                                  {
-                                    id: `edit-${supplier.supplierID}`,
-                                    label: t("Edit"),
-                                    icon: "ri-edit-line",
-                                    tone: "neutral",
-                                    onClick: () => handleOpenEditModal(supplier),
-                                  },
-                                ]}
-                              />
                             </td>
                           </tr>
                         ))

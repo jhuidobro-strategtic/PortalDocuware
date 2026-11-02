@@ -32,6 +32,7 @@ import {
 } from "../../types/list.types";
 import {
   DOCUMENTS_FLASH_NOTIFICATION_KEY,
+  getDocumentSourceUrl,
   getDownloadUrl,
   getPreviewUrl,
 } from "../../services/document.utils";
@@ -840,8 +841,8 @@ const DocumentEditPage: React.FC = () => {
           <Col lg={6} className="d-flex">
             <DocumentEditPreviewPanel
               document={editDoc}
-              previewUrl={getPreviewUrl(editDoc.batchFile?.r2Url?.trim() || editDoc.documenturl)}
-              downloadUrl={getDownloadUrl(editDoc.batchFile?.r2Url?.trim() || editDoc.documenturl)}
+              previewUrl={getPreviewUrl(getDocumentSourceUrl(editDoc))}
+              downloadUrl={getDownloadUrl(getDocumentSourceUrl(editDoc))}
               rotation={rotation}
               onRotateLeft={() => setRotation((prev) => prev - 90)}
               onRotateRight={() => setRotation((prev) => prev + 90)}

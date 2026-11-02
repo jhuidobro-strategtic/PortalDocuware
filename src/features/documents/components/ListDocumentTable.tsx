@@ -71,6 +71,12 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           <thead className="table-light">
             <tr style={{ textAlign: "center" }}>
               <ResizableHeader
+                width={columnWidths.acciones}
+                onResize={(w: number) => onResizeColumn("acciones", w)}
+              >
+                {t("Actions")}
+              </ResizableHeader>
+              <ResizableHeader
                 width={columnWidths.serie}
                 onResize={(w: number) => onResizeColumn("serie", w)}
               >
@@ -145,12 +151,6 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               <ResizableHeader width={columnWidths.orden} onResize={(width) => onResizeColumn("orden", width)}>
                 OC / OS
               </ResizableHeader>
-              <ResizableHeader
-                width={columnWidths.acciones}
-                onResize={(w: number) => onResizeColumn("acciones", w)}
-              >
-                {t("Actions")}
-              </ResizableHeader>
             </tr>
           </thead>
 
@@ -176,6 +176,45 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
 
               return (
                 <tr key={doc.documentid}>
+                  <td
+                    style={{
+                      ...style,
+                      width: columnWidths.acciones,
+                      textAlign: "center",
+                      overflow: "visible",
+                      textOverflow: "clip",
+                      whiteSpace: "normal",
+                    }}
+                  >
+                    <div className="d-flex justify-content-center">
+                      <TableActionsMenu
+                        items={[
+                          {
+                            id: `order-c-${doc.documentid}`,
+                            label: t("Order Generation"),
+                            icon: "ri-file-list-3-line",
+                            tone: "neutral",
+                            disabled: hasApprovedPurchaseOrder,
+                            onClick: () => onOrderC(doc),
+                          },
+                          {
+                            id: `edit-${doc.documentid}`,
+                            label: t("Edit"),
+                            icon: "ri-edit-line",
+                            tone: "neutral",
+                            onClick: () => onEdit(doc),
+                          },
+                          {
+                            id: `delete-${doc.documentid}`,
+                            label: t("Delete"),
+                            icon: "ri-delete-bin-line",
+                            tone: "danger",
+                            onClick: () => onDelete(doc),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </td>
                   <td
                     style={{
                       ...style,
@@ -287,45 +326,6 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     <span className={`badge ${hasApprovedPurchaseOrder ? "bg-primary-subtle text-primary" : "bg-secondary-subtle text-secondary"}`}>
                       {hasApprovedPurchaseOrder ? doc.activeOrder?.orderNo || `${doc.activeOrder?.type || "OC/OS"} registrada` : "Sin orden"}
                     </span>
-                  </td>
-                  <td
-                    style={{
-                      ...style,
-                      width: columnWidths.acciones,
-                      textAlign: "center",
-                      overflow: "visible",
-                      textOverflow: "clip",
-                      whiteSpace: "normal",
-                    }}
-                  >
-                    <div className="d-flex justify-content-center">
-                      <TableActionsMenu
-                        items={[
-                          {
-                            id: `order-c-${doc.documentid}`,
-                            label: t("Order C."),
-                            icon: "ri-file-list-3-line",
-                            tone: "neutral",
-                            disabled: hasApprovedPurchaseOrder,
-                            onClick: () => onOrderC(doc),
-                          },
-                          {
-                            id: `edit-${doc.documentid}`,
-                            label: t("Edit"),
-                            icon: "ri-edit-line",
-                            tone: "neutral",
-                            onClick: () => onEdit(doc),
-                          },
-                          {
-                            id: `delete-${doc.documentid}`,
-                            label: t("Delete"),
-                            icon: "ri-delete-bin-line",
-                            tone: "danger",
-                            onClick: () => onDelete(doc),
-                          },
-                        ]}
-                      />
-                    </div>
                   </td>
                 </tr>
               );
