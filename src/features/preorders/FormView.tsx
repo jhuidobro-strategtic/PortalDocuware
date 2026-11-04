@@ -5,7 +5,7 @@ import BreadCrumb from "../../components/common/BreadCrumb";
 import { getPreferenceUserId } from "../../helpers/ui-preferences";
 import { fetchCatalog, fetchCategorizedSigners, fetchSuppliers } from "../documents/services/orderC.service";
 import PreOrderForm, { PreOrderOptions } from "./PreOrderForm";
-import { getPreOrders, savePreOrder } from "./services";
+import { fetchPreOrderCostCenters, getPreOrders, savePreOrder } from "./services";
 import type { PreOrder, PreOrderDraft } from "./types";
 import "./PreOrders.css";
 
@@ -22,8 +22,8 @@ const PreOrderFormView = () => {
     document.title = `${preOrderId ? "Editar preorden" : "Nueva preorden"} | Docuware`;
     const load = async () => {
       if (!userId) throw new Error("No fue posible identificar al usuario.");
-      const [suppliers, signers, payment, currency, stores, records] = await Promise.all([
-        fetchSuppliers(), fetchCategorizedSigners(), fetchCatalog("PAYMENT_CONDITION"), fetchCatalog("MONEY"), fetchCatalog("STORE_WAREHOUSE"),
+      const [suppliers, signers, payment, currency, stores, costs, records] = await Promise.all([
+        fetchSuppliers(), fetchCategorizedSigners(), fetchCatalog("PAYMENT_CONDITION"), fetchCatalog("MONEY"), fetchCatalog("STORE_WAREHOUSE"), fetchPreOrderCostCenters(),
         preOrderId ? getPreOrders(userId) : Promise.resolve([]),
       ]);
       const existing = preOrderId ? records.find((item) => item.id === Number(preOrderId)) : null;
@@ -31,14 +31,14 @@ const PreOrderFormView = () => {
       if (existing && (existing.creator_id !== userId || !["DRAFT", "PENDING", "REJECTED"].includes(existing.status))) {
         throw new Error("Solo el creador puede editar una preorden antes de la firma Senior.");
       }
-      if (alive) { setRow(existing ?? null); setOptions({ suppliers, seniors: signers.seniorSigners, payment, currency, stores }); }
+      if (alive) { setRow(existing ?? null); setOptions({ suppliers, seniors: signers.seniorSigners, juniors: signers.juniorSigners, ...costs, payment, currency, stores }); }
     };
     load().catch((failure) => { if (alive) setError(failure.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [preOrderId, userId]);
   const save = async (draft: PreOrderDraft, file: File | null) => {
     await savePreOrder(draft, file, userId, row?.id);
-    navigate("/pre-orders", { replace: true, state: { message: "Preorden guardada y enviada al Senior." } });
+    navigate("/pre-orders", { replace: true, state: { message: "Preorden guardada y enviada a aprobación." } });
   };
   return <div className="page-content"><Container fluid>
     <BreadCrumb title={preOrderId ? "Editar preorden" : "Nueva preorden"} pageTitle="Pre-Órdenes" />

@@ -24,3 +24,8 @@ export const uploadPreOrderInvoice = (id: number, userID: number, file: File) =>
   const body = new FormData(); body.append("userID", String(userID)); body.append("file", file);
   return api<PreOrder>(`pre-orders/${id}/invoice-upload/`, { method: "POST", body });
 };
+
+export const fetchPreOrderCostCenters = async () => {
+  const [costs1, costs2] = await Promise.all([api<import("../documents/types/list.types").CentroCosto[]>("centro-costo"), api<import("../documents/types/list.types").CentroCosto[]>("centro-costo-2/")]);
+  return { costs1, costs2 };
+};

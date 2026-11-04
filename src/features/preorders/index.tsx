@@ -10,7 +10,7 @@ import { getPreferenceUserId } from "../../helpers/ui-preferences";
 import { downloadBlob } from "../../helpers/download-blob";
 import { fetchCatalog, fetchCategorizedSigners, fetchSuppliers } from "../documents/services/orderC.service";
 import OrderDocumentItem from "../purchase-orders/components/OrderDocumentItem";
-import { actOnPreOrder, attachPreOrderFile, getPreOrders } from "./services";
+import { actOnPreOrder, attachPreOrderFile, fetchPreOrderCostCenters, getPreOrders } from "./services";
 import { makeConvertedOrderPdf, makePreOrderPdf } from "./pdf";
 import type { PreOrderOptions } from "./PreOrderForm";
 import LinkInvoice from "./LinkInvoice";
@@ -19,7 +19,7 @@ import "../expedients/views/Expedients.css";
 import "./PreOrders.css";
 
 const emptyOptions: PreOrderOptions = { suppliers: [], seniors: [], payment: [], currency: [], stores: [] };
-const eventNames: Record<string, string> = { IMPORTED: "Archivo registrado automáticamente como borrador", CREATED: "Creada y enviada al Senior", UPDATED: "Actualizada y enviada al Senior", APPROVED: "Firmada por Senior",
+const eventNames: Record<string, string> = { IMPORTED: "Archivo registrado automáticamente como borrador", CREATED: "Creada y enviada a aprobación", UPDATED: "Actualizada y enviada a aprobación", APPROVED: "Firmada por Senior", JR_SIGNED: "Firmada por Junior",
   REJECTED: "Rechazada", CANCELLED: "Anulada", FILE_ADDED: "Sustento agregado", INVOICE_UPLOADED: "Comprobante enviado a procesamiento", CONVERTED: "Convertida en OC/OS", CONVERSION_FAILED: "Conversión pendiente de corrección" };
 const PreOrders = () => {
   const navigate = useNavigate(); const location = useLocation();
@@ -38,8 +38,8 @@ const PreOrders = () => {
   const refresh = useCallback(async () => { if (!userId) throw new Error("No fue posible identificar al usuario."); setRows(await getPreOrders(userId)); }, [userId]);
   useEffect(() => {
     let alive = true; document.title = "Pre-Órdenes | Docuware";
-    Promise.all([getPreOrders(userId), fetchSuppliers(), fetchCategorizedSigners(), fetchCatalog("PAYMENT_CONDITION"), fetchCatalog("MONEY"), fetchCatalog("STORE_WAREHOUSE")])
-      .then(([list, suppliers, signers, payment, currency, stores]) => { if (alive) { setRows(list); setOptions({ suppliers, seniors: signers.seniorSigners, payment, currency, stores }); } })
+    Promise.all([getPreOrders(userId), fetchSuppliers(), fetchCategorizedSigners(), fetchCatalog("PAYMENT_CONDITION"), fetchCatalog("MONEY"), fetchCatalog("STORE_WAREHOUSE"), fetchPreOrderCostCenters()])
+      .then(([list, suppliers, signers, payment, currency, stores, costs]) => { if (alive) { setRows(list); setOptions({ suppliers, seniors: signers.seniorSigners, juniors: signers.juniorSigners, ...costs, payment, currency, stores }); } })
       .catch((failure) => { if (alive) setError(failure.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [userId]);
@@ -64,7 +64,7 @@ const PreOrders = () => {
     if (!action) return;
     setBusy(true); setActionError("");
     try { const updated = await actOnPreOrder(action.row.id, action.name, userId, { notes }); update(updated); setAction(null);
-      setSuccess(action.name === "approve" ? `Preorden firmada: ${updated.tracking_number}. Pendiente de comprobante.` : "Estado actualizado. Se conserva el historial."); }
+      setSuccess(action.name === "approve" ? (updated.status === "JR_SIGNED" ? "Firma Junior registrada. Pendiente de firma Senior." : `Preorden firmada: ${updated.tracking_number}. Pendiente de comprobante.`) : "Estado actualizado. Se conserva el historial."); }
     catch (failure) { setActionError(failure instanceof Error ? failure.message : "No fue posible actualizar."); }
     finally { setBusy(false); }
   };
@@ -80,7 +80,7 @@ const PreOrders = () => {
     finally { setBusy(false); }
   };
   const filtered = rows.filter((row) => (status === "all" || row.status === status) &&
-    [row.title, row.source_reference, row.tracking_number, row.supplier_name, row.supplier_ruc, row.converted_order_number, row.creator_name, row.senior_name]
+    [row.title, row.source_reference, row.tracking_number, row.supplier_name, row.supplier_ruc, row.converted_order_number, row.creator_name, row.junior_name, row.senior_name]
       .some((value) => String(value || "").toLocaleLowerCase("es-PE").includes(search.trim().toLocaleLowerCase("es-PE"))));
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / 20)));
   const exportExcel = async () => {
@@ -104,12 +104,13 @@ const PreOrders = () => {
         <Button color="success" disabled={loading || exporting || !filtered.length} onClick={exportExcel}>{exporting ? <Spinner size="sm" /> : <i className="ri-file-excel-2-line me-1" />}Exportar Excel</Button>
         <Button color="primary" disabled={loading || !userId} onClick={() => navigate("/pre-orders/new")}><i className="ri-add-line me-1" />Nueva preorden</Button></div></div>
       {loading ? <div className="preorder-loading"><Spinner color="primary" /></div> : <><div className="table-responsive"><Table className="align-middle table-nowrap preorder-table">
-        <thead className="table-light"><tr><th>Acciones</th><th>Seguimiento</th><th>Asunto / origen</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Creador / Senior</th><th>Fecha</th><th>OC/OS</th></tr></thead>
+        <thead className="table-light"><tr><th>Acciones</th><th>Seguimiento</th><th>Asunto / origen</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Creador / Firmantes</th><th>Fecha</th><th>OC/OS</th></tr></thead>
         <tbody>{!filtered.length && <tr><td colSpan={9} className="text-center py-4">No se encontraron preórdenes.</td></tr>}{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((row) => <tr key={row.id}>
           <td><TableActionsMenu items={[
             { id: `view-${row.id}`, label: "Ver documentos y preorden", icon: "ri-eye-line", onClick: () => openPreview(row), disabled: busy },
             ...(row.creator_id === userId && ["DRAFT", "PENDING", "REJECTED"].includes(row.status) ? [{ id: `edit-${row.id}`, label: row.status === "DRAFT" ? "Editar y completar" : "Editar y enviar", icon: "ri-edit-line", onClick: () => navigate(`/pre-orders/edit/${row.id}`) }] : []),
-            ...(row.senior_id === userId && row.status === "PENDING" ? [
+            ...(row.junior_id === userId && row.status === "PENDING" ? [{ id: `jr-${row.id}`, label: "Firmar como Junior", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } }] : []),
+            ...(row.senior_id === userId && ["PENDING", "JR_SIGNED"].includes(row.status) ? [
               { id: `approve-${row.id}`, label: "Firmar y generar seguimiento", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } },
               { id: `reject-${row.id}`, label: "Rechazar", icon: "ri-close-circle-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "reject" }); setNotes(""); setActionError(""); } },
             ] : []),
@@ -119,17 +120,17 @@ const PreOrders = () => {
           ]} /></td>
           <td>{row.tracking_number || <span className="text-muted">Pendiente #{row.id}</span>}</td><td><div className="preorder-ellipsis" title={row.title}>{row.title}</div><small className="text-muted">{row.source_kind} {row.source_reference}</small></td>
           <td><div className="preorder-ellipsis" title={row.supplier_name}>{row.supplier_name}</div><small className="text-muted">{row.supplier_ruc}</small></td><td>{row.order_type === "C" ? "OC" : "OS"}</td>
-          <td><span className={`badge ${row.status === "REJECTED" || row.status === "CANCELLED" ? "bg-danger-subtle text-danger" : row.status === "PENDING" || row.status === "DRAFT" ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success"}`}>{stateLabels[row.status]}</span>
+          <td><span className={`badge ${row.status === "REJECTED" || row.status === "CANCELLED" ? "bg-danger-subtle text-danger" : row.status === "PENDING" || row.status === "JR_SIGNED" || row.status === "DRAFT" ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success"}`}>{stateLabels[row.status]}</span>
             {row.status === "DRAFT" && !!row.missing_fields?.length && <small className="d-block text-muted mt-1" style={{ whiteSpace: "normal", maxWidth: 250 }}>Completar: {row.missing_fields.join(", ")}</small>}
             {row.invoice_job && row.status !== "CONVERTED" && <small className={`d-block mt-1 ${row.invoice_job.error ? "text-danger" : "text-muted"}`}>{row.invoice_job.error || `Comprobante: ${row.invoice_job.status}`}</small>}</td>
-          <td><div>{row.creator_name}</div><small className="text-muted">{row.senior_name}</small></td><td>{moment(row.created_at).format("DD/MM/YYYY")}</td>
+          <td><div>{row.creator_name}</div><small className="d-block text-muted">JR: {row.junior_name || "Sin asignar"}</small><small className="text-muted">Senior: {row.senior_name}</small></td><td>{moment(row.created_at).format("DD/MM/YYYY")}</td>
           <td>{row.converted_order_number ? <Link to="/purchase-order-details">{row.converted_order_number}</Link> : "—"}</td>
         </tr>)}</tbody></Table></div><AppPagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} totalItems={filtered.length} itemsPerPage={20} onPageChange={setPage} /></>}
     </CardBody></Card>
     {linkRow && <LinkInvoice row={linkRow} userId={userId} onClose={() => setLinkRow(null)} onConverted={converted} onUpdate={update} />}
     <Modal isOpen={!!action} centered toggle={busy ? undefined : () => setAction(null)} backdrop={busy ? "static" : true} keyboard={!busy}>
       <ModalHeader toggle={busy ? undefined : () => setAction(null)}>{action?.name === "approve" ? "Firmar preorden" : action?.name === "reject" ? "Rechazar preorden" : "Anular preorden"}</ModalHeader><ModalBody>
-        <p>{action?.row.title}</p>{action?.name === "approve" && <p>Se registrará su firma Senior y se asignará un número de seguimiento. La OC/OS se generará al agregar el comprobante.</p>}
+        <p>{action?.row.title}</p>{action?.name === "approve" && <p>{action.row.junior_id === userId ? "Se registrará su firma Junior. La preorden quedará pendiente de firma Senior." : "Se registrará su firma Senior y se asignará un número de seguimiento. La OC/OS se generará al agregar el comprobante."}</p>}
         {actionError && <div className="alert alert-danger" role="alert" style={{ whiteSpace: "pre-line" }}>{actionError}</div>}
         <Label htmlFor="pre-notes">{action?.name === "approve" ? "Observaciones" : "Motivo *"}</Label><Input id="pre-notes" type="textarea" value={notes} disabled={busy} onChange={(event) => setNotes(event.target.value)} />
       </ModalBody><ModalFooter><Button color="light" disabled={busy} onClick={() => setAction(null)}>Cancelar</Button><Button color={action?.name === "approve" ? "primary" : "danger"} disabled={busy || (action?.name !== "approve" && !notes.trim())} onClick={confirm}>{busy && <Spinner size="sm" className="me-2" />}Confirmar</Button></ModalFooter>
