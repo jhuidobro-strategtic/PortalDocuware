@@ -104,15 +104,9 @@ const PreOrders = () => {
         <Button color="success" disabled={loading || exporting || !filtered.length} onClick={exportExcel}>{exporting ? <Spinner size="sm" /> : <i className="ri-file-excel-2-line me-1" />}Exportar Excel</Button>
         <Button color="primary" disabled={loading || !userId} onClick={() => navigate("/pre-orders/new")}><i className="ri-add-line me-1" />Nueva preorden</Button></div></div>
       {loading ? <div className="preorder-loading"><Spinner color="primary" /></div> : <><div className="table-responsive"><Table className="align-middle table-nowrap preorder-table">
-        <thead className="table-light"><tr><th>Seguimiento</th><th>Asunto / origen</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Creador / Senior</th><th>Fecha</th><th>OC/OS</th><th>Acciones</th></tr></thead>
+        <thead className="table-light"><tr><th>Acciones</th><th>Seguimiento</th><th>Asunto / origen</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Creador / Senior</th><th>Fecha</th><th>OC/OS</th></tr></thead>
         <tbody>{!filtered.length && <tr><td colSpan={9} className="text-center py-4">No se encontraron preórdenes.</td></tr>}{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((row) => <tr key={row.id}>
-          <td>{row.tracking_number || <span className="text-muted">Pendiente #{row.id}</span>}</td><td><div className="preorder-ellipsis" title={row.title}>{row.title}</div><small className="text-muted">{row.source_kind} {row.source_reference}</small></td>
-          <td><div className="preorder-ellipsis" title={row.supplier_name}>{row.supplier_name}</div><small className="text-muted">{row.supplier_ruc}</small></td><td>{row.order_type === "C" ? "OC" : "OS"}</td>
-          <td><span className={`badge ${row.status === "REJECTED" || row.status === "CANCELLED" ? "bg-danger-subtle text-danger" : row.status === "PENDING" || row.status === "DRAFT" ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success"}`}>{stateLabels[row.status]}</span>
-            {row.status === "DRAFT" && !!row.missing_fields?.length && <small className="d-block text-muted mt-1" style={{ whiteSpace: "normal", maxWidth: 250 }}>Completar: {row.missing_fields.join(", ")}</small>}
-            {row.invoice_job && row.status !== "CONVERTED" && <small className={`d-block mt-1 ${row.invoice_job.error ? "text-danger" : "text-muted"}`}>{row.invoice_job.error || `Comprobante: ${row.invoice_job.status}`}</small>}</td>
-          <td><div>{row.creator_name}</div><small className="text-muted">{row.senior_name}</small></td><td>{moment(row.created_at).format("DD/MM/YYYY")}</td>
-          <td>{row.converted_order_number ? <Link to="/purchase-order-details">{row.converted_order_number}</Link> : "—"}</td><td><TableActionsMenu items={[
+          <td><TableActionsMenu items={[
             { id: `view-${row.id}`, label: "Ver documentos y preorden", icon: "ri-eye-line", onClick: () => openPreview(row), disabled: busy },
             ...(row.creator_id === userId && ["DRAFT", "PENDING", "REJECTED"].includes(row.status) ? [{ id: `edit-${row.id}`, label: row.status === "DRAFT" ? "Editar y completar" : "Editar y enviar", icon: "ri-edit-line", onClick: () => navigate(`/pre-orders/edit/${row.id}`) }] : []),
             ...(row.senior_id === userId && row.status === "PENDING" ? [
@@ -123,6 +117,13 @@ const PreOrders = () => {
             ...(row.status === "CONVERTED" ? [{ id: `pdf-${row.id}`, label: "Generar PDF OC/OS", icon: "ri-file-pdf-line", onClick: () => orderPdf(row), disabled: busy }] : []),
             ...(row.senior_id === userId && !["CONVERTED", "CANCELLED"].includes(row.status) ? [{ id: `cancel-${row.id}`, label: "Anular preorden", icon: "ri-forbid-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "cancel" }); setNotes(""); setActionError(""); } }] : []),
           ]} /></td>
+          <td>{row.tracking_number || <span className="text-muted">Pendiente #{row.id}</span>}</td><td><div className="preorder-ellipsis" title={row.title}>{row.title}</div><small className="text-muted">{row.source_kind} {row.source_reference}</small></td>
+          <td><div className="preorder-ellipsis" title={row.supplier_name}>{row.supplier_name}</div><small className="text-muted">{row.supplier_ruc}</small></td><td>{row.order_type === "C" ? "OC" : "OS"}</td>
+          <td><span className={`badge ${row.status === "REJECTED" || row.status === "CANCELLED" ? "bg-danger-subtle text-danger" : row.status === "PENDING" || row.status === "DRAFT" ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success"}`}>{stateLabels[row.status]}</span>
+            {row.status === "DRAFT" && !!row.missing_fields?.length && <small className="d-block text-muted mt-1" style={{ whiteSpace: "normal", maxWidth: 250 }}>Completar: {row.missing_fields.join(", ")}</small>}
+            {row.invoice_job && row.status !== "CONVERTED" && <small className={`d-block mt-1 ${row.invoice_job.error ? "text-danger" : "text-muted"}`}>{row.invoice_job.error || `Comprobante: ${row.invoice_job.status}`}</small>}</td>
+          <td><div>{row.creator_name}</div><small className="text-muted">{row.senior_name}</small></td><td>{moment(row.created_at).format("DD/MM/YYYY")}</td>
+          <td>{row.converted_order_number ? <Link to="/purchase-order-details">{row.converted_order_number}</Link> : "—"}</td>
         </tr>)}</tbody></Table></div><AppPagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} totalItems={filtered.length} itemsPerPage={20} onPageChange={setPage} /></>}
     </CardBody></Card>
     {linkRow && <LinkInvoice row={linkRow} userId={userId} onClose={() => setLinkRow(null)} onConverted={converted} onUpdate={update} />}
