@@ -72,7 +72,7 @@ const CommercialInvoice = ({ orderId, invoiceId, userId, name, url, createdAt,
         aria-expanded={editing} aria-controls={`${fileId}-form`}>
         <i className="ri-file-edit-line me-1" aria-hidden="true" />Sustituir factura comercial
       </Button>
-      {!canReplace && <span className="small text-muted">Disponible para el solicitante y los firmantes asignados antes de la primera firma.</span>}
+      {!canReplace && <span className="small text-muted">La sustitución está disponible antes de la primera firma, mientras la orden y el expediente estén abiertos.</span>}
     </div>
     {error && <div className="alert alert-danger" role="alert" style={{ whiteSpace: "pre-line" }}>{error}</div>}
     {success && <div className="alert alert-success" role="status">{success}</div>}

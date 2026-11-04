@@ -896,7 +896,8 @@ const PurchaseOrderDetails = () => {
       solicitanteName,
       juniorSignerName,
       seniorSignerName,
-      executedByName: seniorSignerName,
+      executedByName: userLookup[order.createdBy] ||
+        (order.createdBy === sessionUser.id ? sessionUser.name : ""),
       userLookup,
       numberLocale,
       isAuditApproved: isApproved,
@@ -1464,7 +1465,8 @@ const PurchaseOrderDetails = () => {
           solicitanteName,
           juniorSignerName,
           seniorSignerName,
-          executedByName: seniorSignerName || sessionUser.name,
+          executedByName: userLookup[updatedOrder.createdBy] ||
+            (updatedOrder.createdBy === sessionUser.id ? sessionUser.name : ""),
           userLookup,
           numberLocale,
           isAuditApproved: true,
@@ -2289,8 +2291,7 @@ const PurchaseOrderDetails = () => {
                       createdAt={invoiceCreatedAt}
                       disabled={uploadingAttachment || loadingAttachments}
                       canReplace={!attachmentOrder.isCancelled && attachmentOrder.approvalStatus === "PENDING" &&
-                        !attachmentOrder.hasSeniorApproval && !!sessionUser.id &&
-                        [attachmentOrder.createdBy, attachmentOrder.signature, attachmentOrder.signature2].includes(sessionUser.id)}
+                        !attachmentOrder.hasSeniorApproval && !!sessionUser.id}
                       onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
                       onReplaced={async (updatedDocument) => {
                         setDocumentsByAssociatedNo((previous) => ({

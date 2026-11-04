@@ -4,6 +4,8 @@ import moment from "moment";
 import { useTranslation } from "react-i18next";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { useColumnWidths } from "../../../helpers/use-column-widths";
+import { readUiPreference, writeUiPreference } from "../../../helpers/ui-preferences";
+import { restoreDocumentListState } from "../services/list-state";
 import { ColumnWidths, Document, Notification, TipoDocumento } from "../types/list.types";
 import { DOCUMENTS_FLASH_NOTIFICATION_KEY } from "../services/document.utils";
 import { intelligentSearch } from "../../../helpers/search-utils";
@@ -64,15 +66,22 @@ export const useDocumentList = () => {
   const [rotation, setRotation] = useState(0);
   const rotateLeft = () => setRotation((prev) => prev - 90);
   const rotateRight = () => setRotation((prev) => prev + 90);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [orderFilter, setOrderFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<Date[]>([]);
+  const [savedListState] = useState(() => restoreDocumentListState(readUiPreference("documents:list-state")));
+  const [searchTerm, setSearchTerm] = useState(savedListState.searchTerm);
+  const [statusFilter, setStatusFilter] = useState(savedListState.statusFilter);
+  const [orderFilter, setOrderFilter] = useState(savedListState.orderFilter);
+  const [dateRange, setDateRange] = useState<Date[]>(savedListState.dateRange);
   const [deleteModal, setDeleteModal] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(savedListState.currentPage);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [approvedOrderDocumentNos, setApprovedOrderDocumentNos] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    writeUiPreference("documents:list-state", {
+      searchTerm, statusFilter, orderFilter, dateRange: dateRange.map((date) => date.toISOString()), currentPage,
+    });
+  }, [searchTerm, statusFilter, orderFilter, dateRange, currentPage]);
 
   const itemsPerPage = 20;
   const startDate = dateRange[0];
@@ -185,6 +194,9 @@ export const useDocumentList = () => {
   });
 
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  useEffect(() => {
+    if (!loading && !error) setCurrentPage((page) => Math.min(page, Math.max(1, totalPages)));
+  }, [loading, error, totalPages]);
   const paginatedDocuments = filteredDocuments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleDelete = (documentid: number) => {
@@ -315,7 +327,7 @@ export const useDocumentList = () => {
         worksheet.addImage(imageId, "B1:D2");
       } catch {}
 
-      worksheet.mergeCells("E1:L2");
+      worksheet.mergeCells("E1:M2");
       const titleCell = worksheet.getCell("E1");
       titleCell.value = "REPORTE DE DOCUMENTOS";
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -326,7 +338,7 @@ export const useDocumentList = () => {
         worksheet.getCell(cell).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D9E1F2" } };
       });
 
-      const headers = ["ID", "Serie", "Número", "RUC", "Razón Social", "Tipo Documento", "Comprador", "Fecha Emisión", "Sub Total", "IGV", "Total", "Estado"];
+      const headers = ["ID", "Serie", "Número", "RUC", "Razón Social", "Tipo Documento", "Comprador", "Fecha Emisión", "Moneda", "Sub Total", "IGV", "Total", "Estado"];
 
       headers.forEach((header, index) => {
         const cell = worksheet.getCell(3, index + 1);
@@ -341,20 +353,21 @@ export const useDocumentList = () => {
         const row = worksheet.addRow([
           doc.documentid, doc.documentserial, doc.documentnumber, doc.suppliernumber, doc.suppliername,
           getTipoDocumentoNombre(doc.documenttype || { tipoid: 0, tipo: "" }),
-          doc.driver ?? "", moment(doc.documentdate).format("DD/MM/YYYY"), parseFloat(doc.amount), parseFloat(doc.taxamount), parseFloat(doc.totalamount),
+          doc.driver ?? "", moment(doc.documentdate).format("DD/MM/YYYY"), doc.currency?.trim().toUpperCase() || "",
+          parseFloat(doc.amount), parseFloat(doc.taxamount), parseFloat(doc.totalamount),
           doc.status ? "Activo" : "Pendiente",
         ]);
 
         row.eachCell((cell, columnNumber) => {
           cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
-          if (columnNumber === 12) cell.font = { color: { argb: doc.status ? "008000" : "FF0000" }, bold: true };
-          if ([9, 10, 11].includes(columnNumber)) { cell.alignment = { horizontal: "right" }; cell.numFmt = "#,##0.00"; }
+          if (columnNumber === 13) cell.font = { color: { argb: doc.status ? "008000" : "FF0000" }, bold: true };
+          if ([10, 11, 12].includes(columnNumber)) { cell.alignment = { horizontal: "right" }; cell.numFmt = "#,##0.00"; }
         });
       });
 
       worksheet.columns = [
         { width: 6 }, { width: 10 }, { width: 12 }, { width: 15 }, { width: 35 }, { width: 20 },
-        { width: 15 }, { width: 15 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 15 },
+        { width: 15 }, { width: 15 }, { width: 10 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 15 },
       ];
 
       const buffer = await workbook.xlsx.writeBuffer();

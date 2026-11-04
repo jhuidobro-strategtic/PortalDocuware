@@ -355,9 +355,8 @@ export const generatePurchaseOrderPdf = async ({
     "";
 
   const resolvedExecutedByName =
+    userLookup?.[purchaseOrder.createdBy] ||
     executedByName ||
-    resolvedSeniorSignerName ||
-    resolvedJuniorSignerName ||
     "";
 
   const doc = new jsPDF({
@@ -514,7 +513,7 @@ export const generatePurchaseOrderPdf = async ({
     },
     {
       label: "EJECUTADO POR",
-      value: isApproved ? safeUppercaseValue(resolvedExecutedByName) : "-",
+      value: safeUppercaseValue(resolvedExecutedByName),
     },
   ];
   const infoHeight =
