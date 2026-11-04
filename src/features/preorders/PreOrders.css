@@ -1,0 +1,18 @@
+.preorder-toolbar { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.preorder-search { width: 320px; max-width: 100%; }
+.preorder-state { width: 290px; max-width: 100%; }
+.preorder-loading { display: grid; place-items: center; min-height: 50vh; }
+.preorder-table { font-size: .8rem; }
+.preorder-table > :not(caption) > * > * { padding: .4rem .75rem; }
+.preorder-ellipsis { max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 575.98px) {
+  .preorder-toolbar > div, .preorder-toolbar .btn, .preorder-search, .preorder-state { width: 100%; }
+}
+
+.preorder-preview-column { position: sticky; top: 90px; }
+.preorder-source-preview { display: block; height: calc(100vh - 240px); min-height: 600px; }
+.preorder-preview-empty { display: grid; place-items: center; min-height: 400px; padding: 2rem; text-align: center; }
+@media (max-width: 991.98px) {
+  .preorder-preview-column { position: static; }
+  .preorder-source-preview { height: 70vh; min-height: 400px; }
+}

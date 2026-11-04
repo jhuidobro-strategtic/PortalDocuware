@@ -13,7 +13,8 @@ const VerticalLayout = () => {
     useEffect(() => {
         const translatedNavItems = navdata((key: string) => i18n.t(key));
         const activeSection = translatedNavItems.find(
-            (item: any) => item.subItems?.some((subItem: any) => subItem.link === location.pathname)
+            (item: any) => item.subItems?.some((subItem: any) => subItem.link === location.pathname ||
+                (subItem.link === "/pre-orders" && location.pathname.startsWith("/pre-orders/")))
         );
 
         if (activeSection?.id) {
@@ -50,7 +51,8 @@ const VerticalLayout = () => {
                                         <li className="nav-item" key={subItem.id}>
                                             <Link
                                                 to={subItem.link}
-                                                className={`nav-link ${location.pathname === subItem.link ? "active" : ""}`}
+                                                className={`nav-link ${location.pathname === subItem.link ||
+                                                    (subItem.link === "/pre-orders" && location.pathname.startsWith("/pre-orders/")) ? "active" : ""}`}
                                             >
                                                 {subItem.label}
                                             </Link>

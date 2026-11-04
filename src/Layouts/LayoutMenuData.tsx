@@ -40,6 +40,12 @@ const Navdata = (t: (key: string) => string) => [
         ],
     },
     {
+        id: "pre-orders",
+        label: "Pre-Órdenes",
+        icon: "ri-file-list-2-line",
+        subItems: [{ id: "pre-orders-list", label: "Pre-Órdenes", link: "/pre-orders" }],
+    },
+    {
         id: "suppliers",
         label: t("Suppliers"),
         icon: "ri-store-2-line",

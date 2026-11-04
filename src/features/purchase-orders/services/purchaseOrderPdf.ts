@@ -58,6 +58,8 @@ interface PurchaseOrderPdfSupplier {
 }
 
 interface GeneratePurchaseOrderPdfParams {
+  documentTitle?: string;
+  amountSummary?: { subtotal: string; tax: string; total: string };
   approvals?: PurchaseOrderApproval[];
   invoiceDetails?: DocumentDetail[];
   purchaseOrder: PurchaseOrderPdfOrder;
@@ -282,6 +284,8 @@ const buildPurchaseOrderPdfFileName = (
   ).replace(/[\\/:*?"<>|]/g, "_")}.pdf`;
 
 export const generatePurchaseOrderPdf = async ({
+  documentTitle,
+  amountSummary,
   approvals = [],
   invoiceDetails = [],
   purchaseOrder,
@@ -379,9 +383,9 @@ export const generatePurchaseOrderPdf = async ({
     (sum, detail) => sum + Number(detail.total || 0),
     0
   );
-  const relatedDocumentSubtotal = parseAmountNumber(relatedDocument?.amount);
-  const relatedDocumentTax = parseAmountNumber(relatedDocument?.taxamount);
-  const relatedDocumentTotal = parseAmountNumber(relatedDocument?.totalamount);
+  const relatedDocumentSubtotal = parseAmountNumber(amountSummary?.subtotal ?? relatedDocument?.amount);
+  const relatedDocumentTax = parseAmountNumber(amountSummary?.tax ?? relatedDocument?.taxamount);
+  const relatedDocumentTotal = parseAmountNumber(amountSummary?.total ?? relatedDocument?.totalamount);
 
   const documentSubtotal =
     relatedDocumentSubtotal !== null
@@ -414,7 +418,7 @@ export const generatePurchaseOrderPdf = async ({
   doc.text("RUC: 20129605490", 106, 19, { align: "center" });
 
   doc.setFontSize(16);
-  doc.text(getPurchaseOrderTitle(purchaseOrder.tipoorden), (123 + (pageWidth - 58)) / 2, 16, {
+  doc.text(documentTitle || getPurchaseOrderTitle(purchaseOrder.tipoorden), (123 + (pageWidth - 58)) / 2, 16, {
     align: "center",
   });
 

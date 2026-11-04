@@ -19,6 +19,7 @@ import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { getCurrentSessionUser } from "../../documents/hooks/orderC.form";
+import PreOrderProcessing from "../../preorders/PreOrderProcessing";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Folders.css";
@@ -71,7 +72,8 @@ const Folders = () => {
   document.title = `${t("Procesamiento de Archivos")} | PortalDocuware`;
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<"folders" | "assets" | "traceability">("folders");
+  const [currentView, setCurrentView] = useState<"folders" | "assets" | "traceability" | "preorders">("folders");
+  const [preOrdersOpened, setPreOrdersOpened] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [retryingJobId, setRetryingJobId] = useState<number | null>(null);
@@ -709,6 +711,11 @@ const Folders = () => {
                             </Link>
                           </li>
                           <li className="mb-2">
+                            <Link to="#" className={`text-muted ${currentView === 'preorders' ? 'active text-primary fw-medium' : ''}`} onClick={(event) => { event.preventDefault(); setPreOrdersOpened(true); setCurrentView("preorders"); }}>
+                              <span className="me-2">•</span> Pre-Órdenes
+                            </Link>
+                          </li>
+                          <li className="mb-2">
                             <Link to="#" className={`text-muted ${currentView === 'traceability' ? 'active text-primary fw-medium' : ''}`} onClick={(e) => { e.preventDefault(); setCurrentView("traceability"); fetchTraceabilityData(1); }}>
                               <span className="me-2">•</span> Trazabilidad de archivos
                             </Link>
@@ -729,7 +736,8 @@ const Folders = () => {
                   ? renderFoldersView()
                   : currentView === "assets"
                   ? renderDropzoneView()
-                  : renderTraceabilityView()}
+                  : currentView === "traceability" ? renderTraceabilityView() : null}
+                {preOrdersOpened && <div hidden={currentView !== "preorders"}><PreOrderProcessing /></div>}
               
               </SimpleBar>
             </div>
