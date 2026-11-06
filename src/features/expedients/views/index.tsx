@@ -28,6 +28,7 @@ import FloatingAlerts, {
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
+import { fetchExpedientInvoiceDetails } from "../invoiceDetailsExport";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { matchesDateRange, matchesName } from "../../../helpers/document-list-filters";
 import "./Expedients.css";
@@ -717,8 +718,25 @@ const Expedients = () => {
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
       sheet.autoFilter = { from: "A1", to: "M1" }; sheet.columns.forEach((column) => { column.width = 23; });
       [7, 8, 9].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
+      const detailsSheet = workbook.addWorksheet("Detalle de facturas");
+      detailsSheet.addRow(["Expediente", "Factura", "Fecha de factura", "Proveedor", "RUC", "OC/OS", "Código del ítem", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
+      filteredExpedients.forEach((item) => {
+        const invoice = item.factura;
+        if (!invoice) return;
+        (invoiceDetails.get(invoice.documentid) || []).forEach((detail) => {
+          detailsSheet.addRow([item.expedienteid, `${invoice.documentserial}-${invoice.documentnumber}`, moment(invoice.documentdate).format("DD/MM/YYYY"),
+            invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || "", detail.item_code || "", detail.description || "",
+            detail.unit_measure_description || "", Number(detail.quantity), Number(detail.unit_value), Number(detail.tax_value),
+            Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || ""]);
+        });
+      });
+      detailsSheet.getRow(1).font = { bold: true }; detailsSheet.views = [{ state: "frozen", ySplit: 1 }];
+      detailsSheet.autoFilter = { from: "A1", to: "O1" }; detailsSheet.columns.forEach((column) => { column.width = 24; });
+      detailsSheet.getColumn(7).numFmt = "@"; detailsSheet.getColumn(8).width = 65;
+      detailsSheet.getColumn(10).numFmt = "0.######"; [11, 12, 13, 14].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
-    } catch { setFloatingAlerts((previous) => [...previous, { id: "exp-export-error", type: "danger", message: "No fue posible exportar los expedientes." }]); }
+    } catch (failure) { setFloatingAlerts((previous) => [...previous.filter((alert) => alert.id !== "exp-export-error"), { id: "exp-export-error", type: "danger", message: failure instanceof Error ? failure.message : "No fue posible exportar los expedientes." }]); }
     finally { setExporting(false); }
   };
 

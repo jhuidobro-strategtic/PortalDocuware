@@ -2,7 +2,7 @@ import { buildApiUrl } from "../../../helpers/api-url";
 import type { Document, DocumentDetail } from "../../documents/types/list.types";
 
 export const fetchPurchaseOrderInvoiceDetails = async (
-  document: Document
+  document: Pick<Document, "suppliernumber" | "documentserial" | "documentnumber">
 ): Promise<DocumentDetail[]> => {
   const query = new URLSearchParams({
     suppliernumber: document.suppliernumber,

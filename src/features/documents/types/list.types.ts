@@ -49,6 +49,7 @@ export interface CentroCosto {
 }
 
 export interface DocumentDetail {
+  document?: number | null;
   item_code?: string;
   originalItemCode?: string;
   centro_costo_1?: CentroCosto | null;
