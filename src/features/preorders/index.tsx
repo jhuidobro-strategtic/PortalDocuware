@@ -7,6 +7,7 @@ import AppPagination from "../../components/common/Pagination";
 import FloatingAlerts from "../../components/common/FloatingAlerts";
 import TableActionsMenu from "../../components/common/TableActionsMenu";
 import { getPreferenceUserId } from "../../helpers/ui-preferences";
+import { matchesDateRange, matchesName } from "../../helpers/document-list-filters";
 import { downloadBlob } from "../../helpers/download-blob";
 import { fetchCatalog, fetchCategorizedSigners, fetchSuppliers } from "../documents/services/orderC.service";
 import OrderDocumentItem from "../purchase-orders/components/OrderDocumentItem";
@@ -27,6 +28,9 @@ const PreOrders = () => {
   const [rows, setRows] = useState<PreOrder[]>([]); const [options, setOptions] = useState(emptyOptions);
   const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [success, setSuccess] = useState<string>((location.state as { message?: string } | null)?.message || "");
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("all"); const [page, setPage] = useState(1);
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
+  const [dateType, setDateType] = useState("source");
   const [linkRow, setLinkRow] = useState<PreOrder | null>(null);
   const [action, setAction] = useState<{ row: PreOrder; name: "approve" | "reject" | "cancel" } | null>(null);
   const [notes, setNotes] = useState(""); const [actionError, setActionError] = useState(""); const [busy, setBusy] = useState(false);
@@ -80,16 +84,18 @@ const PreOrders = () => {
     finally { setBusy(false); }
   };
   const filtered = rows.filter((row) => (status === "all" || row.status === status) &&
+    matchesName([row.supplier_name, row.title, row.creator_name, row.junior_name, row.senior_name], nameFilter) &&
+    matchesDateRange(dateType === "invoice" ? row.invoice_date : row.order_data.source_date, dateFrom, dateTo) &&
     [row.title, row.source_reference, row.tracking_number, row.supplier_name, row.supplier_ruc, row.converted_order_number, row.creator_name, row.junior_name, row.senior_name]
       .some((value) => String(value || "").toLocaleLowerCase("es-PE").includes(search.trim().toLocaleLowerCase("es-PE"))));
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / 20)));
   const exportExcel = async () => {
     setExporting(true);
     try { const { Workbook } = await import("exceljs"); const workbook = new Workbook(); const sheet = workbook.addWorksheet("Pre-Órdenes");
-      sheet.addRow(["Seguimiento", "Asunto", "Origen", "Referencia", "RUC", "Proveedor", "Tipo", "Estado", "Creador", "Senior", "Fecha", "OC/OS"]);
+      sheet.addRow(["Seguimiento", "Asunto", "Origen", "Referencia", "RUC", "Proveedor", "Tipo", "Estado", "Creador", "Junior", "Senior", "Fecha de registro", "Fecha de documento de origen", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS"]);
       filtered.forEach((row) => sheet.addRow([row.tracking_number || `Pendiente #${row.id}`, row.title, row.source_kind, row.source_reference, row.supplier_ruc, row.supplier_name,
-        row.order_type === "C" ? "OC" : "OS", stateLabels[row.status], row.creator_name, row.senior_name, moment(row.created_at).format("DD/MM/YYYY HH:mm"), row.converted_order_number || ""]));
-      sheet.getRow(1).font = { bold: true }; sheet.columns.forEach((column) => { column.width = 25; });
+        row.order_type === "C" ? "OC" : "OS", stateLabels[row.status], row.creator_name, row.junior_name || "", row.senior_name, moment(row.created_at).format("DD/MM/YYYY HH:mm"), row.order_data.source_date ? moment(row.order_data.source_date).format("DD/MM/YYYY") : "", row.invoice_date ? moment(row.invoice_date).format("DD/MM/YYYY") : "", options.currency.find((option) => Number(option.value) === row.order_data.currency)?.label || "", row.order_data.subtotal ? Number(row.order_data.subtotal) : null, row.order_data.tax_amount ? Number(row.order_data.tax_amount) : null, row.order_data.total ? Number(row.order_data.total) : null, row.converted_order_number || ""]));
+      sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }]; sheet.autoFilter = { from: "A1", to: "S1" }; [16, 17, 18].forEach((column) => { sheet.getColumn(column).numFmt = "#,##0.00"; }); sheet.columns.forEach((column) => { column.width = 25; });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()]), `Preordenes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch { setError("No fue posible exportar el listado."); } finally { setExporting(false); }
   };
@@ -103,6 +109,15 @@ const PreOrders = () => {
       </div><div className="d-flex gap-2 flex-wrap"><Button color="light" disabled={loading || busy} onClick={() => refresh().catch((failure) => setError(failure.message))}>Actualizar</Button>
         <Button color="success" disabled={loading || exporting || !filtered.length} onClick={exportExcel}>{exporting ? <Spinner size="sm" /> : <i className="ri-file-excel-2-line me-1" />}Exportar Excel</Button>
         <Button color="primary" disabled={loading || !userId} onClick={() => navigate("/pre-orders/new")}><i className="ri-add-line me-1" />Nueva preorden</Button></div></div>
+      <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div><Label htmlFor="pre-name">Nombre / asunto</Label><Input id="pre-name" placeholder="Proveedor, asunto o persona..." value={nameFilter} onChange={(event) => { setNameFilter(event.target.value); setPage(1); }} /></div>
+        <div><Label htmlFor="pre-date-type">Filtrar por fecha de</Label><Input id="pre-date-type" type="select" value={dateType} onChange={(event) => { setDateType(event.target.value); setPage(1); }}><option value="source">Documento de origen</option><option value="invoice">Factura vinculada</option></Input></div>
+        <div><Label htmlFor="pre-date-from">Desde</Label><Input id="pre-date-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} /></div>
+        <div><Label htmlFor="pre-date-to">Hasta</Label><Input id="pre-date-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} /></div>
+        {(nameFilter || dateFrom || dateTo || search || status !== "all") && <Button color="light" onClick={() => { setNameFilter(""); setDateFrom(""); setDateTo(""); setSearch(""); setStatus("all"); setPage(1); }}>Limpiar filtros</Button>}
+      </div>
+      {dateType === "invoice" && (dateFrom || dateTo) && <p className="text-muted small">El filtro incluye únicamente preórdenes que ya tienen factura vinculada.</p>}
+      {dateFrom && dateTo && dateFrom > dateTo && <div className="alert alert-warning" role="alert">La fecha inicial debe ser anterior o igual a la fecha final.</div>}
       {loading ? <div className="preorder-loading"><Spinner color="primary" /></div> : <><div className="table-responsive"><Table className="align-middle table-nowrap preorder-table">
         <thead className="table-light"><tr><th>Acciones</th><th>Seguimiento</th><th>Asunto / origen</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Creador / Firmantes</th><th>Fecha</th><th>OC/OS</th></tr></thead>
         <tbody>{!filtered.length && <tr><td colSpan={9} className="text-center py-4">No se encontraron preórdenes.</td></tr>}{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((row) => <tr key={row.id}>

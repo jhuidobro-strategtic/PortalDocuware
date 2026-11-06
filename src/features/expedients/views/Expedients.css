@@ -4,11 +4,11 @@
 }
 
 .expedients-toolbar {
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
 }
 
 .expedients-toolbar-actions {
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
   flex: 1;
   min-width: 0;
 }

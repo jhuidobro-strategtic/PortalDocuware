@@ -12,7 +12,7 @@ export interface PreOrder extends PreOrderDraft {
   creator_id: number; creator_name: string; senior_name: string; supplier_name: string; supplier_ruc: string;
   tracking_number: string | null; approved_at: string | null; created_at: string;
   invoice_job: { id: number; status: string; error: string | null } | null;
-  invoice_id: number | null; converted_order_id: number | null; converted_order_number: string | null; expedient_id: number | null;
+  invoice_date?: string | null; invoice_id: number | null; converted_order_id: number | null; converted_order_number: string | null; expedient_id: number | null;
   files: { id: number; filename: string; url: string; created_at: string }[];
   events: { id: number; action: string; actor_name: string; notes: string; created_at: string }[];
 }

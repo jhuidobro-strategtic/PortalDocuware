@@ -11,6 +11,7 @@ import {
   Input,
   InputGroup,
   InputGroupText,
+  Label,
   Modal,
   ModalBody,
   ModalFooter,
@@ -27,6 +28,8 @@ import FloatingAlerts, {
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
+import { downloadBlob } from "../../../helpers/download-blob";
+import { matchesDateRange, matchesName } from "../../../helpers/document-list-filters";
 import "./Expedients.css";
 
 interface ExpedientDocumentType {
@@ -521,6 +524,9 @@ const Expedients = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedExpedientIds, setSelectedExpedientIds] = useState<Set<number>>(
     new Set()
@@ -675,11 +681,10 @@ const Expedients = () => {
   const filteredExpedients = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
-    if (!term) {
-      return expedients;
-    }
-
     return expedients.filter((expedient) => {
+      if (!matchesDateRange(expedient.factura?.documentdate, dateFrom, dateTo) ||
+          !matchesName([expedient.factura?.suppliername, getPurchaseOrderSupplierLabel(expedient.ordencompra)], nameFilter)) return false;
+      if (!term) return true;
       const statusLabel = isExpedientClosed(
         expedient,
         locallyClosedExpedientIds
@@ -692,7 +697,30 @@ const Expedients = () => {
         statusLabel.toLowerCase().includes(term)
       );
     });
-  }, [expedients, locallyClosedExpedientIds, searchTerm, t]);
+  }, [expedients, locallyClosedExpedientIds, searchTerm, nameFilter, dateFrom, dateTo, t]);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const { Workbook } = await import("exceljs");
+      const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
+      sheet.addRow(["Expediente", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS", "Estado", "Fecha de registro", "Documentos"]);
+      filteredExpedients.forEach((item) => {
+        const invoice = item.factura;
+        sheet.addRow([item.expedienteid, invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
+          invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra), invoice?.suppliernumber || "",
+          invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
+          invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
+          item.ordencompra?.orderNo || "", isExpedientClosed(item, locallyClosedExpedientIds) ? "Cerrado" : "Abierto",
+          moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0]);
+      });
+      sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
+      sheet.autoFilter = { from: "A1", to: "M1" }; sheet.columns.forEach((column) => { column.width = 23; });
+      [7, 8, 9].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
+    } catch { setFloatingAlerts((previous) => [...previous, { id: "exp-export-error", type: "danger", message: "No fue posible exportar los expedientes." }]); }
+    finally { setExporting(false); }
+  };
 
   const totalPages = Math.max(
     1,
@@ -1309,6 +1337,9 @@ const Expedients = () => {
                   )}
                 </Button>
 
+                <Button color="success" disabled={loading || exporting || !filteredExpedients.length} onClick={exportExcel}>
+                  {exporting ? <Spinner size="sm" className="me-2" /> : <i className="ri-file-excel-2-line me-2" />}Exportar Excel
+                </Button>
                 <InputGroup className="expedients-toolbar-search">
                   <InputGroupText>
                     <i className="ri-search-line" />
@@ -1325,6 +1356,13 @@ const Expedients = () => {
               </div>
             </div>
 
+            <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+              <div><Label htmlFor="exp-name">Nombre del proveedor</Label><Input id="exp-name" placeholder="Buscar por nombre..." value={nameFilter} onChange={(event) => { setNameFilter(event.target.value); setCurrentPage(1); }} /></div>
+              <div><Label htmlFor="exp-date-from">Fecha de factura desde</Label><Input id="exp-date-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setCurrentPage(1); }} /></div>
+              <div><Label htmlFor="exp-date-to">Fecha de factura hasta</Label><Input id="exp-date-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setCurrentPage(1); }} /></div>
+              {(nameFilter || dateFrom || dateTo || searchTerm) && <Button color="light" onClick={() => { setNameFilter(""); setDateFrom(""); setDateTo(""); setSearchTerm(""); setCurrentPage(1); }}>Limpiar filtros</Button>}
+            </div>
+            {dateFrom && dateTo && dateFrom > dateTo && <div className="alert alert-warning" role="alert">La fecha inicial debe ser anterior o igual a la fecha final.</div>}
             {loading && (
               <div className="text-center my-5">
                 <Spinner color="primary" />
