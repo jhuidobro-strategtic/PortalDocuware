@@ -31,6 +31,8 @@ import { Document } from "../../documents/types/list.types";
 import { getDocumentSourceUrl, getPreviewUrl, getUploadedDocumentUrl } from "../../documents/services/document.utils";
 import { fetchSigners } from "../../documents/services/orderC.service";
 import type { SelectOption } from "../../documents/types/orderC.types";
+import { getOrderSignerStatus } from "../services/orderSignerStatus";
+import type { PurchaseOrderApproval } from "../services/purchaseOrderApprovals";
 import { generatePurchaseOrderPdf } from "../services/purchaseOrderPdf";
 import { fetchPurchaseOrderApprovals } from "../services/purchaseOrderApprovals";
 import { fetchPurchaseOrderInvoiceDetails } from "../services/purchaseOrderInvoiceDetails";
@@ -99,6 +101,7 @@ interface PurchaseOrder {
   approvalStatus: ApprovalStatus;
   hasSeniorApproval: boolean;
   canBeApprovedBy: boolean;
+  approvals?: PurchaseOrderApproval[];
   requiredby?: string | null;
   createdBy: number;
   createAt: string;
@@ -154,6 +157,7 @@ interface PurchaseOrderApiItem {
   approvalStatus: ApprovalStatus;
   hasSeniorApproval: boolean;
   canBeApprovedBy: boolean;
+  approvals?: PurchaseOrderApproval[];
   requiredby?: string | null;
   createdBy: number;
   createAt: string;
@@ -286,6 +290,7 @@ const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
       ? item.signature2
       : null,
   requiredby: String(item.requiredby ?? "").trim() || null,
+  approvals: item.approvals || [],
   approvalStatus: item.approvalStatus,
   hasSeniorApproval: item.hasSeniorApproval === true,
   canBeApprovedBy: item.canBeApprovedBy === true,
@@ -2044,12 +2049,11 @@ const PurchaseOrderDetails = () => {
                                   <i className={purchaseState.icon} />
                                   <span>{purchaseState.label}</span>
                                 </span>}
-                                {!purchaseOrder.isCancelled && getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) !== "rejected" && purchaseOrder.approvalStatus === "JR_SIGNED" && !purchaseOrder.hasSeniorApproval && (
-                                  <div className="small text-warning mt-1" role="status">
-                                    <i className="ri-time-line me-1" />
-                                    Firmado por JR · Pendiente de firma Senior
+                                {getOrderSignerStatus(purchaseOrder, userLookup, purchaseOrder.isCancelled || getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) === "rejected").map((signer) => (
+                                  <div key={signer.level} className={`small mt-1 ${signer.signed ? "text-success" : "text-muted"}`} style={{ whiteSpace: "normal", minWidth: 200 }}>
+                                    <i className={`${signer.signed ? "ri-checkbox-circle-line" : "ri-time-line"} me-1`} aria-hidden="true" />{signer.label}
                                   </div>
-                                )}
+                                ))}
                               </td>
                               <td>{purchaseOrder.createdBy}</td>
                               <td>
