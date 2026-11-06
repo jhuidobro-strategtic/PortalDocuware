@@ -122,6 +122,8 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  closed_by?: number | null;
+  closed_at?: string | null;
   reference_code?: string | null;
   adjustment_note_data?: { documentid: number; kind: string; documenttype_id: number; series: string; number: string } | null;
   expedienteid: number;
@@ -556,6 +558,7 @@ const Expedients = () => {
   const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [expedientToClose, setExpedientToClose] = useState<Expedient | null>(null);
+  const [expedientAction, setExpedientAction] = useState<"close" | "reopen">("close");
   const [closingExpedient, setClosingExpedient] = useState(false);
   const [documentPendingDelete, setDocumentPendingDelete] =
     useState<ExpedientDocumentPendingDelete | null>(null);
@@ -958,11 +961,10 @@ const Expedients = () => {
     }
   };
 
-  const handleOpenCloseExpedientModal = (expedient: Expedient) => {
-    if (isExpedientClosed(expedient, locallyClosedExpedientIds)) {
-      return;
-    }
-
+  const handleOpenCloseExpedientModal = (expedient: Expedient, action: "close" | "reopen" = "close") => {
+    const closed = isExpedientClosed(expedient, locallyClosedExpedientIds);
+    if (action === "close" ? closed : !closed || expedient.closed_by !== sessionUser.id) return;
+    setExpedientAction(action);
     setExpedientToClose(expedient);
   };
 
@@ -1054,7 +1056,9 @@ const Expedients = () => {
         },
         body: JSON.stringify({
           expedienteid: expedientToClose.expedienteid,
-          updateby: sessionUser.id,
+          updatedby: sessionUser.id,
+          userID: sessionUser.id,
+          action: expedientAction,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -1065,19 +1069,14 @@ const Expedients = () => {
 
       setLocallyClosedExpedientIds((currentIds) => {
         const nextIds = new Set(currentIds);
-        nextIds.add(expedientToClose.expedienteid);
+        if (expedientAction === "close") nextIds.add(expedientToClose.expedienteid);
+        else nextIds.delete(expedientToClose.expedienteid);
         return nextIds;
       });
       syncExpedientsCollection(
         expedients.map((expedient) =>
           expedient.expedienteid === expedientToClose.expedienteid
-            ? {
-                ...expedient,
-                estado: false,
-                lock_exp: true,
-                updatedby: sessionUser.id,
-                updatedat: new Date().toISOString(),
-              }
+            ? { ...expedient, ...payload.data }
             : expedient
         )
       );
@@ -1093,7 +1092,7 @@ const Expedients = () => {
       setExpedientToClose(null);
       pushFloatingAlert(
         "success",
-        payload?.message || t("Expedient closed successfully.")
+        payload?.message || (expedientAction === "reopen" ? "Expediente reabierto correctamente." : t("Expedient closed successfully."))
       );
     } catch (closeError) {
       const message =
@@ -1492,6 +1491,14 @@ const Expedients = () => {
                                         hidden:
                                           !expedient.expediente_documentos?.length,
                                         onClick: () => setSelectedExpedient(expedient),
+                                      },
+                                      {
+                                        id: `reopen-expedient-${expedient.expedienteid}`,
+                                        label: "Reabrir expediente",
+                                        icon: "ri-folder-open-line",
+                                        tone: "primary",
+                                        hidden: !isExpedientClosedByStatus || expedient.closed_by !== sessionUser.id,
+                                        onClick: () => handleOpenCloseExpedientModal(expedient, "reopen"),
                                       },
                                       {
                                         id: `close-expedient-${expedient.expedienteid}`,
@@ -2032,12 +2039,12 @@ const Expedients = () => {
         <ModalHeader
           toggle={closingExpedient ? undefined : handleCloseCloseExpedientModal}
         >
-          {t("Close Expedient")}
+          {expedientAction === "reopen" ? "Reabrir expediente" : t("Close Expedient")}
         </ModalHeader>
         <ModalBody>
           <p className="mb-2 fw-semibold">{t("Are you sure?")}</p>
           <p className="text-muted mb-0">
-            {t("Are you sure you want to close expedient #{{id}}?", {
+            {expedientAction === "reopen" ? `¿Desea reabrir el expediente #${expedientToClose?.expedienteid}? Podrá anexar nuevos documentos, incluidas notas de crédito y débito.` : t("Are you sure you want to close expedient #{{id}}?", {
               id: expedientToClose?.expedienteid ?? "-",
             })}
           </p>
@@ -2051,7 +2058,7 @@ const Expedients = () => {
             {t("Cancel")}
           </Button>
           <Button
-            color="danger"
+            color={expedientAction === "reopen" ? "primary" : "danger"}
             onClick={handleConfirmCloseExpedient}
             disabled={closingExpedient}
           >
