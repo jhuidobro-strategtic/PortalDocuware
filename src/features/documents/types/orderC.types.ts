@@ -25,6 +25,7 @@ export interface SessionUser {
 
 export interface OrderCDetailFormValues {
   id: string;
+  item_code?: string;
   descriptionItem: string;
   quantity: string;
   unitPrice: string;
@@ -108,6 +109,7 @@ export interface OrderCSummaryValues {
 export type SelectOption = { value: string; label: string; flagUrl?: string };
 
 export interface SunatInvoiceItem {
+  item_code?: string; codigo?: string; codigo_producto?: string; codigo_interno?: string; codigo_item?: string; codigo_articulo?: string;
   descripcion?: string;
   cantidad?: number | string;
   valor_unitario?: number | string;

@@ -44,6 +44,7 @@ import "../../expedients/views/Expedients.css";
 
 interface PurchaseOrderDetail {
   purchaseDetailID: number;
+  item_code?: string;
   descriptionItem: string;
   quantity: number;
   unitPrice: string;
@@ -1289,6 +1290,18 @@ const PurchaseOrderDetails = () => {
         { width: 16 },
       ];
 
+      const detailSheet = workbook.addWorksheet("Detalle de ítems");
+      detailSheet.addRow(["Número de orden", "Documento asociado", "Proveedor", "Código del ítem", "Descripción", "Cantidad", "Precio unitario", "Total", "Moneda"]);
+      filteredPurchaseOrders.forEach((order) => order.details.forEach((detail) => {
+        detailSheet.addRow([order.orderNo, order.documentAssociatedNo, order.supplierLabel || getLookupLabel(supplierLookup, order.supplierID),
+          detail.item_code || "", detail.descriptionItem || "", Number(detail.quantity), Number(detail.unitPrice), Number(detail.total),
+          getCurrencyMeta(order.currency, t, order.currencyLabel || currencyLookup[order.currency]).label || ""]);
+      }));
+      detailSheet.getRow(1).font = { bold: true }; detailSheet.views = [{ state: "frozen", ySplit: 1 }];
+      detailSheet.autoFilter = { from: "A1", to: "I1" }; detailSheet.columns.forEach((column) => { column.width = 24; });
+      detailSheet.getColumn(4).numFmt = "@"; detailSheet.getColumn(5).width = 65;
+      detailSheet.getColumn(6).numFmt = "0.######"; [7, 8].forEach((column) => { detailSheet.getColumn(column).numFmt = "#,##0.00"; });
+
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
         new Blob([buffer], {
@@ -2253,6 +2266,10 @@ const PurchaseOrderDetails = () => {
                 </div>
               </div>
               <div className="expedient-drawer-body">
+                <h5>Detalle de la orden</h5>
+                <div className="table-responsive mb-3"><Table size="sm" className="align-middle"><thead><tr><th>Código del ítem</th><th>Descripción</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th></tr></thead>
+                  <tbody>{attachmentOrder.details.map((detail) => <tr key={detail.purchaseDetailID}><td>{detail.item_code || "—"}</td><td>{detail.descriptionItem}</td><td>{detail.quantity}</td><td>{detail.unitPrice}</td><td>{detail.total}</td></tr>)}</tbody>
+                </Table></div>
                 {!isApproved && !attachmentOrder.isCancelled && (
                   <div className="alert alert-info" role="status">
                     {getPurchaseStateKind(attachmentOrder.purchaseState, attachmentOrder.purchaseStateLabel) === "rejected"

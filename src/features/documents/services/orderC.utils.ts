@@ -1,4 +1,4 @@
-import { Document } from "../types/list.types";
+import { Document, DocumentDetail } from "../types/list.types";
 import {
   SelectOption,
   SunatInvoicePayload,
@@ -146,6 +146,7 @@ export const mapSunatItemsToOrderDetails = (items: SunatInvoiceItem[] = []) => {
   const mappedItems = items
     .map((item) => ({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      item_code: String(item.item_code ?? item.codigo ?? item.codigo_producto ?? item.codigo_interno ?? item.codigo_item ?? item.codigo_articulo ?? "").trim(),
       descriptionItem: String(item.descripcion ?? "").trim(),
       quantity: formatQuantityValue(item.cantidad),
       unitPrice: formatDecimalValue(
@@ -274,6 +275,7 @@ export const buildPurchaseOrderPayload = (
   requiredby: values.requiredby.trim(),
   createdBy: Number(values.createdBy),
   details: details.map((detail) => ({
+    item_code: detail.item_code?.trim() || "",
     descriptionItem: detail.descriptionItem.trim(),
     quantity: Number(detail.quantity),
     unitPrice: Number(detail.unitPrice).toFixed(2),
@@ -297,3 +299,9 @@ export const requiredFields: OrderCFieldName[] = [
   "createdBy",
 ];
 
+
+export const applySavedItemCodes = (lines: OrderCDetailFormValues[], saved: DocumentDetail[]) => lines.map((line) => {
+  const matches = saved.filter((item) => item.description?.trim() === line.descriptionItem.trim() &&
+    Number(item.quantity) === Number(line.quantity) && Number(item.unit_value) === Number(line.unitPrice));
+  return matches.length === 1 ? { ...line, item_code: matches[0].item_code ?? line.item_code } : line;
+});

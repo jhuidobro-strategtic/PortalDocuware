@@ -35,6 +35,7 @@ const DocumentOrderC = () => {
     values,
     sunatSearchValues,
     details,
+    setDetails,
     summaryValues,
     loading,
     submitting,
@@ -453,7 +454,7 @@ const DocumentOrderC = () => {
                     <thead className="table-light">
                       <tr>
                         <th style={{ width: "72px" }}>#</th>
-                        <th>{t("Item description")}</th>
+                        <th>Código del ítem</th><th>{t("Item description")}</th>
                         <th style={{ width: "160px" }} className="text-center">
                           {t("Quantity")}
                         </th>
@@ -468,7 +469,7 @@ const DocumentOrderC = () => {
                     <tbody>
                       {details.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-4">
+                          <td colSpan={6} className="text-center py-4">
                             <div>
                               <h6 className="mb-1">
                                 {t("No details found in SUNAT")}
@@ -487,7 +488,8 @@ const DocumentOrderC = () => {
                             <td className="fw-semibold text-muted">
                               {index + 1}
                             </td>
-                            <td>{detail.descriptionItem || t("No description")}</td>
+                            <td style={{ minWidth: 160 }}><Input type="text" maxLength={100} value={detail.item_code || ""} disabled={submitting || prefillingFromSunat}
+                              aria-label={`Código del ítem, ${index + 1}`} onChange={(event) => { const value = event.target.value; setDetails((rows) => rows.map((row, position) => position === index ? { ...row, item_code: value } : row)); }} /></td><td>{detail.descriptionItem || t("No description")}</td>
                             <td className="text-center">{detail.quantity}</td>
                             <td className="text-end">
                               {formatListAmount(detail.unitPrice, numberLocale)}

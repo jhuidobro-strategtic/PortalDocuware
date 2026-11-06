@@ -74,6 +74,7 @@ const normalizeDocumentForForm = (document: Document): Document => ({
 });
 
 interface SunatItem {
+  item_code?: string; codigo?: string; codigo_producto?: string; codigo_interno?: string; codigo_item?: string; codigo_articulo?: string;
   unidad_medida_descripcion?: string;
   descripcion?: string;
   cantidad?: number | string;
@@ -110,6 +111,7 @@ const toAmountString = (value: unknown) => parseAmount(value).toFixed(2);
 const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => {
   const normalizeDetail = (detail: DocumentDetail): DocumentDetail => ({
     ...detail,
+    originalItemCode: detail.item_code ?? "",
     vehicle_no: detail.vehicle_no || detail.extracted_plate || "",
     originalExtractedPlate: detail.extracted_plate ?? "",
     costCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
@@ -209,6 +211,7 @@ const mapSunatItemsToDocumentDetails = (sunatPayload: SunatPayload): DocumentDet
     documentnumber: sunatPayload.detalle?.numero || "",
     suppliernumber: sunatPayload.emisor?.ruc || "",
     unit_measure_description: item.unidad_medida_descripcion || "",
+    item_code: String(item.item_code || item.codigo || item.codigo_producto || item.codigo_interno || item.codigo_item || item.codigo_articulo || "").trim(),
     description: item.descripcion || "",
     vehicle_no: extractVehiclePlate(item.descripcion || "") || "",
     quantity: parseAmount(item.cantidad),
@@ -581,7 +584,8 @@ const DocumentEditPage: React.FC = () => {
       const original2 = detail.originalCostCenter2 !== undefined ? detail.originalCostCenter2 : documentData.centro_costo_2_id ?? null;
       return normalizeCenterId(current1) !== normalizeCenterId(original1) ||
         normalizeCenterId(current2) !== normalizeCenterId(original2) ||
-        (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
+        (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "") ||
+        (detail.item_code ?? "") !== (detail.originalItemCode ?? "");
     });
       let failedSyncs = 0;
       for (const detail of changedDetails) {
@@ -590,8 +594,10 @@ const DocumentEditPage: React.FC = () => {
           centro_costo_2_id: detail.costCenter2 !== undefined ? detail.costCenter2 : documentData.centro_costo_2_id ?? null,
         };
         const plateChanged = (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
+        const codeChanged = (detail.item_code ?? "") !== (detail.originalItemCode ?? "");
         const updatePayload = {
           ...costCenterPayload,
+          ...(codeChanged ? { item_code: detail.item_code ?? "" } : {}),
           ...(plateChanged ? { extracted_plate: detail.extracted_plate ?? "" } : {}),
         };
         const createResponse = await fetch(buildApiUrl(
@@ -607,6 +613,7 @@ const DocumentEditPage: React.FC = () => {
             documentnumber: detail.documentnumber,
             suppliernumber: detail.suppliernumber,
             unit_measure_description: detail.unit_measure_description,
+            item_code: detail.item_code || "",
             description: detail.description,
             vehicle_nro: detail.vehicle_no || (detail as any).vehicle_nro,
             quantity: detail.quantity,
@@ -634,6 +641,7 @@ const DocumentEditPage: React.FC = () => {
             const savedCenter2 = createdDetail?.costCenter2 !== undefined ? createdDetail.costCenter2 : costCenterPayload.centro_costo_2_id;
             const savedPlate = createdDetail?.extracted_plate !== undefined ? createdDetail.extracted_plate : detail.extracted_plate ?? "";
             sunatDetails[index] = { ...detail, ...createdDetail,
+              originalItemCode: createdDetail?.item_code ?? detail.item_code ?? "",
               extracted_plate: savedPlate, originalExtractedPlate: savedPlate,
               costCenter1: savedCenter1, costCenter2: savedCenter2,
               originalCostCenter1: savedCenter1, originalCostCenter2: savedCenter2 };

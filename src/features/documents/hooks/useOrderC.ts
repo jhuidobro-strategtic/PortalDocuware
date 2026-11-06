@@ -34,6 +34,7 @@ import {
   normalizeSupplierNumber,
   getDocumentTypeId,
   getDocumentAssociatedNo,
+  applySavedItemCodes,
   mapSunatItemsToOrderDetails,
   mapSunatCurrencyToOrderCurrency,
   getSunatSupplierName,
@@ -200,7 +201,7 @@ export const useOrderC = () => {
         const rows = Array.isArray(result) ? result : result.data;
         if (!response.ok || !Array.isArray(rows) || !rows.length) throw new Error("No se encontraron detalles guardados para este comprobante.");
         setDetails(rows.filter((item) => !item.document || Number(item.document) === source.documentid).map((item) => ({
-          id: String(item.detailid), descriptionItem: item.description || "",
+          id: String(item.detailid), item_code: item.item_code || "", descriptionItem: item.description || "",
           quantity: String(Number(item.quantity)), unitPrice: String(item.unit_value),
           storedTotal: (Number(item.total_value) + Number(item.tax_value)).toFixed(2),
         })));
@@ -467,7 +468,15 @@ export const useOrderC = () => {
       }
 
       const payload = data.payload as SunatInvoicePayload;
-      const detailRows = mapSunatItemsToOrderDetails(payload.items);
+      const mappedRows = mapSunatItemsToOrderDetails(payload.items);
+      const query = new URLSearchParams({ suppliernumber: payload.emisor?.ruc || document.suppliernumber,
+        documentserial: payload.detalle?.serie || sunatSearchValues.serie,
+        documentnumber: normalizeSunatDocumentNumber(payload.detalle?.numero || sunatSearchValues.numero) });
+      const savedResponse = await fetch(buildApiUrl(`documents-detail/?${query}`));
+      const savedResult = await savedResponse.json().catch(() => null);
+      if (!savedResponse.ok) throw new Error("No fue posible recuperar los códigos guardados de la factura.");
+      const savedRows = Array.isArray(savedResult) ? savedResult : savedResult?.data;
+      const detailRows = applySavedItemCodes(mappedRows, Array.isArray(savedRows) ? savedRows.filter((item) => !item.document || Number(item.document) === document.documentid) : []);
       const hasSunatDetails = detailRows.some((detail) => detail.descriptionItem.trim());
       const currencyCode = payload.detalle?.codigo_moneda || document.currency;
       const associatedDocumentNo =
@@ -627,6 +636,7 @@ export const useOrderC = () => {
     values,
     sunatSearchValues,
     details,
+    setDetails,
     summaryValues,
     loading,
     submitting,

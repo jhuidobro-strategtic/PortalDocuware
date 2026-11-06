@@ -131,7 +131,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
               <thead className="table-light">
                 <tr>
                   <th className="text-center">{t("Unit")}</th>
-                  <th className="text-center">{t("Description")}</th>
+                  <th>Código del ítem</th><th className="text-center">{t("Description")}</th>
                   <th className="text-center">{t("Plate")}</th>
                   <th className="text-center">{t("Quantity")}</th>
                   {costColumns.map((field, index) => (
@@ -152,7 +152,7 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
               <tbody>
                 {details.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4">
+                    <td colSpan={9} className="text-center py-4">
                       {t("No details available")}
                     </td>
                   </tr>
@@ -163,7 +163,8 @@ const DocumentInvoiceDetails: React.FC<DocumentInvoiceDetailsProps> = ({
                         <td className="text-center">
                           {detail.unit_measure_description}
                         </td>
-                        <td>{detail.description}</td>
+                        <td style={{ minWidth: 160 }}><Input type="text" maxLength={100} value={detail.item_code || ""} disabled={disabled}
+                          aria-label={`Código del ítem, ${rowIndex + 1}`} onChange={(event) => { const value = event.target.value; onDetailsChange((rows) => rows.map((row, index) => index === rowIndex ? { ...row, item_code: value } : row)); }} /></td><td>{detail.description}</td>
                         <td className="text-center">
                           <Input type="text" value={detail.extracted_plate ?? ""}
                             disabled={disabled || loadingVehicles}
