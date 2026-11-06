@@ -122,6 +122,8 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  reference_code?: string | null;
+  adjustment_note_data?: { documentid: number; kind: string; documenttype_id: number; series: string; number: string } | null;
   expedienteid: number;
   facturaid: number | null;
   factura?: ExpedientInvoice | null;
@@ -312,6 +314,9 @@ const getRegisteredDocumentTypeLabel = (
   expedient: Expedient,
   t: (key: string) => string
 ) => {
+  if (expedient.adjustment_note_data?.documenttype_id === file.tipodocumentoid) {
+    return expedient.adjustment_note_data.kind === "NC" ? "Nota de crédito" : "Nota de débito";
+  }
   if (file.tipodocumentoid === 1) {
     return expedient.factura?.documenttype?.tipo || t("Invoice");
   }
@@ -705,14 +710,14 @@ const Expedients = () => {
     try {
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
-      sheet.addRow(["Expediente", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS", "Estado", "Fecha de registro", "Documentos"]);
+      sheet.addRow(["Expediente", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         sheet.addRow([item.expedienteid, invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
           invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra), invoice?.suppliernumber || "",
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
           invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
-          item.ordencompra?.orderNo || "", isExpedientClosed(item, locallyClosedExpedientIds) ? "Cerrado" : "Abierto",
+          item.ordencompra?.orderNo || item.reference_code || "", isExpedientClosed(item, locallyClosedExpedientIds) ? "Cerrado" : "Abierto",
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
@@ -720,13 +725,13 @@ const Expedients = () => {
       [7, 8, 9].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
       const detailsSheet = workbook.addWorksheet("Detalle de facturas");
-      detailsSheet.addRow(["Expediente", "Factura", "Fecha de factura", "Proveedor", "RUC", "OC/OS", "Código del ítem", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
+      detailsSheet.addRow(["Expediente", "Factura", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         if (!invoice) return;
         (invoiceDetails.get(invoice.documentid) || []).forEach((detail) => {
           detailsSheet.addRow([item.expedienteid, `${invoice.documentserial}-${invoice.documentnumber}`, moment(invoice.documentdate).format("DD/MM/YYYY"),
-            invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || "", detail.item_code || "", detail.description || "",
+            invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || item.reference_code || "", detail.item_code || "", detail.description || "",
             detail.unit_measure_description || "", Number(detail.quantity), Number(detail.unit_value), Number(detail.tax_value),
             Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || ""]);
         });
@@ -1424,7 +1429,7 @@ const Expedients = () => {
                           {t("Invoice ID")}
                         </th>                        
                         <th className="text-center" style={{ minWidth: "170px" }}>
-                          {t("Order Number")}
+                          OC/OS / Nota
                         </th>
                         <th className="text-center" style={{ minWidth: "260px" }}>
                           {t("Supplier")}
@@ -1528,11 +1533,12 @@ const Expedients = () => {
                               </td>
                               <td style={{ whiteSpace: "normal" }} className="text-center">
                                 <div className="fw-semibold">
-                                  {expedient.ordencompra?.orderNo ||
+                                  {expedient.ordencompra?.orderNo || expedient.reference_code ||
                                     (expedient.ordencompraid
                                       ? `#${expedient.ordencompraid}`
                                       : "-")}
                                 </div>
+                                {expedient.adjustment_note_data && <div className="text-muted small">{expedient.adjustment_note_data.series}-{expedient.adjustment_note_data.number}</div>}
                                 {expedient.ordencompra && (
                                   <>
                                     <div className="text-muted small">
@@ -1638,7 +1644,7 @@ const Expedients = () => {
                 {t("Registered Documents")}
               </span>
               <h4 className="mb-1">
-                {t("Expedient #{{id}}", {
+                {selectedExpedient?.reference_code || t("Expedient #{{id}}", {
                   id: selectedExpedient?.expedienteid ?? "-",
                 })}
               </h4>

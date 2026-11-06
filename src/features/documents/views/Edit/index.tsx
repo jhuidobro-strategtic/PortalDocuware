@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "react-i18next";
 import BreadCrumb from "../../../../components/common/BreadCrumb";
 import Notifications from "../../components/ListNotifications";
+import InvoiceWithoutOrder from "../../components/InvoiceWithoutOrder";
 import DocumentEditorForm from "../../components/DocumentEditorForm";
 import { buildApiUrl } from "../../../../helpers/api-url";
 import {
@@ -235,6 +236,7 @@ const DocumentEditPage: React.FC = () => {
   const [editDoc, setEditDoc] = useState<Document | null>(
     locationState?.document ? normalizeDocumentForForm(locationState.document) : null
   );
+  const [showInvoiceWithoutOrder, setShowInvoiceWithoutOrder] = useState(false);
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
   const [centrosCostos2, setCentrosCostos2] = useState<CentroCosto[]>([]);
@@ -841,6 +843,7 @@ const DocumentEditPage: React.FC = () => {
                   onSearchDocument={handleSearchDocument}
                   onSave={handleSave}
                   onCancel={() => navigate("/documents")}
+                  onInvoiceWithoutOrder={tiposDocumento.find((type) => type.tipoid === (typeof editDoc.documenttype === "object" ? editDoc.documenttype?.tipoid : editDoc.documenttype))?.tipo.toUpperCase() === "FACTURA" ? () => setShowInvoiceWithoutOrder(true) : undefined}
                 />
               </CardBody>
             </Card>
@@ -876,6 +879,7 @@ const DocumentEditPage: React.FC = () => {
           </Col>
         </Row>
 
+        {showInvoiceWithoutOrder && <InvoiceWithoutOrder document={editDoc} onClose={() => setShowInvoiceWithoutOrder(false)} />}
         <Modal
           isOpen={showGenerateOrderModal}
           toggle={handleSkipOrderGeneration}

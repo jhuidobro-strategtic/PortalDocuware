@@ -30,6 +30,7 @@ interface DocumentEditorFormProps {
   onSearchDocument: () => Promise<void>;
   onSave: () => void;
   onCancel: () => void;
+  onInvoiceWithoutOrder?: () => void;
 }
 
 const normalizeDocumentNumber = (value: string) => {
@@ -55,6 +56,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   onSearchDocument,
   onSave,
   onCancel,
+  onInvoiceWithoutOrder,
 }) => {
   const { t } = useTranslation();
 
@@ -322,6 +324,10 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
               />
             </FormGroup>
           </Col>
+          {onInvoiceWithoutOrder && <Col xs={12}>
+            <Button type="button" color="secondary" disabled={loadingSave || loadingDocument || !!editDoc.hasActiveOrder} onClick={onInvoiceWithoutOrder}>FACTURA SIN ORDEN</Button>
+            {editDoc.hasActiveOrder && <small className="d-block text-muted mt-1">La factura ya tiene una OC/OS vigente.</small>}
+          </Col>}
         </Row>
       </div>
 
