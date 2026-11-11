@@ -1,4 +1,5 @@
 const fieldLabels: Record<string, string> = {
+  accounting_adjustment: "Detracción / retención", accounting_code: "Cuenta contable",
   no_vehiculo: "Identificador / nombre", placa: "Placa", tipo: "Tipo de vehículo", descripcion: "Descripción",
   centro_costo_1_id: "Centro de costo 1", centro_costo_2_id: "Centro de costo 2", activo: "Estado",
   sourceKind: "Tipo de comprobante", suppliernumber: "RUC del emisor", suppliername: "Nombre del emisor",

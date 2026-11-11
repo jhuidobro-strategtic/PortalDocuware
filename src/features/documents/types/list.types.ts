@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 
 export interface Document {
+  accounting_adjustment?: Partial<import("../services/accounting").AccountingAdjustment>;
   hasActiveOrder?: boolean;
   activeOrder?: { purchaseOrderID: number; orderNo: string | null; type: "OC" | "OS" } | null;
   sourceKind?: "BOLETA" | "RH" | "";

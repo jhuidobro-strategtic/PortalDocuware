@@ -18,6 +18,7 @@ import Notifications from "../../components/ListNotifications";
 import InvoiceWithoutOrder from "../../components/InvoiceWithoutOrder";
 import DocumentEditorForm from "../../components/DocumentEditorForm";
 import { buildApiUrl } from "../../../../helpers/api-url";
+import { getApiErrorMessage } from "../../../../helpers/api-error-message";
 import {
   buildFactilizaUrl,
   buildSunatUrl,
@@ -737,7 +738,7 @@ const DocumentEditPage: React.FC = () => {
         setSavedDocumentForOrder(nextSavedDocument);
         setShowGenerateOrderModal(true);
       } else {
-        addNotification("danger", payload.message || t("Error updating"));
+        addNotification("danger", getApiErrorMessage(payload, t("Error updating")));
       }
     } catch (saveError) {
       console.error(saveError);

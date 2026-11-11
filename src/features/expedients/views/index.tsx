@@ -29,7 +29,7 @@ import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { fetchExpedientInvoiceDetails } from "../invoiceDetailsExport";
-import { documentExportCode } from "../accountingExport";
+import { accountingExportHeaders, accountingExportValues, documentExportCode } from "../accountingExport";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { matchesDateRange, matchesName } from "../../../helpers/document-list-filters";
 import "./Expedients.css";
@@ -57,6 +57,8 @@ interface ExpedientSupplierReference {
 
 interface ExpedientInvoice {
   sourceKind?: "BOLETA" | "RH" | "";
+  withholdingamount?: string;
+  accounting_adjustment?: Partial<import("../../documents/services/accounting").AccountingAdjustment>;
   documentid: number;
   documenttype: ExpedientDocumentType | null;
   documentserial: string;
@@ -715,7 +717,7 @@ const Expedients = () => {
     try {
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
-      sheet.addRow(["Expediente", "Código de documento", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos"]);
+      sheet.addRow(["Expediente", "Código de documento", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         sheet.addRow([item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
@@ -723,15 +725,16 @@ const Expedients = () => {
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
           invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
           item.ordencompra?.orderNo || item.reference_code || "", isExpedientClosed(item, locallyClosedExpedientIds) ? "Cerrado" : "Abierto",
-          moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0]);
+          moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice)]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
-      sheet.autoFilter = { from: "A1", to: "N1" }; sheet.columns.forEach((column) => { column.width = 23; });
+      sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } }; sheet.columns.forEach((column) => { column.width = 23; });
       sheet.getColumn(2).numFmt = "@";
-      [8, 9, 10].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      [8, 9, 10, 18, 19, 20, 21, 22].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      [15, 16].forEach((column) => { sheet.getColumn(column).numFmt = '0.00%'; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
       const detailsSheet = workbook.addWorksheet("Detalle de facturas");
-      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
+      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`)]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         if (!invoice) return;
@@ -739,13 +742,20 @@ const Expedients = () => {
           detailsSheet.addRow([item.expedienteid, documentExportCode(invoice), invoice.documentserial, invoice.documentnumber, moment(invoice.documentdate).format("DD/MM/YYYY"),
             invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || item.reference_code || "", detail.item_code || "", detail.accounting_code || "", detail.centro_costo_1?.centrocodigo || "", detail.centro_costo_2?.centrocodigo || "", detail.description || "",
             detail.unit_measure_description || "", Number(detail.quantity), Number(detail.unit_value), Number(detail.tax_value),
-            Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || ""]);
+            Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || "", ...accountingExportValues(invoice)]);
         });
       });
       detailsSheet.getRow(1).font = { bold: true }; detailsSheet.views = [{ state: "frozen", ySplit: 1 }];
-      detailsSheet.autoFilter = { from: "A1", to: "T1" }; detailsSheet.columns.forEach((column) => { column.width = 24; });
-      [2, 3, 4, 7, 9, 10, 11, 12].forEach((column) => { detailsSheet.getColumn(column).numFmt = "@"; }); detailsSheet.getColumn(13).width = 65;
-      detailsSheet.getColumn(15).numFmt = "0.######"; [16, 17, 18, 19].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
+      detailsSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: detailsSheet.columnCount } }; detailsSheet.columns.forEach((column) => { column.width = 24; });
+      [2, 3, 4, 7, 9, 10, 11, 12].forEach((column) => { detailsSheet.getColumn(column).numFmt = "@"; });
+      detailsSheet.getColumn(13).width = 65;
+      detailsSheet.getColumn(15).numFmt = "0.######"; [16, 17, 18, 19, 24, 25, 26, 27, 28].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
+      [21, 22].forEach((column) => { detailsSheet.getColumn(column).numFmt = "0.00%"; });
+      [sheet, detailsSheet].forEach((worksheet) => {
+        worksheet.getRow(1).alignment = { vertical: "middle", wrapText: true };
+        worksheet.getRow(1).height = 60;
+      });
+      detailsSheet.getCell("U1").note = "Los descuentos y el neto son importes del comprobante completo, repetidos por ítem. No sume estas columnas por línea; use la hoja Expedientes.";
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch (failure) { setFloatingAlerts((previous) => [...previous.filter((alert) => alert.id !== "exp-export-error"), { id: "exp-export-error", type: "danger", message: failure instanceof Error ? failure.message : "No fue posible exportar los expedientes." }]); }
     finally { setExporting(false); }

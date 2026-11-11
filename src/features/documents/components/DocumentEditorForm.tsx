@@ -15,6 +15,7 @@ import Flatpickr from "react-flatpickr";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import CurrencyDropdown from "./CurrencyDropdown";
+import AccountingAdjustmentFields from "./AccountingAdjustmentFields";
 import { Document, TipoDocumento } from "../types/list.types";
 
 interface DocumentEditorFormProps {
@@ -307,6 +308,10 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
             </FormGroup>
           </Col>
 
+          <Col md={12}>
+            <AccountingAdjustmentFields document={editDoc} disabled={loadingSave || loadingDocument}
+              onChange={(accounting_adjustment) => setEditDoc((previous) => previous ? { ...previous, accounting_adjustment } : previous)} />
+          </Col>
           <Col md={12}>
             <FormGroup className="mb-0">
               <Label className="form-label">{t("Notes")}</Label>
