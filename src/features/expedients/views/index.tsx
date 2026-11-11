@@ -29,6 +29,7 @@ import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { fetchExpedientInvoiceDetails } from "../invoiceDetailsExport";
+import { documentExportCode } from "../accountingExport";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { matchesDateRange, matchesName } from "../../../helpers/document-list-filters";
 import "./Expedients.css";
@@ -55,6 +56,7 @@ interface ExpedientSupplierReference {
 }
 
 interface ExpedientInvoice {
+  sourceKind?: "BOLETA" | "RH" | "";
   documentid: number;
   documenttype: ExpedientDocumentType | null;
   documentserial: string;
@@ -713,10 +715,10 @@ const Expedients = () => {
     try {
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
-      sheet.addRow(["Expediente", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos"]);
+      sheet.addRow(["Expediente", "Código de documento", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
-        sheet.addRow([item.expedienteid, invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
+        sheet.addRow([item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
           invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra), invoice?.suppliernumber || "",
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
           invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
@@ -724,25 +726,26 @@ const Expedients = () => {
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
-      sheet.autoFilter = { from: "A1", to: "M1" }; sheet.columns.forEach((column) => { column.width = 23; });
-      [7, 8, 9].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      sheet.autoFilter = { from: "A1", to: "N1" }; sheet.columns.forEach((column) => { column.width = 23; });
+      sheet.getColumn(2).numFmt = "@";
+      [8, 9, 10].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
       const detailsSheet = workbook.addWorksheet("Detalle de facturas");
-      detailsSheet.addRow(["Expediente", "Factura", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
+      detailsSheet.addRow(["Expediente", "Código de documento", "Factura", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         if (!invoice) return;
         (invoiceDetails.get(invoice.documentid) || []).forEach((detail) => {
-          detailsSheet.addRow([item.expedienteid, `${invoice.documentserial}-${invoice.documentnumber}`, moment(invoice.documentdate).format("DD/MM/YYYY"),
+          detailsSheet.addRow([item.expedienteid, documentExportCode(invoice), `${invoice.documentserial}-${invoice.documentnumber}`, moment(invoice.documentdate).format("DD/MM/YYYY"),
             invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || item.reference_code || "", detail.item_code || "", detail.accounting_code || "", detail.centro_costo_1?.centrocodigo || "", detail.centro_costo_2?.centrocodigo || "", detail.description || "",
             detail.unit_measure_description || "", Number(detail.quantity), Number(detail.unit_value), Number(detail.tax_value),
             Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || ""]);
         });
       });
       detailsSheet.getRow(1).font = { bold: true }; detailsSheet.views = [{ state: "frozen", ySplit: 1 }];
-      detailsSheet.autoFilter = { from: "A1", to: "R1" }; detailsSheet.columns.forEach((column) => { column.width = 24; });
-      [7, 8, 9, 10].forEach((column) => { detailsSheet.getColumn(column).numFmt = "@"; }); detailsSheet.getColumn(11).width = 65;
-      detailsSheet.getColumn(13).numFmt = "0.######"; [14, 15, 16, 17].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
+      detailsSheet.autoFilter = { from: "A1", to: "S1" }; detailsSheet.columns.forEach((column) => { column.width = 24; });
+      [2, 8, 9, 10, 11].forEach((column) => { detailsSheet.getColumn(column).numFmt = "@"; }); detailsSheet.getColumn(12).width = 65;
+      detailsSheet.getColumn(14).numFmt = "0.######"; [15, 16, 17, 18].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch (failure) { setFloatingAlerts((previous) => [...previous.filter((alert) => alert.id !== "exp-export-error"), { id: "exp-export-error", type: "danger", message: failure instanceof Error ? failure.message : "No fue posible exportar los expedientes." }]); }
     finally { setExporting(false); }
