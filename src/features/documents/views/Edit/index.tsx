@@ -113,6 +113,7 @@ const normalizeDocumentDetailsPayload = (payload: unknown): DocumentDetail[] => 
   const normalizeDetail = (detail: DocumentDetail): DocumentDetail => ({
     ...detail,
     originalItemCode: detail.item_code ?? "",
+    originalAccountingCode: detail.accounting_code ?? "",
     vehicle_no: detail.vehicle_no || detail.extracted_plate || "",
     originalExtractedPlate: detail.extracted_plate ?? "",
     costCenter1: detail.centro_costo_1 !== undefined ? detail.centro_costo_1?.centroid ?? null : detail.costCenter1,
@@ -587,7 +588,8 @@ const DocumentEditPage: React.FC = () => {
       return normalizeCenterId(current1) !== normalizeCenterId(original1) ||
         normalizeCenterId(current2) !== normalizeCenterId(original2) ||
         (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "") ||
-        (detail.item_code ?? "") !== (detail.originalItemCode ?? "");
+        (detail.item_code ?? "") !== (detail.originalItemCode ?? "") ||
+        (detail.accounting_code ?? "") !== (detail.originalAccountingCode ?? "");
     });
       let failedSyncs = 0;
       for (const detail of changedDetails) {
@@ -598,6 +600,7 @@ const DocumentEditPage: React.FC = () => {
         const plateChanged = (detail.extracted_plate ?? "") !== (detail.originalExtractedPlate ?? "");
         const codeChanged = (detail.item_code ?? "") !== (detail.originalItemCode ?? "");
         const updatePayload = {
+          accounting_code: detail.accounting_code || "",
           ...costCenterPayload,
           ...(codeChanged ? { item_code: detail.item_code ?? "" } : {}),
           ...(plateChanged ? { extracted_plate: detail.extracted_plate ?? "" } : {}),
@@ -616,6 +619,7 @@ const DocumentEditPage: React.FC = () => {
             suppliernumber: detail.suppliernumber,
             unit_measure_description: detail.unit_measure_description,
             item_code: detail.item_code || "",
+            accounting_code: detail.accounting_code || "",
             description: detail.description,
             vehicle_nro: detail.vehicle_no || (detail as any).vehicle_nro,
             quantity: detail.quantity,
@@ -644,6 +648,7 @@ const DocumentEditPage: React.FC = () => {
             const savedPlate = createdDetail?.extracted_plate !== undefined ? createdDetail.extracted_plate : detail.extracted_plate ?? "";
             sunatDetails[index] = { ...detail, ...createdDetail,
               originalItemCode: createdDetail?.item_code ?? detail.item_code ?? "",
+              originalAccountingCode: createdDetail?.accounting_code ?? detail.accounting_code ?? "",
               extracted_plate: savedPlate, originalExtractedPlate: savedPlate,
               costCenter1: savedCenter1, costCenter2: savedCenter2,
               originalCostCenter1: savedCenter1, originalCostCenter2: savedCenter2 };

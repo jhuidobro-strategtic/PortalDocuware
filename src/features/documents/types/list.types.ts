@@ -49,6 +49,9 @@ export interface CentroCosto {
 }
 
 export interface DocumentDetail {
+  accounting_code?: string;
+  originalAccountingCode?: string;
+  accounting_suggestions?: import("../services/accounting").AccountingAccount[];
   document?: number | null;
   item_code?: string;
   originalItemCode?: string;
