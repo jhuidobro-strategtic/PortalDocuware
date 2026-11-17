@@ -256,7 +256,7 @@ export const useOrderC = () => {
   }, [supplierOptions, values.suppliernumber]);
 
   useEffect(() => {
-    if (locationState?.document || !documentId) {
+    if (!documentId) {
       setLoading(false);
       return;
     }
@@ -264,17 +264,14 @@ export const useOrderC = () => {
     const fetchDocument = async () => {
       try {
         setLoading(true);
-        const response = await fetch(buildApiUrl("documents"));
+        const response = await fetch(buildApiUrl(`documents/${documentId}/`));
         const data = await response.json();
 
-        if (!data.success || !Array.isArray(data.data)) {
+        if (!response.ok || !data.success) {
           throw new Error(t("Unable to get the selected document."));
         }
 
-        const selectedDocument =
-          data.data.find(
-            (item: Document) => String(item.documentid) === String(documentId)
-          ) ?? null;
+        const selectedDocument = data.data as Document | null;
 
         if (!selectedDocument) {
           throw new Error(t("The requested record was not found."));
@@ -291,7 +288,7 @@ export const useOrderC = () => {
     };
 
     fetchDocument();
-  }, [documentId, locationState?.document, t]);
+  }, [documentId, t]);
 
   const handleChange = (field: keyof OrderCFormValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));

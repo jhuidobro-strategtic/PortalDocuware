@@ -72,7 +72,7 @@ const DocumentOrderC = () => {
     );
   }
 
-  if (error || !document) {
+  if (error || !document || document.hasActiveOrder) {
     return (
       <div className="page-content">
         <Container fluid>
@@ -81,7 +81,9 @@ const DocumentOrderC = () => {
               {
                 id: "order-c-load-error",
                 type: "danger",
-                message: error || t("No information was found for this view."),
+                message: error || (document?.hasActiveOrder
+                  ? "El comprobante ya tiene una OC/OS vigente enviada a firma."
+                  : t("No information was found for this view.")),
               },
             ]}
           />

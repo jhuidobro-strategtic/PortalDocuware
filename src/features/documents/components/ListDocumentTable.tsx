@@ -202,6 +202,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Edit"),
                             icon: "ri-edit-line",
                             tone: "neutral",
+                            disabled: hasApprovedPurchaseOrder,
                             onClick: () => onEdit(doc),
                           },
                           {
@@ -209,6 +210,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Delete"),
                             icon: "ri-delete-bin-line",
                             tone: "danger",
+                            disabled: hasApprovedPurchaseOrder,
                             onClick: () => onDelete(doc),
                           },
                         ]}
