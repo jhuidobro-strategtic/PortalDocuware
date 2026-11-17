@@ -25,6 +25,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
+import { canManageUsers } from "../../../helpers/user-management-access";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
@@ -126,6 +127,8 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  paid_at?: string | null;
+  paid_by?: number | null;
   closed_by?: number | null;
   closed_at?: string | null;
   reference_code?: string | null;
@@ -268,19 +271,21 @@ const getExpedientDocumentFetchUrls = (
   );
 };
 
-const getExpedientStatusMeta = (isActive: boolean, t: (key: string) => string) =>
-  isActive
+const getPaymentStatus = (expedient: Expedient) => expedient.paid_at ? "Pagado" : "Pendiente de pago";
+
+const getExpedientStatusMeta = (expedient: Expedient) =>
+  expedient.paid_at
     ? {
-        label: t("Active status"),
+        label: getPaymentStatus(expedient),
         className:
           "badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
         icon: "ri-checkbox-circle-line",
       }
     : {
-        label: t("Inactive"),
+        label: getPaymentStatus(expedient),
         className:
-          "badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
-        icon: "ri-close-circle-line",
+          "badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 d-inline-flex align-items-center gap-1",
+        icon: "ri-time-line",
       };
 
 const isExpedientClosed = (
@@ -575,6 +580,10 @@ const Expedients = () => {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const numberLocale = getNumberLocale(i18n.language);
   const sessionUser = getCurrentSessionUser();
+  const [paymentTarget, setPaymentTarget] = useState<Expedient | null>(null);
+  const [paymentPassword, setPaymentPassword] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const uploadTypeOptions = useMemo<ExpedientUploadTypeOption[]>(
     () =>
       EXPEDIENT_UPLOAD_TYPE_OPTIONS.map((option) => ({
@@ -638,6 +647,43 @@ const Expedients = () => {
     ]);
   };
 
+  const dismissPayment = () => {
+    setPaymentTarget(null);
+    setPaymentPassword("");
+    setPaymentError("");
+  };
+
+  const confirmPayment = async () => {
+    if (!paymentTarget || !sessionUser.id || !paymentPassword || confirmingPayment) return;
+    setConfirmingPayment(true);
+    setPaymentError("");
+    try {
+      const response = await fetch(buildApiUrl(`expedientes/${paymentTarget.expedienteid}/payment/`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: sessionUser.id, password: paymentPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.paid_at) {
+        throw new Error(result.detail || "No se pudo confirmar el pago.");
+      }
+      const payment = { paid_at: result.paid_at, paid_by: result.paid_by };
+      setExpedients((rows) => rows.map((row) =>
+        row.expedienteid === paymentTarget.expedienteid ? { ...row, ...payment } : row
+      ));
+      setSelectedExpedient((row) =>
+        row?.expedienteid === paymentTarget.expedienteid ? { ...row, ...payment } : row
+      );
+      dismissPayment();
+      pushFloatingAlert("success", "Pago confirmado.");
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "No se pudo confirmar el pago.");
+      setPaymentPassword("");
+    } finally {
+      setConfirmingPayment(false);
+    }
+  };
+
   const resetUploadState = useCallback(() => {
     setUploadDocumentType(String(DEFAULT_UPLOAD_DOCUMENT_TYPE));
     setSelectedUploadFile(null);
@@ -698,19 +744,14 @@ const Expedients = () => {
       if (!matchesDateRange(expedient.factura?.documentdate, dateFrom, dateTo) ||
           !matchesName([expedient.factura?.suppliername, getPurchaseOrderSupplierLabel(expedient.ordencompra)], nameFilter)) return false;
       if (!term) return true;
-      const statusLabel = isExpedientClosed(
-        expedient,
-        locallyClosedExpedientIds
-      )
-        ? t("Inactive")
-        : t("Active");
+      const statusLabel = getPaymentStatus(expedient);
 
       return (
         matchesSearchValue(expedient, term) ||
         statusLabel.toLowerCase().includes(term)
       );
     });
-  }, [expedients, locallyClosedExpedientIds, searchTerm, nameFilter, dateFrom, dateTo, t]);
+  }, [expedients, searchTerm, nameFilter, dateFrom, dateTo]);
 
   const exportExcel = async () => {
     setExporting(true);
@@ -724,7 +765,7 @@ const Expedients = () => {
           invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra), invoice?.suppliernumber || "",
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
           invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
-          item.ordencompra?.orderNo || item.reference_code || "", isExpedientClosed(item, locallyClosedExpedientIds) ? "Cerrado" : "Abierto",
+          item.ordencompra?.orderNo || item.reference_code || "", getPaymentStatus(item),
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice)]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
@@ -1473,10 +1514,7 @@ const Expedients = () => {
                             expedient,
                             locallyClosedExpedientIds
                           );
-                          const statusMeta = getExpedientStatusMeta(
-                            !isExpedientClosedByStatus,
-                            t
-                          );
+                          const statusMeta = getExpedientStatusMeta(expedient);
                           const invoiceCode = getInvoiceCode(expedient.factura);
                           const purchaseOrderSupplier = getPurchaseOrderSupplierLabel(
                             expedient.ordencompra
@@ -1504,6 +1542,14 @@ const Expedients = () => {
                                         hidden:
                                           !expedient.expediente_documentos?.length,
                                         onClick: () => setSelectedExpedient(expedient),
+                                      },
+                                      {
+                                        id: `pay-expedient-${expedient.expedienteid}`,
+                                        label: "Marcar como pagado",
+                                        icon: "ri-check-double-line",
+                                        tone: "primary",
+                                        hidden: Boolean(expedient.paid_at) || !sessionUser.id || !canManageUsers(),
+                                        onClick: () => setPaymentTarget(expedient),
                                       },
                                       {
                                         id: `reopen-expedient-${expedient.expedienteid}`,
@@ -1994,6 +2040,27 @@ const Expedients = () => {
           </div>
         </div>
       </aside>
+
+      <Modal isOpen={!!paymentTarget} toggle={confirmingPayment ? undefined : dismissPayment}
+        backdrop={confirmingPayment ? "static" : true} keyboard={!confirmingPayment} centered>
+        <form onSubmit={(event) => { event.preventDefault(); void confirmPayment(); }}>
+          <ModalHeader toggle={confirmingPayment ? undefined : dismissPayment}>Marcar como pagado</ModalHeader>
+          <ModalBody>
+            <p>Confirma el pago del expediente {paymentTarget?.expedienteid} con tu contraseña.</p>
+            <Label for="expedient-payment-password">Contraseña</Label>
+            <Input id="expedient-payment-password" type="password" autoComplete="current-password"
+              value={paymentPassword} onChange={(event) => setPaymentPassword(event.target.value)}
+              required disabled={confirmingPayment} />
+            {paymentError && <p className="text-danger mt-2 mb-0" role="alert">{paymentError}</p>}
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" color="light" disabled={confirmingPayment} onClick={dismissPayment}>Cancelar</Button>
+            <Button type="submit" color="primary" disabled={!paymentPassword || confirmingPayment}>
+              {confirmingPayment ? "Confirmando…" : "Confirmar pago"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={!!documentPendingDelete}
