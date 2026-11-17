@@ -10,6 +10,7 @@ import DocumentFilters from "../../components/DetailsFilters";
 import DocumentTable from "../../components/DetailsDocumentTable";
 import { DocumentDetailsRow } from "../../types/details.types";
 import { intelligentSearch } from "../../../../helpers/search-utils";
+import { buildDocumentDetailExportRows } from "./exportRows";
 import { downloadBlob } from "../../../../helpers/download-blob";
 
 const DocumentDetails: React.FC = () => {
@@ -55,7 +56,7 @@ const DocumentDetails: React.FC = () => {
     const matchesSearch = intelligentSearch(doc, searchTerm);
 
     // Usamos moment para comparar correctamente las fechas
-    const docDate = moment(doc.documentdate, ["YYYY/MM/DD", "DD/MM/YYYY"]);
+    const docDate = moment(doc.documentdate, ["YYYY-MM-DD", "YYYY/MM/DD", "DD/MM/YYYY"], true);
 
     const matchesDate =
       (!startDate || docDate.isSameOrAfter(moment(startDate), "day")) &&
@@ -100,7 +101,7 @@ const DocumentDetails: React.FC = () => {
         // Keep the export available even if the logo cannot be embedded.
       }
 
-      worksheet.mergeCells("E1:AA2");
+      worksheet.mergeCells("E1:AJ2");
       const titleCell = worksheet.getCell("E1");
       titleCell.value = "REPORTE DETALLADO DE DOCUMENTOS";
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
@@ -147,6 +148,8 @@ const DocumentDetails: React.FC = () => {
         "Código Centro de Costos",
         "Código Centro de Costos 2",
         "Porcentaje I.G.V.",
+        "Cantidad", "Valor unitario", "Cuenta contable", "Comprador", "Placa",
+        "Centro de costo del documento", "Subtotal del documento", "IGV del documento", "Total del documento",
       ];
 
       headers.forEach((header, index) => {
@@ -167,62 +170,8 @@ const DocumentDetails: React.FC = () => {
         };
       });
 
-      const rows = filteredDocuments.map((doc) => {
-        const tipoDocumento =
-          typeof doc.documenttype === "object" && doc.documenttype !== null
-            ? (doc.documenttype as any).tipo ?? "N/A"
-            : (doc.documenttype ?? "N/A").toString();
-
-        const movimientoOrden = "";
-        const fechaVencimiento = "";
-        const anioEmision = "";
-        const dTipo = "";
-      const producto = "";
-      const vCompra = "";
-      const rFecha = "";
-      const rTipo = "";
-      const rSerie = "";
-      const rNroComprobante = "";
-      const tipoCambio = "";
-      const equivalenteDolar = "";
-      const condicionCC = "";
-        const codigoCC = "";
-        const codigoCC2 = "";
-        const amount = Number((doc as any).amount ?? 0);
-        const taxamount = Number((doc as any).taxamount ?? 0);
-        const pIGV =
-          amount > 0 ? ((taxamount / amount) * 100).toFixed(2) : "0.00";
-
-        return [
-          movimientoOrden ?? "",
-        moment(doc.documentdate).format("DD/MM/YYYY"),
-        fechaVencimiento ?? "",
-        tipoDocumento,
-        doc.documentserial ?? "",
-        anioEmision ?? "",
-        doc.documentnumber ?? "",
-        dTipo ?? "",
-        doc.suppliernumber ?? "",
-        doc.suppliername ?? "",
-        producto ?? "",
-        Number((doc as any).quantity ?? 0),
-        vCompra ?? "",
-        Number((doc as any).amount ?? 0),
-        Number((doc as any).taxamount ?? 0),
-        Number((doc as any).totalamount ?? 0),
-        tipoCambio,
-        rFecha,
-        rTipo,
-        rSerie,
-        rNroComprobante,
-        doc.currency ?? "PEN",
-        equivalenteDolar,
-          condicionCC,
-          codigoCC,
-          codigoCC2,
-          pIGV,
-        ];
-      });
+      const rows = buildDocumentDetailExportRows(filteredDocuments);
+      worksheet.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: headers.length } };
 
       rows.forEach((rowData) => {
         const row = worksheet.addRow(rowData);
@@ -235,8 +184,8 @@ const DocumentDetails: React.FC = () => {
             right: { style: "thin" },
           };
 
-          if ([12, 14, 15, 16, 27].includes(columnNumber)) {
-            cell.numFmt = "#,##0.00";
+          if ([13, 14, 15, 16, 27, 28, 29, 34, 35, 36].includes(columnNumber)) {
+            cell.numFmt = columnNumber === 27 ? "0.00%" : columnNumber === 28 ? "0.######" : "#,##0.00";
             cell.alignment = { horizontal: "right" };
           } else {
             cell.alignment = { horizontal: "left" };
@@ -273,6 +222,11 @@ const DocumentDetails: React.FC = () => {
         { width: 35 },
         { width: 20 },
       ];
+
+      [15, 20, 24, 25, 16, 28, 25, 22, 22].forEach((width, index) => {
+        worksheet.getColumn(28 + index).width = width;
+      });
+      worksheet.getCell("AH3").note = "Los totales de cabecera aparecen una vez por comprobante en las filas exportadas.";
 
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
