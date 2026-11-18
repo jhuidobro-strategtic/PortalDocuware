@@ -30,6 +30,7 @@ const TravelReports = lazy(() => import("../features/travel-expenses/views/Repor
 const Folders = lazy(() => import("../features/folders/views"));
 const Users = lazy(() => import("../features/users/views"));
 const VehicleManager = lazy(() => import("../features/vehicles/views"));
+const Roles = lazy(() => import("../features/users/views/Roles"));
 const Landing = () => <Navigate to={firstAllowedRoute()} replace />;
 
 const authProtectedRoutes = [
@@ -67,6 +68,7 @@ const authProtectedRoutes = [
   { path: "/reports/rendiciones", component: <TravelReports /> },
   { path: "/procesamiento-archivos", component: <Folders /> },
   { path: "/users", component: <Users /> },
+  { path: "/users/roles", component: <Roles /> },
   { path: "/gestor-vehicular", component: <VehicleManager /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Landing /> },

@@ -129,6 +129,7 @@ const Navdata = (t: (key: string) => string) => [
                 label: t("Users"),
                 link: "/users",
             },
+            { id: "roles", label: "Roles y permisos", link: "/users/roles" },
         ],
     },
 ].map((item) => item.subItems ? {
