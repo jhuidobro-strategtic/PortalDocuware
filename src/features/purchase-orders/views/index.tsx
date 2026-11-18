@@ -1,4 +1,5 @@
 import { hasPermission } from "../../../helpers/portal-access";
+import AttachmentOrderList from "../../../components/common/AttachmentOrderList";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
@@ -78,6 +79,7 @@ interface OrderExpedient {
 type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
 
 interface PurchaseOrder {
+  attachment_order?: string[];
   isCancelled: boolean;
   cancellationReason?: string;
   purchaseOrderID: number;
@@ -140,6 +142,7 @@ interface SupplierReference {
 }
 
 interface PurchaseOrderApiItem {
+  attachment_order?: string[];
   isCancelled?: boolean;
   cancellationReason?: string;
   purchaseOrderID: number;
@@ -263,6 +266,7 @@ const getDocumentTypeLabel = (value: number | DocumentTypeReference) =>
   typeof value === "number" ? "" : value?.tipo ?? "";
 
 const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
+  attachment_order: item.attachment_order,
   isCancelled: item.isCancelled === true,
   cancellationReason: item.cancellationReason,
   purchaseOrderID: item.purchaseOrderID,
@@ -2301,9 +2305,14 @@ const PurchaseOrderDetails = () => {
                     setAttachmentError("");
                   }} />}
                 <div className="expedient-drawer-list">
-                  {/* 1. Factura */}
-                  {hasInvoice && (
-                    <CommercialInvoice
+                  {loadingAttachments ? (
+                    <div className="text-center py-4"><Spinner color="primary" /></div>
+                  ) : <>
+                    {attachmentError && <p className="text-danger" role="alert">{attachmentError}</p>}
+                    <AttachmentOrderList key={attachmentOrder.purchaseOrderID}
+                      items={[
+                        ...(hasInvoice ? [{ id: "invoice", name: invoiceName, node: (
+                          <CommercialInvoice
                       key={`commercial-invoice-${attachmentOrder.purchaseOrderID}`}
                       orderId={attachmentOrder.purchaseOrderID}
                       invoiceId={relatedInvoiceDoc?.documentid}
@@ -2329,10 +2338,9 @@ const PurchaseOrderDetails = () => {
                           .flatMap((row) => row.expediente_documentos ?? []).filter((file) => file.estado !== false));
                       }}
                     />
-                  )}
-
-                  {/* 2. Orden de Compra */}
-                  <OrderDocumentItem
+                        ) }] : []),
+                        { id: "order", name: orderDocName, node: (
+                          <OrderDocumentItem
                     key={`order-preview-${attachmentOrder.purchaseOrderID}-${previewOrderAutomatically}`}
                     initiallyOpen={previewOrderAutomatically}
                     name={orderDocName}
@@ -2342,23 +2350,33 @@ const PurchaseOrderDetails = () => {
                     createdAt={orderDocCreatedAt}
                     loading={loadingOrderPreviewPdf && !orderDocUrl}
                   />
-
-                  {/* 3. Documentos de sustento */}
-                  {loadingAttachments ? (
-                    <div className="text-center py-4"><Spinner color="primary" /></div>
-                  ) : attachmentError ? (
-                    <p className="text-danger" role="alert">{attachmentError}</p>
-                  ) : (
-                    otherAttachments.map((file) => (
-                      <OrderDocumentItem
+                        ) },
+                        ...otherAttachments.map((file) => ({
+                          id: String(file.expedientedocid), name: file.filename || t("Document"), node: (
+                            <OrderDocumentItem
                         key={file.expedientedocid}
                         name={file.filename || t("Document")}
                         type={Number(file.tipodocumentoid) === 1 ? t("Invoice") : t("Supporting Document")}
                         url={getAttachmentUrl(file)}
                         createdAt={file.createat}
                       />
-                    ))
-                  )}
+                          ),
+                        })),
+                      ]}
+                      order={attachmentOrder.attachment_order}
+                      itemKey={(item) => item.id}
+                      itemName={(item) => item.name}
+                      render={(item) => item.node}
+                      endpoint={`purchase-orders/${attachmentOrder.purchaseOrderID}/attachment-order/`}
+                      canReorder={!attachmentError && !uploadingAttachment && hasPermission("expedients.attach")}
+                      onSaved={(order) => {
+                        const update = (row: PurchaseOrder) => row.purchaseOrderID === attachmentOrder.purchaseOrderID
+                          ? { ...row, attachment_order: order } : row;
+                        setPurchaseOrders((rows) => rows.map(update));
+                        setAttachmentOrder((row) => row ? update(row) : row);
+                      }}
+                    />
+                  </>}
                 </div>
               </div>
             </div>

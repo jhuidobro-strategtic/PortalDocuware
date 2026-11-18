@@ -26,6 +26,7 @@ import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
 import { hasPermission } from "../../../helpers/portal-access";
+import AttachmentOrderList, { arrangeAttachments } from "../../../components/common/AttachmentOrderList";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
@@ -127,6 +128,7 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  attachment_order?: string[];
   paid_at?: string | null;
   paid_by?: number | null;
   closed_by?: number | null;
@@ -1876,7 +1878,21 @@ const Expedients = () => {
 
             {selectedExpedient?.expediente_documentos?.length ? (
               <div className="expedient-drawer-list">
-                {selectedExpedient.expediente_documentos.map((file, index) => {
+                <AttachmentOrderList key={selectedExpedient.expedienteid}
+                  items={selectedExpedient.expediente_documentos} order={selectedExpedient.attachment_order}
+                  itemKey={(file) => String(file.expedientedocid)} itemName={(file) => file.filename || "Documento"}
+                  endpoint={`expedientes/${selectedExpedient.expedienteid}/attachment-order/`}
+                  canReorder={!isSelectedExpedientClosed && hasPermission("expedients.attach")}
+                  onSaved={(order) => {
+                    const update = (row: Expedient): Expedient => row.expedienteid !== selectedExpedient.expedienteid ? row : {
+                      ...row,
+                      attachment_order: order,
+                      expediente_documentos: arrangeAttachments(row.expediente_documentos, order, (file) => String(file.expedientedocid)),
+                    };
+                    setExpedients((rows) => rows.map(update));
+                    setSelectedExpedient((row) => row ? update(row) : row);
+                  }}
+                  render={(file, index) => {
                   const fileUrl = getExpedientDocumentUrl(file);
                   const isPreviewActive =
                     selectedPreviewDocument?.expedientedocid === file.expedientedocid;
@@ -2026,7 +2042,7 @@ const Expedients = () => {
                       )}
                     </React.Fragment>
                   );
-                })}
+                }} />
               </div>
             ) : (
               <div className="expedient-drawer-empty">
