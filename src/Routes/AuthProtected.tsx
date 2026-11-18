@@ -5,9 +5,11 @@ import { canVisit, firstAllowedRoute, portalSession } from "../helpers/portal-ac
 
 export default function AuthProtected({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const [verifiedPath, setVerifiedPath] = useState("");
+  const [, refreshPermissions] = useState(0);
   const [error, setError] = useState("");
-  const token = portalSession()?.token;
+  const session = portalSession();
+  const token = session?.token;
+  const hasPermissions = Array.isArray(session?.data?.effectivePermissions);
 
   useEffect(() => {
     if (!token) return;
@@ -18,7 +20,7 @@ export default function AuthProtected({ children }: { children: React.ReactNode 
         if (controller.signal.aborted || portalSession()?.token !== token) return;
         if (response.status === 401) {
           sessionStorage.removeItem("authUser");
-          setVerifiedPath(pathname);
+          refreshPermissions((version) => version + 1);
           return;
         }
         if (!response.ok) throw new Error("No se pudo verificar la sesión. Recarga la página.");
@@ -28,14 +30,18 @@ export default function AuthProtected({ children }: { children: React.ReactNode 
         sessionStorage.setItem("authUser", JSON.stringify({ ...session, data: {
           ...session.data, effectivePermissions: permissions, profileName: role.name,
         } }));
-        setVerifiedPath(pathname);
+        refreshPermissions((version) => version + 1);
       }).catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
   }, [pathname, token]);
 
   if (!token) return <Navigate to="/login" replace />;
-  if (error) return <p className="p-4" role="alert">{error}</p>;
-  if (verifiedPath !== pathname) return <p className="p-4" role="status">Verificando acceso…</p>;
+  if (!hasPermissions) {
+    if (error) return <p className="p-4" role="alert">{error}</p>;
+    return <div className="d-flex align-items-center justify-content-center min-vh-100" role="status" aria-label="Cargando">
+      <span className="spinner-border spinner-border-sm text-primary" aria-hidden="true" />
+    </div>;
+  }
   if (!canVisit(pathname)) return <Navigate to={firstAllowedRoute()} replace />;
   return <>{children}</>;
 }
