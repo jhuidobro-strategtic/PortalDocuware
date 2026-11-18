@@ -42,6 +42,7 @@ foreach ($dependency in @(
 }
 
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+$env:DOCUWARE_OCR_SERVICE_TOKEN = [Guid]::NewGuid().ToString('N') + [Guid]::NewGuid().ToString('N')
 $services = @()
 foreach ($name in @('ocr', 'api', 'worker', 'frontend')) {
     $process = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList @(
