@@ -27,6 +27,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts from "../../../components/common/FloatingAlerts";
 import type { FloatingAlertItem } from "../../../components/common/FloatingAlerts";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
+import UserPermissionsModal from "./UserPermissionsModal";
 import { buildApiUrl } from "../../../helpers/api-url";
 import { downloadBlob } from "../../../helpers/download-blob";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
@@ -168,6 +169,7 @@ const matchesSearchValue = (value: unknown, term: string): boolean => {
 const UsersPage = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [permissionsUserId, setPermissionsUserId] = useState<number | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -737,6 +739,13 @@ const UsersPage = () => {
                                 <TableActionsMenu
                                   items={[
                                     {
+                                      id: `permissions-${user.userID}`,
+                                      label: "Permisos individuales",
+                                      icon: "ri-shield-keyhole-line",
+                                      tone: "primary",
+                                      onClick: () => setPermissionsUserId(user.userID),
+                                    },
+                                    {
                                       id: `edit-${user.userID}`,
                                       label: t("Edit"),
                                       icon: "ri-edit-line",
@@ -1081,6 +1090,11 @@ const UsersPage = () => {
             </Button>
           </ModalFooter>
         </Modal>
+        {permissionsUserId !== null && <UserPermissionsModal key={permissionsUserId} userId={permissionsUserId}
+          onClose={() => setPermissionsUserId(null)} onSaved={() => {
+            setPermissionsUserId(null);
+            setFeedback({ type: "success", message: "Permisos individuales guardados." });
+          }} />}
       </Container>
     </div>
   );

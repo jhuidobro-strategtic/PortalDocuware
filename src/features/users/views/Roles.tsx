@@ -236,9 +236,9 @@ export default function Roles() {
           return <tr key={row.id}>
             <td>{new Date(row.created_at).toLocaleString("es-PE")}</td>
             <td>{row.actor__fullname}</td>
-            <td>{row.action === "role.permissions" ? "Permisos del rol" : row.action === "user.create" ? "Alta de usuario" : "Actualización de usuario"}</td>
+            <td>{row.action === "role.permissions" ? "Permisos del rol" : row.action === "user.permissions" ? "Permisos individuales" : row.action === "user.create" ? "Alta de usuario" : "Actualización de usuario"}</td>
             <td><details><summary>{role ? roleName(role.name) : `Usuario ${row.target}`}</summary>
-              {row.action === "role.permissions" ? <ul className="mb-0 ps-3">
+              {(row.action === "role.permissions" || row.action === "user.permissions") ? <ul className="mb-0 ps-3">
                 {[...added.map((key) => [key, "Activado"]), ...revoked.map((key) => [key, "Retirado"])].map(([key, action]) =>
                   <li key={key}>{action} · {modules[key.split(".")[0]]} · {permissionLabel(key)}</li>
                 )}
