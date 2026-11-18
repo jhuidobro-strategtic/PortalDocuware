@@ -452,7 +452,7 @@ const DocumentEditPage: React.FC = () => {
         }
 
         const normalizedDocument = normalizeDocumentForForm(resolvedDocument);
-        if (normalizedDocument.hasActiveOrder) {
+        if (normalizedDocument.hasActiveOrder || normalizedDocument.activeOrder) {
           setError("El comprobante tiene una OC/OS vigente enviada a firma. Sus datos y detalles están bloqueados.");
           return;
         }

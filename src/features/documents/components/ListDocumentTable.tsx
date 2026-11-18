@@ -164,9 +164,9 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
               </tr>
             )}
             {documents.map((doc) => {
-              const hasApprovedPurchaseOrder = doc.hasActiveOrder ?? approvedOrderDocumentNos.has(
+              const hasApprovedPurchaseOrder = Boolean(doc.activeOrder) || (doc.hasActiveOrder ?? approvedOrderDocumentNos.has(
                 getDocumentAssociatedNo(doc)
-              );
+              ));
               const style = {
                 ...highlightStyle(doc),
                 width: undefined,
@@ -200,7 +200,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                           },
                           {
                             id: `edit-${doc.documentid}`,
-                            label: t("Edit"),
+                            label: hasApprovedPurchaseOrder ? "Editar (bloqueado por OC/OS)" : t("Edit"),
                             icon: "ri-edit-line",
                             tone: "neutral",
                             disabled: hasApprovedPurchaseOrder || !hasPermission("documents.edit"),

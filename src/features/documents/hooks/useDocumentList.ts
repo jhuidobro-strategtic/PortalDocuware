@@ -243,6 +243,11 @@ export const useDocumentList = () => {
   };
 
   const handleEditClick = (doc: Document) => {
+    if (doc.hasActiveOrder || doc.activeOrder ||
+        (doc.hasActiveOrder == null && approvedOrderDocumentNos.has(getDocumentAssociatedNo(doc)))) {
+      addNotification("warning", "Este comprobante tiene una OC/OS vigente y no se puede editar.");
+      return;
+    }
     navigate(`/documents/edit/${doc.documentid}`, { state: { document: doc } });
   };
 
