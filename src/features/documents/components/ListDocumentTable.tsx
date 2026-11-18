@@ -1,3 +1,4 @@
+import { hasPermission } from "../../../helpers/portal-access";
 import React from "react";
 import { Table } from "reactstrap";
 import moment from "moment";
@@ -194,7 +195,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Order Generation"),
                             icon: "ri-file-list-3-line",
                             tone: "neutral",
-                            disabled: hasApprovedPurchaseOrder,
+                            disabled: hasApprovedPurchaseOrder || !hasPermission("orders.create"),
                             onClick: () => onOrderC(doc),
                           },
                           {
@@ -202,7 +203,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Edit"),
                             icon: "ri-edit-line",
                             tone: "neutral",
-                            disabled: hasApprovedPurchaseOrder,
+                            disabled: hasApprovedPurchaseOrder || !hasPermission("documents.edit"),
                             onClick: () => onEdit(doc),
                           },
                           {
@@ -210,7 +211,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Delete"),
                             icon: "ri-delete-bin-line",
                             tone: "danger",
-                            disabled: hasApprovedPurchaseOrder,
+                            disabled: hasApprovedPurchaseOrder || !hasPermission("documents.delete"),
                             onClick: () => onDelete(doc),
                           },
                         ]}

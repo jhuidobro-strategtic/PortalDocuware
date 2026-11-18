@@ -25,7 +25,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
-import { canManageUsers } from "../../../helpers/user-management-access";
+import { hasPermission } from "../../../helpers/portal-access";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
@@ -1548,7 +1548,7 @@ const Expedients = () => {
                                         label: "Marcar como pagado",
                                         icon: "ri-check-double-line",
                                         tone: "primary",
-                                        hidden: Boolean(expedient.paid_at) || !sessionUser.id || !canManageUsers(),
+                                        hidden: Boolean(expedient.paid_at) || !sessionUser.id || !hasPermission("expedients.pay"),
                                         onClick: () => setPaymentTarget(expedient),
                                       },
                                       {
@@ -1556,7 +1556,7 @@ const Expedients = () => {
                                         label: "Reabrir expediente",
                                         icon: "ri-folder-open-line",
                                         tone: "primary",
-                                        hidden: !isExpedientClosedByStatus || expedient.closed_by !== sessionUser.id,
+                                        hidden: !hasPermission("expedients.reopen") || !isExpedientClosedByStatus || expedient.closed_by !== sessionUser.id,
                                         onClick: () => handleOpenCloseExpedientModal(expedient, "reopen"),
                                       },
                                       {
@@ -1564,7 +1564,7 @@ const Expedients = () => {
                                         label: t("Close Expedient"),
                                         icon: "ri-folder-close-line",
                                         tone: "danger",
-                                        disabled: isExpedientClosedByStatus,
+                                        disabled: isExpedientClosedByStatus || !hasPermission("expedients.close"),
                                         onClick: () =>
                                           handleOpenCloseExpedientModal(expedient),
                                       },
@@ -1744,7 +1744,7 @@ const Expedients = () => {
                 color="light"
                 className="expedient-upload-toggle-button"
                 onClick={() => setIsUploadPanelOpen((current) => !current)}
-                disabled={uploadingDocument || isSelectedExpedientClosed}
+                disabled={uploadingDocument || isSelectedExpedientClosed || !hasPermission("expedients.attach")}
               >
                 <i
                   className={`${

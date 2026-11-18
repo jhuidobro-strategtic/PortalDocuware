@@ -1,3 +1,4 @@
+import { hasPermission } from "../../../helpers/portal-access";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
@@ -761,7 +762,7 @@ const PurchaseOrderDetails = () => {
     currentStateLabel?: string,
     order?: PurchaseOrder
   ) => {
-    if (sessionUser.approvalRole === "NONE") return [];
+    if (sessionUser.approvalRole === "NONE" || (!hasPermission("orders.sign") && !hasPermission("orders.status"))) return [];
     if (order?.isCancelled) return [];
     if (isJuniorApprover && order?.approvalStatus === "JR_SIGNED") return [];
     if (order && (!order.canBeApprovedBy || order.hasSeniorApproval || order.approvalStatus === "APPROVED")) {
@@ -779,16 +780,16 @@ const PurchaseOrderDetails = () => {
         return false;
       }
 
-      if (order?.canBeApprovedBy && option.kind === "approved") {
+      if (order?.canBeApprovedBy && option.kind === "approved" && hasPermission("orders.sign")) {
         return true;
       }
 
       if (currentStateKind === "pending") {
-        return option.kind === "approved" || option.kind === "rejected";
+        return (option.kind === "approved" && hasPermission("orders.sign")) || (option.kind === "rejected" && hasPermission("orders.status"));
       }
 
       if (currentStateKind === "approved") {
-        return option.kind === "paid";
+        return option.kind === "paid" && hasPermission("orders.status");
       }
 
       return false;
@@ -1598,7 +1599,7 @@ const PurchaseOrderDetails = () => {
             : Promise.resolve(null),
           fetch(buildApiUrl("documents")),
           fetch(buildApiUrl("proveedores")),
-          fetch(buildApiUrl("users/")),
+          fetch(buildApiUrl("users/directory/")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_CONDITION")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=MONEY")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=STORE_WAREHOUSE")),
@@ -2012,7 +2013,7 @@ const PurchaseOrderDetails = () => {
                                         onClick: () =>
                                           handleOpenAttachments(purchaseOrder),
                                       },
-                                      ...(sessionUser.approvalRole === "SENIOR" && purchaseOrder.signature2 === sessionUser.id && !purchaseOrder.isCancelled ? [{
+                                      ...(hasPermission("orders.cancel") && sessionUser.approvalRole === "SENIOR" && purchaseOrder.signature2 === sessionUser.id && !purchaseOrder.isCancelled ? [{
                                         id: `cancel-order-${purchaseOrder.purchaseOrderID}`, label: "Anular orden",
                                         icon: "ri-close-circle-line", tone: "danger" as const,
                                         onClick: () => { setCancelOrder(purchaseOrder); setCancelReason(""); setCancelError(""); },

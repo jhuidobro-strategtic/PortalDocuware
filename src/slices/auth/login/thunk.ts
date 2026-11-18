@@ -1,4 +1,6 @@
 import { postFakeLogin } from "../../../helpers/fakebackend_helper";
+import { buildApiUrl } from "../../../helpers/api-url";
+import { firstAllowedRoute, portalSession } from "../../../helpers/portal-access";
 import {
   loginSuccess,
   logoutUserSuccess,
@@ -28,7 +30,7 @@ export const loginUser = (user: any, history: any) => async (dispatch: any) => {
 
       sessionStorage.setItem("authUser", JSON.stringify(authSession));
       dispatch(loginSuccess(authSession.data));
-      history("/documents");
+      history(firstAllowedRoute());
       return;
     }
 
@@ -40,6 +42,9 @@ export const loginUser = (user: any, history: any) => async (dispatch: any) => {
 
 export const logoutUser = () => async (dispatch: any) => {
   try {
+    if (portalSession()?.token) {
+      await fetch(buildApiUrl("users/session/"), { method: "DELETE" }).catch(() => undefined);
+    }
     sessionStorage.removeItem("authUser");
     dispatch(logoutUserSuccess(true));
   } catch (error) {

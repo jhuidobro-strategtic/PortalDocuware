@@ -484,14 +484,26 @@ const UsersPage = () => {
     setUserPendingDisable(null);
   };
 
-  const handleConfirmDisable = () => {
-    setFeedback({
-      type: "info",
-      message: t(
-        "The backend does not expose an endpoint to disable users yet. The action menu is ready to connect it when available."
-      ),
-    });
-    handleCloseDisableModal();
+  const handleConfirmDisable = async () => {
+    if (!userPendingDisable || updatingUser) return;
+    setUpdatingUser(true);
+    try {
+      const response = await fetch(buildApiUrl("users/register/"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userid: userPendingDisable.userID, status: false }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.detail || result.message || "No se pudo desactivar al usuario.");
+      setUsers((rows) => rows.map((user) => user.userID === userPendingDisable.userID ? { ...user, status: false } : user));
+      setFeedback({ type: "success", message: "Usuario desactivado." });
+      handleCloseDisableModal();
+    } catch (error) {
+      setFeedback({ type: "danger", message: error instanceof Error ? error.message : "No se pudo desactivar al usuario." });
+      handleCloseDisableModal();
+    } finally {
+      setUpdatingUser(false);
+    }
   };
 
   const exportToExcel = async () => {
@@ -1064,7 +1076,7 @@ const UsersPage = () => {
             <Button color="light" onClick={handleCloseDisableModal}>
               {t("Cancel")}
             </Button>
-            <Button color="danger" onClick={handleConfirmDisable}>
+            <Button color="danger" disabled={updatingUser} onClick={handleConfirmDisable}>
               {t("Disable")}
             </Button>
           </ModalFooter>

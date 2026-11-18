@@ -659,7 +659,7 @@ const RequestsPage = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(buildApiUrl("users/"), {
+      const response = await fetch(buildApiUrl("users/directory/"), {
         cache: "no-store",
         headers: getAuthHeaders(),
       });

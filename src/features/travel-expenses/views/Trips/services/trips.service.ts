@@ -509,7 +509,7 @@ export const fetchTripCatalogs = async () => {
         cache: "no-store",
         headers,
       }),
-      fetch(buildApiUrl("users/"), {
+      fetch(buildApiUrl("users/directory/"), {
         cache: "no-store",
         headers,
       }),

@@ -8,13 +8,6 @@ axios.defaults.baseURL = api.API_URL;
 // content type
 axios.defaults.headers.post["Content-Type"] = "application/json";
 
-// content type
-const authUser: any = sessionStorage.getItem("authUser")
-const parsedAuthUser = authUser ? JSON.parse(authUser) : null;
-const token = parsedAuthUser?.token ?? null;
-if (token)
-  axios.defaults.headers.common["Authorization"] = "Bearer " + token;
-
 // intercepting to capture errors
 axios.interceptors.response.use(
   function (response) {
@@ -39,14 +32,6 @@ axios.interceptors.response.use(
     return Promise.reject(message);
   }
 );
-/**
- * Sets the default authorization
- * @param {*} token
- */
-const setAuthorization = (token : string) => {
-  axios.defaults.headers.common["Authorization"] = "Bearer " + token;
-};
-
 class APIClient {
   /**
    * Fetches data from the given URL
@@ -106,4 +91,4 @@ const getLoggedinUser = () => {
   }
 };
 
-export { APIClient, setAuthorization, getLoggedinUser };
+export { APIClient, getLoggedinUser };

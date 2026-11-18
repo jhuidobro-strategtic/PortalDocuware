@@ -1,4 +1,4 @@
-import { canManageUsers } from "../helpers/user-management-access";
+import { canVisit } from "../helpers/portal-access";
 
 const Navdata = (t: (key: string) => string) => [
     {
@@ -131,6 +131,8 @@ const Navdata = (t: (key: string) => string) => [
             },
         ],
     },
-].filter((item) => item.id !== "user-management" || canManageUsers());
+].map((item) => item.subItems ? {
+    ...item, subItems: item.subItems.filter((child) => canVisit(child.link)),
+} : item).filter((item) => !item.subItems || item.subItems.length > 0);
 
 export default Navdata;

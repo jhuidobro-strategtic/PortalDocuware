@@ -159,7 +159,7 @@ const mapSignerOption = (item: SignerApiItem): SelectOption => {
 };
 
 export const fetchCategorizedSigners = async (): Promise<CategorizedSigners> => {
-  const response = await fetch(buildApiUrl("users/"), {
+  const response = await fetch(buildApiUrl("users/signers/"), {
     cache: "no-store",
   });
   const data = await response.json().catch(() => null);

@@ -224,7 +224,7 @@ export const fetchScheduleDetail = async (
       headers: getAuthHeaders(),
       signal,
     }),
-    fetch(buildApiUrl("users/"), {
+    fetch(buildApiUrl("users/directory/"), {
       cache: "no-store",
       headers: getAuthHeaders(),
       signal,

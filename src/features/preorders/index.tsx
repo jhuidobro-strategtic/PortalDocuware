@@ -1,3 +1,4 @@
+import { hasPermission } from "../../helpers/portal-access";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import moment from "moment";
@@ -108,7 +109,7 @@ const PreOrders = () => {
         <Input type="select" aria-label="Estado de preorden" className="preorder-state" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">Todos los estados</option>{Object.entries(stateLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Input>
       </div><div className="d-flex gap-2 flex-wrap"><Button color="light" disabled={loading || busy} onClick={() => refresh().catch((failure) => setError(failure.message))}>Actualizar</Button>
         <Button color="success" disabled={loading || exporting || !filtered.length} onClick={exportExcel}>{exporting ? <Spinner size="sm" /> : <i className="ri-file-excel-2-line me-1" />}Exportar Excel</Button>
-        <Button color="primary" disabled={loading || !userId} onClick={() => navigate("/pre-orders/new")}><i className="ri-add-line me-1" />Nueva preorden</Button></div></div>
+        <Button color="primary" disabled={loading || !userId || !hasPermission("preorders.create")} onClick={() => navigate("/pre-orders/new")}><i className="ri-add-line me-1" />Nueva preorden</Button></div></div>
       <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
         <div><Label htmlFor="pre-name">Nombre / asunto</Label><Input id="pre-name" placeholder="Proveedor, asunto o persona..." value={nameFilter} onChange={(event) => { setNameFilter(event.target.value); setPage(1); }} /></div>
         <div><Label htmlFor="pre-date-type">Filtrar por fecha de</Label><Input id="pre-date-type" type="select" value={dateType} onChange={(event) => { setDateType(event.target.value); setPage(1); }}><option value="source">Documento de origen</option><option value="invoice">Factura vinculada</option></Input></div>
@@ -123,15 +124,15 @@ const PreOrders = () => {
         <tbody>{!filtered.length && <tr><td colSpan={9} className="text-center py-4">No se encontraron preórdenes.</td></tr>}{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((row) => <tr key={row.id}>
           <td><TableActionsMenu items={[
             { id: `view-${row.id}`, label: "Ver documentos y preorden", icon: "ri-eye-line", onClick: () => openPreview(row), disabled: busy },
-            ...(row.creator_id === userId && ["DRAFT", "PENDING", "REJECTED"].includes(row.status) ? [{ id: `edit-${row.id}`, label: row.status === "DRAFT" ? "Editar y completar" : "Editar y enviar", icon: "ri-edit-line", onClick: () => navigate(`/pre-orders/edit/${row.id}`) }] : []),
-            ...(row.junior_id === userId && row.status === "PENDING" ? [{ id: `jr-${row.id}`, label: "Firmar como Junior", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } }] : []),
+            ...(hasPermission("preorders.edit") && row.creator_id === userId && ["DRAFT", "PENDING", "REJECTED"].includes(row.status) ? [{ id: `edit-${row.id}`, label: row.status === "DRAFT" ? "Editar y completar" : "Editar y enviar", icon: "ri-edit-line", onClick: () => navigate(`/pre-orders/edit/${row.id}`) }] : []),
+            ...(hasPermission("preorders.sign") && row.junior_id === userId && row.status === "PENDING" ? [{ id: `jr-${row.id}`, label: "Firmar como Junior", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } }] : []),
             ...(row.senior_id === userId && ["PENDING", "JR_SIGNED"].includes(row.status) ? [
-              { id: `approve-${row.id}`, label: "Firmar y generar seguimiento", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } },
-              { id: `reject-${row.id}`, label: "Rechazar", icon: "ri-close-circle-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "reject" }); setNotes(""); setActionError(""); } },
+              { id: `approve-${row.id}`, hidden: !hasPermission("preorders.sign"), label: "Firmar y generar seguimiento", icon: "ri-quill-pen-line", onClick: () => { setAction({ row, name: "approve" }); setNotes(""); setActionError(""); } },
+              { id: `reject-${row.id}`, hidden: !hasPermission("preorders.reject"), label: "Rechazar", icon: "ri-close-circle-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "reject" }); setNotes(""); setActionError(""); } },
             ] : []),
-            ...(row.status === "WAITING_INVOICE" ? [{ id: `invoice-${row.id}`, label: "Agregar comprobante y generar OC/OS", icon: "ri-file-add-line", onClick: () => setLinkRow(row) }] : []),
+            ...(hasPermission("preorders.link") && row.status === "WAITING_INVOICE" ? [{ id: `invoice-${row.id}`, label: "Agregar comprobante y generar OC/OS", icon: "ri-file-add-line", onClick: () => setLinkRow(row) }] : []),
             ...(row.status === "CONVERTED" ? [{ id: `pdf-${row.id}`, label: "Generar PDF OC/OS", icon: "ri-file-pdf-line", onClick: () => orderPdf(row), disabled: busy }] : []),
-            ...(row.senior_id === userId && !["CONVERTED", "CANCELLED"].includes(row.status) ? [{ id: `cancel-${row.id}`, label: "Anular preorden", icon: "ri-forbid-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "cancel" }); setNotes(""); setActionError(""); } }] : []),
+            ...(hasPermission("preorders.cancel") && row.senior_id === userId && !["CONVERTED", "CANCELLED"].includes(row.status) ? [{ id: `cancel-${row.id}`, label: "Anular preorden", icon: "ri-forbid-line", tone: "danger" as const, onClick: () => { setAction({ row, name: "cancel" }); setNotes(""); setActionError(""); } }] : []),
           ]} /></td>
           <td>{row.tracking_number || <span className="text-muted">Pendiente #{row.id}</span>}</td><td><div className="preorder-ellipsis" title={row.title}>{row.title}</div><small className="text-muted">{row.source_kind} {row.source_reference}</small></td>
           <td><div className="preorder-ellipsis" title={row.supplier_name}>{row.supplier_name}</div><small className="text-muted">{row.supplier_ruc}</small></td><td>{row.order_type === "C" ? "OC" : "OS"}</td>

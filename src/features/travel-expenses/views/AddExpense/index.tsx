@@ -606,7 +606,7 @@ const AddExpensePage = () => {
           cache: "no-store",
           headers: getAuthHeaders(),
         }),
-        fetch(buildApiUrl("users/"), {
+        fetch(buildApiUrl("users/directory/"), {
           cache: "no-store",
           headers: getAuthHeaders(),
         }),
