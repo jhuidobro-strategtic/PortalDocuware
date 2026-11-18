@@ -58,7 +58,7 @@
   white-space: nowrap;
 }
 
-.document-edit-details-table thead th:nth-child(2) {
+.document-edit-details-table thead th.document-edit-description-column {
   min-width: 350px;
 }
 
