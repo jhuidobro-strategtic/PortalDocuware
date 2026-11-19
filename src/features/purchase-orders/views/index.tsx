@@ -2374,7 +2374,7 @@ const PurchaseOrderDetails = () => {
                       itemName={(item) => item.name}
                       render={(item) => item.node}
                       endpoint={`purchase-orders/${attachmentOrder.purchaseOrderID}/attachment-order/`}
-                      canReorder={!attachmentError && !uploadingAttachment && hasPermission("expedients.attach")}
+                      canReorder={!attachmentError && !uploadingAttachment && hasPermission("orders.reorder_documents")}
                       onSaved={(order, standard) => {
                         const update = (row: PurchaseOrder) => row.purchaseOrderID === attachmentOrder.purchaseOrderID
                           ? { ...row, attachment_order: order, attachment_standard: standard ?? row.attachment_standard } : row;

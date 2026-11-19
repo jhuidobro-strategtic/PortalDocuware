@@ -5,6 +5,8 @@ export const modules: Record<string, string> = {
   travel: "Gastos de viaje",
 };
 const actions: Record<string, string> = {
+  configure_order: "Configurar el orden estándar de documentos",
+  reorder_documents: "Reordenar documentos y restablecer el estándar",
   read: "Consultar", edit: "Editar", delete: "Eliminar", report: "Consultar reportes y exportar",
   import: "Importar comprobantes", import_read: "Consultar lotes", import_retry: "Reintentar importaciones",
   import_review: "Revisar comprobantes importados", create: "Crear", sign: "Firmar según facultad y asignación",

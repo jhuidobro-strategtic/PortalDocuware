@@ -1885,7 +1885,7 @@ const Expedients = () => {
                   standard={selectedExpedient.attachment_standard} category={(file) => file.ordering_category || "support"}
                   itemKey={(file) => String(file.expedientedocid)} itemName={(file) => file.filename || "Documento"}
                   endpoint={`expedientes/${selectedExpedient.expedienteid}/attachment-order/`}
-                  canReorder={!isSelectedExpedientClosed && hasPermission("expedients.attach")}
+                  canReorder={!isSelectedExpedientClosed && hasPermission("expedients.reorder_documents")}
                   onSaved={(order, standard) => {
                     const update = (row: Expedient): Expedient => row.expedienteid !== selectedExpedient.expedienteid ? row : {
                       ...row,
