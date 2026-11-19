@@ -31,6 +31,7 @@ const Folders = lazy(() => import("../features/folders/views"));
 const Users = lazy(() => import("../features/users/views"));
 const VehicleManager = lazy(() => import("../features/vehicles/views"));
 const Roles = lazy(() => import("../features/users/views/Roles"));
+const DocumentOrderStandard = lazy(() => import("../features/users/views/DocumentOrderStandard"));
 const Landing = () => <Navigate to={firstAllowedRoute()} replace />;
 
 const authProtectedRoutes = [
@@ -69,6 +70,7 @@ const authProtectedRoutes = [
   { path: "/procesamiento-archivos", component: <Folders /> },
   { path: "/users", component: <Users /> },
   { path: "/users/roles", component: <Roles /> },
+  { path: "/users/document-order", component: <DocumentOrderStandard /> },
   { path: "/gestor-vehicular", component: <VehicleManager /> },
   { path: "/profile", component: <UserProfile /> },
   { path: "*", component: <Landing /> },

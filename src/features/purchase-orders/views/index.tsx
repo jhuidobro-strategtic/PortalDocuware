@@ -61,6 +61,7 @@ interface PurchaseOrderDetail {
 }
 
 interface OrderAttachment {
+  ordering_category?: string;
   createat?: string;
   expedientedocid: number;
   tipodocumentoid: number;
@@ -80,6 +81,7 @@ type ApprovalStatus = "PENDING" | "JR_SIGNED" | "APPROVED";
 
 interface PurchaseOrder {
   attachment_order?: string[];
+  attachment_standard?: string[];
   isCancelled: boolean;
   cancellationReason?: string;
   purchaseOrderID: number;
@@ -143,6 +145,7 @@ interface SupplierReference {
 
 interface PurchaseOrderApiItem {
   attachment_order?: string[];
+  attachment_standard?: string[];
   isCancelled?: boolean;
   cancellationReason?: string;
   purchaseOrderID: number;
@@ -267,6 +270,7 @@ const getDocumentTypeLabel = (value: number | DocumentTypeReference) =>
 
 const mapPurchaseOrder = (item: PurchaseOrderApiItem): PurchaseOrder => ({
   attachment_order: item.attachment_order,
+  attachment_standard: item.attachment_standard,
   isCancelled: item.isCancelled === true,
   cancellationReason: item.cancellationReason,
   purchaseOrderID: item.purchaseOrderID,
@@ -2311,7 +2315,7 @@ const PurchaseOrderDetails = () => {
                     {attachmentError && <p className="text-danger" role="alert">{attachmentError}</p>}
                     <AttachmentOrderList key={attachmentOrder.purchaseOrderID}
                       items={[
-                        ...(hasInvoice ? [{ id: "invoice", name: invoiceName, node: (
+                        ...(hasInvoice ? [{ id: "invoice", category: "invoice", name: invoiceName, node: (
                           <CommercialInvoice
                       key={`commercial-invoice-${attachmentOrder.purchaseOrderID}`}
                       orderId={attachmentOrder.purchaseOrderID}
@@ -2339,7 +2343,7 @@ const PurchaseOrderDetails = () => {
                       }}
                     />
                         ) }] : []),
-                        { id: "order", name: orderDocName, node: (
+                        { id: "order", category: "order", name: orderDocName, node: (
                           <OrderDocumentItem
                     key={`order-preview-${attachmentOrder.purchaseOrderID}-${previewOrderAutomatically}`}
                     initiallyOpen={previewOrderAutomatically}
@@ -2352,7 +2356,7 @@ const PurchaseOrderDetails = () => {
                   />
                         ) },
                         ...otherAttachments.map((file) => ({
-                          id: String(file.expedientedocid), name: file.filename || t("Document"), node: (
+                          id: String(file.expedientedocid), category: file.ordering_category || "support", name: file.filename || t("Document"), node: (
                             <OrderDocumentItem
                         key={file.expedientedocid}
                         name={file.filename || t("Document")}
@@ -2364,14 +2368,16 @@ const PurchaseOrderDetails = () => {
                         })),
                       ]}
                       order={attachmentOrder.attachment_order}
+                      standard={attachmentOrder.attachment_standard}
+                      category={(item) => item.category}
                       itemKey={(item) => item.id}
                       itemName={(item) => item.name}
                       render={(item) => item.node}
                       endpoint={`purchase-orders/${attachmentOrder.purchaseOrderID}/attachment-order/`}
                       canReorder={!attachmentError && !uploadingAttachment && hasPermission("expedients.attach")}
-                      onSaved={(order) => {
+                      onSaved={(order, standard) => {
                         const update = (row: PurchaseOrder) => row.purchaseOrderID === attachmentOrder.purchaseOrderID
-                          ? { ...row, attachment_order: order } : row;
+                          ? { ...row, attachment_order: order, attachment_standard: standard ?? row.attachment_standard } : row;
                         setPurchaseOrders((rows) => rows.map(update));
                         setAttachmentOrder((row) => row ? update(row) : row);
                       }}

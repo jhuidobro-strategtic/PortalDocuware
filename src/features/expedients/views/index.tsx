@@ -114,6 +114,7 @@ interface ExpedientPurchaseOrder {
 }
 
 interface ExpedientDocument {
+  ordering_category?: string;
   expedientedocid: number;
   expedienteid: number;
   tipodocumentoid: number;
@@ -129,6 +130,7 @@ interface ExpedientDocument {
 
 interface Expedient {
   attachment_order?: string[];
+  attachment_standard?: string[];
   paid_at?: string | null;
   paid_by?: number | null;
   closed_by?: number | null;
@@ -1880,14 +1882,16 @@ const Expedients = () => {
               <div className="expedient-drawer-list">
                 <AttachmentOrderList key={selectedExpedient.expedienteid}
                   items={selectedExpedient.expediente_documentos} order={selectedExpedient.attachment_order}
+                  standard={selectedExpedient.attachment_standard} category={(file) => file.ordering_category || "support"}
                   itemKey={(file) => String(file.expedientedocid)} itemName={(file) => file.filename || "Documento"}
                   endpoint={`expedientes/${selectedExpedient.expedienteid}/attachment-order/`}
                   canReorder={!isSelectedExpedientClosed && hasPermission("expedients.attach")}
-                  onSaved={(order) => {
+                  onSaved={(order, standard) => {
                     const update = (row: Expedient): Expedient => row.expedienteid !== selectedExpedient.expedienteid ? row : {
                       ...row,
                       attachment_order: order,
-                      expediente_documentos: arrangeAttachments(row.expediente_documentos, order, (file) => String(file.expedientedocid)),
+                      attachment_standard: standard ?? row.attachment_standard,
+                      expediente_documentos: arrangeAttachments(row.expediente_documentos, order, (file) => String(file.expedientedocid), standard ?? row.attachment_standard, (file) => file.ordering_category || "support"),
                     };
                     setExpedients((rows) => rows.map(update));
                     setSelectedExpedient((row) => row ? update(row) : row);
