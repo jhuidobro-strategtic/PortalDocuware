@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card, CardBody, Container } from "reactstrap";
+import { Alert, Button, Container } from "reactstrap";
 import { buildApiUrl } from "../../../helpers/api-url";
+import "./Roles.css";
+import "./DocumentOrderStandard.css";
 
 const names: Record<string, string> = {
   invoice: "Factura o comprobante", order: "Orden de compra o servicio",
@@ -40,16 +42,24 @@ export default function DocumentOrderStandard() {
     finally { setSaving(false); }
   };
 
-  return <Container fluid className="page-content">
-    <h4>Orden estándar de documentos</h4>
-    <p className="text-muted">Esta secuencia se asigna a las nuevas órdenes y expedientes. En un registro existente puedes aplicarla con Restablecer orden estándar.</p>
+  return <Container fluid className="page-content access-roles document-standard">
+    <header className="access-roles-heading">
+      <div><h1>Orden documental</h1><p>Define cómo se presentan los documentos de las nuevas órdenes y expedientes.</p></div>
+    </header>
     {error && <Alert color="danger" role="alert">{error} <Button color="link" onClick={() => setAttempt((count) => count + 1)}>Reintentar</Button></Alert>}
     {notice && <Alert color="success" role="status">{notice}</Alert>}
-    <Card><CardBody>
+    <div className="document-standard-layout">
+    <section className="access-roles-surface document-standard-editor" aria-label="Secuencia estándar">
+      <div className="access-roles-editor-head">
+        <div><h2>Secuencia estándar</h2><p>Mueve cada tipo con las flechas.</p></div>
+      </div>
       {!saved.length && !error && <p role="status">Cargando estándar…</p>}
-      <ol className="list-unstyled mb-3">
-        {categories.map((key, index) => <li key={key} className="d-flex align-items-center gap-2 border-bottom py-3">
-          <span className="text-muted">{index + 1}.</span><span className="me-auto">{names[key]}</span>
+      <ol className="document-standard-list">
+        {categories.map((key, index) => <li key={key} className="document-standard-row">
+          <span className="document-standard-position">{index + 1}</span>
+          <i className={key === "order" ? "ri-file-list-3-line document-standard-icon" : key === "support" ? "ri-attachment-line document-standard-icon" : "ri-file-text-line document-standard-icon"} aria-hidden="true" />
+          <span className="document-standard-name">{names[key]}</span>
+          <div className="document-standard-controls">
           {([-1, 1] as const).map((direction) => <Button key={direction} color="outline-secondary" size="sm"
             disabled={saving || index + direction < 0 || index + direction >= categories.length}
             aria-label={`${direction === -1 ? "Subir" : "Bajar"} ${names[key]}`} onClick={() => {
@@ -58,12 +68,24 @@ export default function DocumentOrderStandard() {
               [next[index], next[index + direction]] = [next[index + direction], next[index]];
               setCategories(next);
             }}><i className={direction === -1 ? "ri-arrow-up-line" : "ri-arrow-down-line"} aria-hidden="true" /></Button>)}
+          </div>
         </li>)}
       </ol>
-      <div className="d-flex gap-2 justify-content-end">
-        {dirty && <Button color="light" disabled={saving} onClick={() => setCategories(saved)}>Descartar</Button>}
-        <Button color="primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Guardando…" : "Guardar estándar"}</Button>
+      <div className="access-roles-footer">
+        <span className="small" role="status">{dirty ? "Cambios sin guardar" : "Estándar al día"}</span>
+        <div className="access-roles-footer-actions">
+          {dirty && <Button color="light" disabled={saving} onClick={() => { setCategories(saved); setNotice(""); }}>Descartar</Button>}
+          <Button color="primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Guardando…" : "Guardar estándar"}</Button>
+        </div>
       </div>
-    </CardBody></Card>
+    </section>
+    <aside className="document-standard-help">
+      <h2>Aplicación del estándar</h2>
+      <p>Las nuevas órdenes y expedientes reciben la secuencia que guardes aquí.</p>
+      <h3>Registros existentes</h3>
+      <p>Para aplicarles esta secuencia, abre <strong>Ver documentos → Ordenar documentos</strong> y pulsa <strong>Restablecer orden estándar</strong>.</p>
+      <p>Los registros con un orden personalizado lo conservan hasta que decidas restablecerlo.</p>
+    </aside>
+    </div>
   </Container>;
 }
