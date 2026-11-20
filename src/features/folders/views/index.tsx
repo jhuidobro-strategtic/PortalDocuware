@@ -88,10 +88,12 @@ const Folders = () => {
   const fetchTraceabilityData = useCallback(async (page = 1) => {
     setLoadingTraceability(true);
     try {
-      const response = await axios.get<InvoiceImportResponse>(
-        buildApiUrl(`invoice-imports/?page=${page}&page_size=20`)
-      );
-      setTraceabilityData(response.data);
+      const response = await fetch(buildApiUrl(`invoice-imports/?page=${page}&page_size=20`));
+      const payload = await response.json();
+      if (!response.ok || !payload.success || !Array.isArray(payload.data?.results)) {
+        throw new Error(payload.message || "No fue posible cargar la trazabilidad.");
+      }
+      setTraceabilityData(payload.data as InvoiceImportResponse);
       setCurrentPage(page);
     } catch (error: any) {
       console.error("Error loading traceability data:", error);
@@ -108,7 +110,7 @@ const Folders = () => {
   }, [currentView, traceabilityData, fetchTraceabilityData]);
 
   useEffect(() => {
-    const active = traceabilityData?.results.some((batch) => batch.jobs.some((job) =>
+    const active = traceabilityData?.results?.some((batch) => batch.jobs.some((job) =>
       ["uploaded", "uploaded_local", "ocr_processing", "sunat_processing", "persisting"].includes(job.status)
     ));
     if (currentView !== "traceability" || !active) return;
@@ -716,7 +718,7 @@ const Folders = () => {
                             </Link>
                           </li>
                           <li className="mb-2">
-                            <Link to="#" className={`text-muted ${currentView === 'traceability' ? 'active text-primary fw-medium' : ''}`} onClick={(e) => { e.preventDefault(); setCurrentView("traceability"); fetchTraceabilityData(1); }}>
+                            <Link to="#" className={`text-muted ${currentView === 'traceability' ? 'active text-primary fw-medium' : ''}`} onClick={(e) => { e.preventDefault(); setCurrentView("traceability"); }}>
                               <span className="me-2">•</span> Trazabilidad de archivos
                             </Link>
                           </li>
