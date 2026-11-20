@@ -63,60 +63,21 @@ const enrichExpenseRequestsWithVouchers = async (
   expenseRequests: ScheduleExpenseRequest[],
   signal?: AbortSignal
 ) => {
-  const voucherRequests = expenseRequests.flatMap((request) =>
-    request.details.map((detail) => ({
-      expenseDetailId: detail.expenseDetailId,
-      idRequest: request.idRequest,
-    }))
-  );
-
-  if (voucherRequests.length === 0) {
-    return expenseRequests;
+  if (!expenseRequests.some((request) => request.details.length)) return expenseRequests;
+  const voucherLookup: Record<string, ReturnType<typeof mapExpenseVoucher>[]> = {};
+  const requestIds = [...new Set(expenseRequests.map((request) => request.idRequest))];
+  for (let start = 0; start < requestIds.length; start += 100) {
+    const ids = requestIds.slice(start, start + 100).join(",");
+    const response = await fetch(buildApiUrl(`expense-vouchers/?request_ids=${ids}`), {
+      cache: "no-store", headers: getAuthHeaders(), signal,
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.success || !Array.isArray(payload.data)) throw new Error("No fue posible obtener los comprobantes de gastos.");
+    for (const item of payload.data) {
+      const key = `${Number(item.id_request)}:${Number(item.expense_detail_id)}`;
+      (voucherLookup[key] ??= []).push(mapExpenseVoucher(item));
+    }
   }
-
-  const voucherResponses = await Promise.all(
-    voucherRequests.map(async ({ idRequest, expenseDetailId }) => {
-      let vouchers: ReturnType<typeof mapExpenseVoucher>[] = [];
-
-      try {
-        const response = await fetch(
-          buildApiUrl(
-            `expense-vouchers/?id_request=${encodeURIComponent(
-              String(idRequest)
-            )}&expense_detail_id=${encodeURIComponent(String(expenseDetailId))}`
-          ),
-          {
-            cache: "no-store",
-            headers: getAuthHeaders(),
-            signal,
-          }
-        );
-        const responseData = await response.json().catch(() => null);
-        vouchers =
-          response.ok &&
-          responseData?.success &&
-          Array.isArray(responseData?.data)
-            ? responseData.data.map(mapExpenseVoucher)
-            : [];
-      } catch {
-        vouchers = [];
-      }
-
-      return {
-        expenseDetailId,
-        idRequest,
-        vouchers,
-      };
-    })
-  );
-
-  const voucherLookup = voucherResponses.reduce<Record<string, ReturnType<typeof mapExpenseVoucher>[]>>(
-    (acc, item) => {
-      acc[`${item.idRequest}:${item.expenseDetailId}`] = item.vouchers;
-      return acc;
-    },
-    {}
-  );
 
   return expenseRequests.map((request) => ({
     ...request,
@@ -195,17 +156,9 @@ export const fetchScheduleTrips = async (
     };
   });
 
-  const enrichedTrips = await Promise.all(
-    trips.map(async (trip) => ({
-      ...trip,
-      expenseRequests: await enrichExpenseRequestsWithVouchers(
-        trip.expenseRequests,
-        signal
-      ),
-    }))
-  );
-
-  return enrichedTrips;
+  const enrichedRequests = await enrichExpenseRequestsWithVouchers(trips.flatMap((trip) => trip.expenseRequests), signal);
+  const requestLookup = new Map(enrichedRequests.map((request) => [request.idRequest, request]));
+  return trips.map((trip) => ({ ...trip, expenseRequests: trip.expenseRequests.map((request) => requestLookup.get(request.idRequest) ?? request) }));
 };
 
 export const fetchScheduleDetail = async (
