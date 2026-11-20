@@ -155,9 +155,7 @@ const AddAnticipo = () => {
             fetch(buildApiUrl("catalogos/?tipo_catalogo=BANK"), { headers }).catch(() => null),
             fetch(buildApiUrl("catalogos/?tipo_catalogo=ACCOUNT_TYPE"), { headers }).catch(() => null),
             fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_METHOD"), { headers }).catch(() => null),
-            fetch("https://docuware-api-a09ab977636d.herokuapp.com/api/centro-costo", { headers }).catch(() =>
-              fetch(buildApiUrl("centro-costo")).catch(() => null)
-            ),
+            fetch(buildApiUrl("centro-costo/"), { headers }).catch(() => null),
             fetch(buildApiUrl("catalogos/?tipo_catalogo=STATE_OF_PURCHASE_ORDER"), { headers }).catch(() => null),
           ]);
 
