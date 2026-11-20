@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
@@ -8,12 +8,9 @@ import { readUiPreference, writeUiPreference } from "../../../helpers/ui-prefere
 import { restoreDocumentListState } from "../services/list-state";
 import { ColumnWidths, Document, Notification, TipoDocumento } from "../types/list.types";
 import { DOCUMENTS_FLASH_NOTIFICATION_KEY } from "../services/document.utils";
-import { intelligentSearch } from "../../../helpers/search-utils";
 import { downloadBlob } from "../../../helpers/download-blob";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 
-type PurchaseOrderReference = { documentAssociatedNo?: string; isCancelled?: boolean;
-  supplierID?: { supplierno?: string }; documentAssociatedType?: number | { tipoid: number }; };
 type ImportSummary = { documents_created?: number; documents_updated?: number; details_created?: number; duplicates_skipped?: number; };
 type ExtractDocumentsResultPayload = { message?: string; items?: unknown[]; import_summary?: ImportSummary | null; };
 type ExtractDocumentsJobData = { job_id?: string; status?: string; message?: string; result?: ExtractDocumentsResultPayload | null; };
@@ -83,9 +80,16 @@ export const useDocumentList = () => {
     });
   }, [searchTerm, statusFilter, orderFilter, dateRange, currentPage]);
 
+  const [totalCount, setTotalCount] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const requestVersion = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
+  const hasLoaded = useRef(false);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm]);
   const itemsPerPage = 20;
-  const startDate = dateRange[0];
-  const endDate = dateRange[1];
 
   const [columnWidths, setColumnWidths] = useColumnWidths<ColumnWidths>("documents", {
     id: 80, serie: 100, numero: 100, ruc: 130, razon: 200, tipo: 150, driver: 120, fecha: 130, moneda: 100, subtotal: 110, igv: 100, total: 120, estado: 120, orden: 180, acciones: 120,
@@ -109,53 +113,46 @@ export const useDocumentList = () => {
     }
   }, []);
 
+  const startKey = dateRange[0] ? moment(dateRange[0]).format("YYYY-MM-DD") : "";
+  const endKey = dateRange[1] ? moment(dateRange[1]).format("YYYY-MM-DD") : "";
+  const filterQuery = useMemo(() => new URLSearchParams({search: debouncedSearch, status: statusFilter, order: orderFilter, start_date: startKey, end_date: endKey}).toString(), [debouncedSearch, statusFilter, orderFilter, startKey, endKey]);
   const fetchInitialData = useCallback(async (showLoader = true) => {
+    const version = ++requestVersion.current;
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
     if (showLoader) setLoading(true);
     setError(null);
     try {
-      const [documentsResponse, documentTypesResponse, purchaseOrdersResponse] = await Promise.all([
-        fetch(buildApiUrl("documents"), { headers: getAuthHeaders() }),
-        fetch(buildApiUrl("tipo-documento"), { headers: getAuthHeaders() }),
-        fetch(buildApiUrl("purchase-orders/"), { headers: getAuthHeaders() }),
-      ]);
-
-      const documentsPayload = await documentsResponse.json();
-      const documentTypesPayload = await documentTypesResponse.json();
-      const purchaseOrdersPayload = await purchaseOrdersResponse.json().catch(() => null);
-
-      if (documentsPayload.success) {
-        setDocuments(documentsPayload.data);
-      } else {
-        throw new Error(documentsPayload.message || t("Error getting documents"));
-      }
-
-      if (documentTypesPayload.success) setTiposDocumento(documentTypesPayload.data);
-
-      if (purchaseOrdersResponse.ok && purchaseOrdersPayload?.success && Array.isArray(purchaseOrdersPayload?.data)) {
-        const approvedOrders = new Set(
-          (purchaseOrdersPayload.data as PurchaseOrderReference[])
-            .filter((purchaseOrder) => !purchaseOrder.isCancelled)
-            .map((order) => JSON.stringify([order.supplierID?.supplierno?.trim() ?? "",
-              typeof order.documentAssociatedType === "object" ? order.documentAssociatedType?.tipoid : order.documentAssociatedType,
-              normalizeAssociatedNo(String(order.documentAssociatedNo ?? ""))]))
-            .filter(Boolean)
-        );
-        setApprovedOrderDocumentNos(approvedOrders);
-      } else {
-        setApprovedOrderDocumentNos(new Set());
-      }
-    } catch (fetchError: unknown) {
-      const message = fetchError instanceof Error ? fetchError.message : t("Unexpected server response");
-      setError(message);
-      throw fetchError;
+      const response = await fetch(buildApiUrl(`documents/?${filterQuery}&page=${currentPage}&page_size=${itemsPerPage}`), { headers: getAuthHeaders(), signal: controller.signal });
+      const payload = await response.json();
+      if (controller.signal.aborted || version !== requestVersion.current) return;
+      if (!response.ok || !payload.success || !Array.isArray(payload.data) || !payload.pagination) throw new Error(payload.message || t("Error getting documents"));
+      setDocuments(payload.data);
+      setTotalCount(payload.pagination.count);
+      setCurrentPage(payload.pagination.page);
+      setApprovedOrderDocumentNos(new Set((payload.data as Document[]).filter((doc) => doc.hasActiveOrder).map(getDocumentAssociatedNo)));
+    } catch (failure: unknown) {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
+      setError(failure instanceof Error ? failure.message : t("Unexpected server response"));
     } finally {
-      if (showLoader) setLoading(false);
+      if (!controller.signal.aborted && version === requestVersion.current) {
+        hasLoaded.current = true;
+        if (showLoader) setLoading(false);
+      }
     }
-  }, [t]);
-
+  }, [t, filterQuery, currentPage]);
   useEffect(() => {
-    fetchInitialData().catch(() => {});
+    void fetchInitialData();
+    const controller = activeRequest.current;
+    return () => controller?.abort();
   }, [fetchInitialData]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(buildApiUrl("tipo-documento/"), { headers: getAuthHeaders(), signal: controller.signal })
+      .then((response) => response.json()).then((payload) => { if (!controller.signal.aborted && payload.success) setTiposDocumento(payload.data); }).catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   const handleResize = (column: keyof ColumnWidths, newWidth: number) => {
     setColumnWidths((prev) => ({ ...prev, [column]: newWidth }));
@@ -170,34 +167,8 @@ export const useDocumentList = () => {
     return t("Unknown");
   };
 
-  const filteredDocuments = documents.filter((doc) => {
-    const hasOrder = doc.hasActiveOrder ?? approvedOrderDocumentNos.has(getDocumentAssociatedNo(doc));
-    if ((orderFilter === "with" && !hasOrder) || (orderFilter === "without" && hasOrder)) return false;
-    const matchesSearch = intelligentSearch(doc, searchTerm);
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" && doc.status) || (statusFilter === "pending" && !doc.status);
-    let matchesDate = true;
-    if (startDate || endDate) {
-      const documentDate = moment(doc.documentdate, ["YYYY/MM/DD", "YYYY-MM-DD"]);
-      const start = startDate ? moment(startDate).startOf("day") : null;
-      const end = endDate ? moment(endDate).endOf("day") : null;
-      matchesDate = (!start || documentDate.isSameOrAfter(start)) && (!end || documentDate.isSameOrBefore(end));
-    }
-    return matchesSearch && matchesStatus && matchesDate;
-  }).sort((left, right) => {
-    const leftCreatedAt = Date.parse(left.created_at);
-    const rightCreatedAt = Date.parse(right.created_at);
-    const leftTimestamp = Number.isFinite(leftCreatedAt) ? leftCreatedAt : -Infinity;
-    const rightTimestamp = Number.isFinite(rightCreatedAt) ? rightCreatedAt : -Infinity;
-    return rightTimestamp === leftTimestamp
-      ? right.documentid - left.documentid
-      : rightTimestamp - leftTimestamp;
-  });
-
-  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
-  useEffect(() => {
-    if (!loading && !error) setCurrentPage((page) => Math.min(page, Math.max(1, totalPages)));
-  }, [loading, error, totalPages]);
-  const paginatedDocuments = filteredDocuments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const paginatedDocuments = documents;
 
   const handleDelete = (documentid: number) => {
     setDocumentToDelete(documentid);
@@ -216,6 +187,7 @@ export const useDocumentList = () => {
         addNotification("success", t("Document deleted successfully"));
         setDeleteModal(false);
         setDocumentToDelete(null);
+        await fetchInitialData(false);
       } else {
         addNotification("danger", payload.message || t("Error deleting the document"));
       }
@@ -321,6 +293,12 @@ export const useDocumentList = () => {
 
   const exportToExcel = async () => {
     try {
+      const query = new URLSearchParams(filterQuery);
+      query.set("search", searchTerm);
+      const response = await fetch(buildApiUrl(`documents/?${query}`), { headers: getAuthHeaders() });
+      const payload = await response.json();
+      if (!response.ok || !payload.success || !Array.isArray(payload.data)) throw new Error("Export failed");
+      const filteredDocuments = payload.data as Document[];
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook();
       const worksheet = workbook.addWorksheet("Documentos");
@@ -386,10 +364,12 @@ export const useDocumentList = () => {
   };
 
   return {
-    documents, loading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
+    documents, loading, initialLoading: loading && !hasLoaded.current, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter: (value: string) => { setOrderFilter(value); setCurrentPage(1); }, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
-    setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
-    paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount: filteredDocuments.length,
+    setSearchTerm: (value: string) => { setSearchTerm(value); setCurrentPage(1); },
+    setStatusFilter: (value: string) => { setStatusFilter(value); setCurrentPage(1); },
+    setDateRange: (value: Date[]) => { setDateRange(value); setCurrentPage(1); }, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
+    paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount: totalCount,
     handleResize, handleDelete, confirmDelete, handleViewDocument, handleClosePreview, handleOpenOrderC,
     handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre
   };

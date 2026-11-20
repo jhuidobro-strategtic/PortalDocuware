@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,6 @@ import { buildApiUrl } from "../../../../helpers/api-url";
 import DocumentFilters from "../../components/DetailsFilters";
 import DocumentTable from "../../components/DetailsDocumentTable";
 import { DocumentDetailsRow } from "../../types/details.types";
-import { intelligentSearch } from "../../../../helpers/search-utils";
 import { buildDocumentDetailExportRows } from "./exportRows";
 import { downloadBlob } from "../../../../helpers/download-blob";
 
@@ -30,40 +29,28 @@ const DocumentDetails: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  const [totalCount, setTotalCount] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const res = await fetch(buildApiUrl("documents-all"));
-        const data = await res.json();
-
-        if (!Array.isArray(data)) {
-          throw new Error(t("Unexpected server response"));
-        }
-
-        setDocuments(data);
-      } catch (err: any) {
-        setError(err.message || t("Error getting documents"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [t]);
-
-  // filtrado
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = intelligentSearch(doc, searchTerm);
-
-    // Usamos moment para comparar correctamente las fechas
-    const docDate = moment(doc.documentdate, ["YYYY-MM-DD", "YYYY/MM/DD", "DD/MM/YYYY"], true);
-
-    const matchesDate =
-      (!startDate || docDate.isSameOrAfter(moment(startDate), "day")) &&
-      (!endDate || docDate.isSameOrBefore(moment(endDate), "day"));
-
-    return matchesSearch && matchesDate;
-  });
+    const timer = window.setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+  const startKey = startDate ? moment(startDate).format("YYYY-MM-DD") : "";
+  const endKey = endDate ? moment(endDate).format("YYYY-MM-DD") : "";
+  const filterQuery = useMemo(() => new URLSearchParams({search: debouncedSearch, start_date: startKey, end_date: endKey}).toString(), [debouncedSearch, startKey, endKey]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true); setError(null);
+    void fetch(buildApiUrl(`documents-all?${filterQuery}&page=${currentPage}&page_size=${itemsPerPage}`), { signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok || !Array.isArray(payload.data) || !payload.pagination) throw new Error(t("Unexpected server response"));
+        if (!controller.signal.aborted) { setDocuments(payload.data); setTotalCount(payload.pagination.count); setCurrentPage(payload.pagination.page); }
+      }).catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
+      .finally(() => { if (!controller.signal.aborted) { setLoading(false); setInitialLoading(false); } });
+    return () => controller.abort();
+  }, [t, filterQuery, currentPage]);
 
   const handleSearchTermChange = (value: string) => {
     setSearchTerm(value);
@@ -75,16 +62,18 @@ const DocumentDetails: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
-  const paginatedDocuments = filteredDocuments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const paginatedDocuments = documents;
 
   // exportar a excel Detalles
   const exportToExcel = async () => {
     try {
       setExportAlert(null);
+      const query = new URLSearchParams(filterQuery);
+      query.set("search", searchTerm);
+      const response = await fetch(buildApiUrl(`documents-all?${query}`));
+      const filteredDocuments = await response.json();
+      if (!response.ok || !Array.isArray(filteredDocuments)) throw new Error(t("Unexpected server response"));
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook();
       const worksheet = workbook.addWorksheet("Detalles de Documentos");
@@ -241,7 +230,7 @@ const DocumentDetails: React.FC = () => {
     }
   };
 
-  if (loading)
+  if (initialLoading)
     return (
       <div className="text-center my-5">
         <Spinner color="primary" />
@@ -259,7 +248,7 @@ const DocumentDetails: React.FC = () => {
   }
 
   return (
-    <Container fluid className="mt-4 small-text">
+    <Container fluid className="mt-4 small-text" aria-busy={loading}>
       {exportAlert && (
         <FloatingAlerts
           alerts={[
@@ -291,7 +280,7 @@ const DocumentDetails: React.FC = () => {
                   <AppPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
-                    totalItems={filteredDocuments.length}
+                    totalItems={totalCount}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                   />

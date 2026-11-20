@@ -12,7 +12,7 @@ import { useDocumentList, getDocumentAssociatedNo } from "../../hooks/useDocumen
 
 const DocumentList: React.FC = () => {
   const {
-    loading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
+    loading, initialLoading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
     setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
     paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount,
@@ -20,7 +20,7 @@ const DocumentList: React.FC = () => {
     handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre
   } = useDocumentList();
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="text-center my-5">
         <Spinner color="primary" />
@@ -39,7 +39,7 @@ const DocumentList: React.FC = () => {
   }
 
   return (
-    <Container fluid className="mt-4 small-text">
+    <Container fluid className="mt-4 small-text" aria-busy={loading}>
       <Notifications
         notifications={notifications}
         onRemove={(id) =>
