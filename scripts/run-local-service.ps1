@@ -45,7 +45,7 @@ switch ($Service) {
         $env:OCR_API_URL = 'http://127.0.0.1:5001/process-document'
         $env:LOCAL_INVOICE_PROCESSING = 'true'
         if ($Service -eq 'api') {
-            & .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000 --noreload
+            & .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
         } else {
             & .\venv\Scripts\python.exe manage.py process_invoice_jobs --local-only
         }
