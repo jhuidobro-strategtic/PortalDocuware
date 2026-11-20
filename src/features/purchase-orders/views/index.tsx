@@ -943,7 +943,7 @@ const PurchaseOrderDetails = () => {
     }
     setOrderPreviewPdfUrl("");
 
-    const expedientesPromise = fetch(buildApiUrl("expedientes/"))
+    const expedientesPromise = fetch(buildApiUrl(`expedientes/?purchase_order_id=${order.purchaseOrderID}`))
       .then(async (response) => {
         const payload = await response.json().catch(() => null);
         if (!response.ok || payload?.success === false) {
@@ -1605,7 +1605,7 @@ const PurchaseOrderDetails = () => {
           isJuniorApprover || sessionUser.approvalRole === "SENIOR"
             ? fetch(buildApiUrl(`purchase-orders/pending-approvals/?userID=${sessionUser.id}`))
             : Promise.resolve(null),
-          fetch(buildApiUrl("documents")),
+          fetch(buildApiUrl("documents/?for_orders=1")),
           fetch(buildApiUrl("proveedores")),
           fetch(buildApiUrl("users/directory/")),
           fetch(buildApiUrl("catalogos/?tipo_catalogo=PAYMENT_CONDITION")),
@@ -2297,7 +2297,7 @@ const PurchaseOrderDetails = () => {
                   userId={sessionUser.id}
                   onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
                   onUploaded={async () => {
-                    const response = await fetch(buildApiUrl("expedientes/"));
+                    const response = await fetch(buildApiUrl(`expedientes/?purchase_order_id=${attachmentOrder.purchaseOrderID}`));
                     const payload = await response.json().catch(() => null);
                     const rows = payload?.data ?? payload;
                     if (!response.ok || payload?.success === false || !Array.isArray(rows)) {
@@ -2332,7 +2332,7 @@ const PurchaseOrderDetails = () => {
                         setDocumentsByAssociatedNo((previous) => ({
                           ...previous, [attachmentOrder.documentAssociatedNo]: updatedDocument,
                         }));
-                        const response = await fetch(buildApiUrl("expedientes/"));
+                        const response = await fetch(buildApiUrl(`expedientes/?purchase_order_id=${attachmentOrder.purchaseOrderID}`));
                         const payload = await response.json().catch(() => null);
                         if (!response.ok || payload?.success === false || !Array.isArray(payload?.data)) {
                           throw new Error("No se pudo actualizar el expediente.");

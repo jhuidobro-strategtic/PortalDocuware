@@ -29,7 +29,7 @@ const OrderDocumentUpload = ({ orderId, invoiceId, userId, token, disabled = fal
     setBusy(true); onBusyChange(true);
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     try {
-      const response = await fetch(buildApiUrl("expedientes/"), { headers });
+      const response = await fetch(buildApiUrl(`expedientes/?purchase_order_id=${orderId}`), { headers });
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.success === false) throw new Error(getApiErrorMessage(result, "No fue posible consultar el expediente."));
       const rows = result?.data ?? result;
