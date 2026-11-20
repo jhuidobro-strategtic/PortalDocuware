@@ -27,6 +27,7 @@ interface DocumentEditorFormProps {
   loadingRuc: boolean;
   loadingDocument: boolean;
   loadingSave: boolean;
+  loadingDetails?: boolean;
   onSearchRuc: () => Promise<void>;
   onSearchDocument: () => Promise<void>;
   onSave: () => void;
@@ -53,6 +54,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   loadingRuc,
   loadingDocument,
   loadingSave,
+  loadingDetails = false,
   onSearchRuc,
   onSearchDocument,
   onSave,
@@ -340,7 +342,7 @@ const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         <Button color="light" type="button" onClick={onCancel}>
           {t("Cancel")}
         </Button>
-        <Button color="primary" type="submit" disabled={loadingSave}>
+        <Button color="primary" type="submit" disabled={loadingSave || loadingDetails}>
           {loadingSave ? (
             <>
               <Spinner size="sm" className="me-2" />

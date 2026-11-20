@@ -472,6 +472,7 @@ const DocumentEditPage: React.FC = () => {
         }
 
         setLoadingDetails(true);
+        setLoading(false);
         try {
           const details = await fetchDetailsByValues(
             normalizedDocument.suppliernumber,
@@ -669,6 +670,7 @@ const DocumentEditPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (loadingDetails || loadingSave) return;
     if (!editDoc) {
       return;
     }
@@ -849,6 +851,7 @@ const DocumentEditPage: React.FC = () => {
                   loadingRuc={loadingRuc}
                   loadingDocument={loadingDocument}
                   loadingSave={loadingSave}
+                  loadingDetails={loadingDetails}
                   onSearchRuc={handleSearchRuc}
                   onSearchDocument={handleSearchDocument}
                   onSave={handleSave}
@@ -884,7 +887,7 @@ const DocumentEditPage: React.FC = () => {
               centrosCostos2={centrosCostos2}
               onDetailsChange={setDocDetails}
               onPlateNotFound={(plate) => addNotification("warning", `La placa ${plate} no está registrada.`)}
-              disabled={loadingSave}
+              disabled={loadingSave || loadingDetails}
             />
           </Col>
         </Row>
