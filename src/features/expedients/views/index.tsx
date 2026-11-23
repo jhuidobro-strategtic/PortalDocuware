@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ExpedientAdjustments, { FinancialSummary } from "../components/ExpedientAdjustments";
 import moment from "moment";
 import JSZip from "jszip";
 import { PDFDocument, PDFPage } from "pdf-lib";
@@ -16,6 +17,7 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Offcanvas, OffcanvasBody, OffcanvasHeader,
   Spinner,
   Table,
 } from "reactstrap";
@@ -135,6 +137,8 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  financial_summary?: FinancialSummary;
+  adjustments_data?: { id: number; kind: string; reference: string; invoice_reference: string; currency: string; amount: string; net_amount: string; reason: string; status: string; created_at: string }[];
   attachment_order?: string[];
   attachment_standard?: string[];
   paid_at?: string | null;
@@ -281,10 +285,10 @@ const getExpedientDocumentFetchUrls = (
   );
 };
 
-const getPaymentStatus = (expedient: Expedient) => expedient.paid_at ? "Pagado" : "Pendiente de pago";
+const getPaymentStatus = (expedient: Expedient) => expedient.financial_summary?.payment_status || (expedient.paid_at ? "Pagado" : "Pendiente de pago");
 
 const getExpedientStatusMeta = (expedient: Expedient) =>
-  expedient.paid_at
+  getPaymentStatus(expedient) === "Pagado"
     ? {
         label: getPaymentStatus(expedient),
         className:
@@ -592,6 +596,8 @@ const Expedients = () => {
   const numberLocale = getNumberLocale(i18n.language);
   const sessionUser = getCurrentSessionUser();
   const [paymentTarget, setPaymentTarget] = useState<Expedient | null>(null);
+  const [adjustmentTarget, setAdjustmentTarget] = useState<Expedient | null>(null);
+  const [adjustmentBusy, setAdjustmentBusy] = useState(false);
   const [paymentPassword, setPaymentPassword] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -678,7 +684,7 @@ const Expedients = () => {
       if (!response.ok || !result.paid_at) {
         throw new Error(result.detail || "No se pudo confirmar el pago.");
       }
-      const payment = { paid_at: result.paid_at, paid_by: result.paid_by };
+      const payment = { paid_at: result.paid_at, paid_by: result.paid_by, financial_summary: result.financial_summary };
       setExpedients((rows) => rows.map((row) =>
         row.expedienteid === paymentTarget.expedienteid ? { ...row, ...payment } : row
       ));
@@ -770,7 +776,8 @@ const Expedients = () => {
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
       sheet.addRow(["Fecha De Orden", "OS/OC", "Serie", "Numero", "MONEDA", "Monto", "Ruc", "Razón Social", "Fecha Documento", "Tipo Documento", "Documento (Serie - Numero)",
-        "Expediente", "Código de documento", "Subtotal", "IGV", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders]);
+        "Expediente", "Código de documento", "Subtotal", "IGV", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders,
+        "ND aprobadas", "NC aprobadas", "Total ajustado", "Neto ajustado", "Pagos registrados", "Saldo pendiente / a favor", "Ajustes pendientes"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         const series = invoice?.documentserial || item.adjustment_note_data?.series || "";
@@ -782,7 +789,8 @@ const Expedients = () => {
           invoice?.suppliernumber || "", invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra),
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", documentType, [series, number].filter(Boolean).join(" - "),
           item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, getPaymentStatus(item),
-          moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice)]);
+          moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice),
+          ...["approved_debits", "approved_credits", "adjusted_total", "adjusted_net", "settled_amount", "balance", "pending_adjustments"].map(key => item.financial_summary ? Number(item.financial_summary[key as keyof FinancialSummary]) : null)]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
       sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } }; sheet.columns.forEach((column) => { column.width = 23; });
@@ -812,6 +820,15 @@ const Expedients = () => {
       styleExcelWorksheet(sheet, { widths: [19, 23, 14, 18, 15, 20, 19, 45, 20, 29, 32, 15, 20, 20, 20, 25, 25, 16, 20, 20, 36, 22, 22, 22, 25, 22, 30], statusColumn: 16 });
       styleExcelWorksheet(detailsSheet, { widths: [15, 20, 14, 18, 20, 45, 19, 23, 24, 24, 24, 24, 64, 18, 18, 22, 20, 22, 22, 15, 24, 24, 36, 24, 24, 24, 27, 24, 32] });
       detailsSheet.getCell("U1").note = "Los descuentos y el neto son importes del comprobante completo, repetidos por ítem. No sume estas columnas por línea; use la hoja Expedientes.";
+      [28, 29, 30, 31, 32, 33].forEach(column => { sheet.getColumn(column).numFmt = "#,##0.00"; });
+      const adjustmentsSheet = workbook.addWorksheet("Ajustes NC ND");
+      adjustmentsSheet.addRow(["Expediente", "OC/OS original", "Factura afectada", "Tipo", "Documento", "Moneda", "Importe", "Neto", "Estado del ajuste", "Motivo", "Fecha de registro"]);
+      filteredExpedients.forEach(item => (item.adjustments_data || []).forEach(adjustment => {
+        adjustmentsSheet.addRow([item.expedienteid, item.ordencompra?.orderNo || "", adjustment.invoice_reference, adjustment.kind, adjustment.reference,
+          adjustment.currency, Number(adjustment.amount), Number(adjustment.net_amount), ({ PENDING: "Pendiente", JR_SIGNED: "Firmado Junior · pendiente Senior", APPROVED: "Aprobado", REJECTED: "Rechazado" } as Record<string, string>)[adjustment.status] || adjustment.status, adjustment.reason, moment(adjustment.created_at).format("DD/MM/YYYY HH:mm")]);
+      }));
+      [7, 8].forEach(column => { adjustmentsSheet.getColumn(column).numFmt = "#,##0.00"; });
+      styleExcelWorksheet(adjustmentsSheet, { widths: [16, 26, 28, 14, 26, 16, 22, 22, 32, 55, 26], statusColumn: 9 });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch (failure) { setFloatingAlerts((previous) => [...previous.filter((alert) => alert.id !== "exp-export-error"), { id: "exp-export-error", type: "danger", message: failure instanceof Error ? failure.message : "No fue posible exportar los expedientes." }]); }
     finally { setExporting(false); }
@@ -1563,7 +1580,8 @@ const Expedients = () => {
                                         label: "Marcar como pagado",
                                         icon: "ri-check-double-line",
                                         tone: "primary",
-                                        hidden: Boolean(expedient.paid_at) || !sessionUser.id || !hasPermission("expedients.pay"),
+                                        hidden: (expedient.financial_summary ? Number(expedient.financial_summary.balance) <= 0 : Boolean(expedient.paid_at)) || !sessionUser.id || !hasPermission("expedients.pay"),
+                                        disabled: Boolean(expedient.financial_summary?.pending_adjustments),
                                         onClick: () => setPaymentTarget(expedient),
                                       },
                                       {
@@ -1573,6 +1591,13 @@ const Expedients = () => {
                                         tone: "primary",
                                         hidden: !hasPermission("expedients.reopen") || !isExpedientClosedByStatus || expedient.closed_by !== sessionUser.id,
                                         onClick: () => handleOpenCloseExpedientModal(expedient, "reopen"),
+                                      },
+                                      {
+                                        id: `adjustments-${expedient.expedienteid}`,
+                                        label: "Ajustes NC / ND",
+                                        icon: "ri-exchange-dollar-line",
+                                        hidden: !expedient.ordencompraid || !expedient.facturaid || !hasPermission("expedients.read"),
+                                        onClick: () => setAdjustmentTarget(expedient),
                                       },
                                       {
                                         id: `close-expedient-${expedient.expedienteid}`,
@@ -1657,13 +1682,14 @@ const Expedients = () => {
                                   <>
                                     <div className="fw-semibold">
                                       {formatAmount(
-                                        expedient.factura.totalamount,
+                                        expedient.financial_summary?.adjusted_total || expedient.factura.totalamount,
                                         numberLocale
                                       )}
                                     </div>
                                     <div className="text-muted small">
                                       {expedient.factura.currency || "-"}
                                     </div>
+                                    {expedient.financial_summary && <div className="text-muted small">Saldo: {formatAmount(expedient.financial_summary.balance, numberLocale)}{expedient.financial_summary.pending_adjustments > 0 && ` · ${expedient.financial_summary.pending_adjustments} ajuste(s) pendiente(s)`}</div>}
                                   </>
                                 ) : (
                                   <span className="text-muted">-</span>
@@ -1706,6 +1732,11 @@ const Expedients = () => {
           </CardBody>
         </Card>
       </Container>
+
+      <Offcanvas isOpen={Boolean(adjustmentTarget)} direction="end" style={{ width: "min(1200px, 96vw)" }} toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)} keyboard={!adjustmentBusy} backdrop>
+        <OffcanvasHeader toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)}>Ajustes NC / ND · {adjustmentTarget?.ordencompra?.orderNo}</OffcanvasHeader>
+        <OffcanvasBody>{adjustmentTarget && <ExpedientAdjustments key={adjustmentTarget.expedienteid} expedientId={adjustmentTarget.expedienteid} invoiceReference={getInvoiceCode(adjustmentTarget.factura)} closed={isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => { void fetchExpedientsData(t).then(syncExpedientsCollection).catch(() => setFloatingAlerts(previous => [...previous, { id: "adjustment-refresh", type: "warning", message: "El ajuste se guardó. Recargue la lista para actualizar el saldo." }])); }} />}</OffcanvasBody>
+      </Offcanvas>
 
       <div
         className={`expedient-drawer-backdrop ${

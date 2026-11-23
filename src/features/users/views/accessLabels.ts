@@ -13,6 +13,7 @@ const actions: Record<string, string> = {
   reject: "Rechazar", cancel: "Anular", link: "Vincular comprobante", status: "Cambiar estado operativo",
   replace_invoice: "Sustituir factura comercial", attach: "Adjuntar archivos",
   remove_attachment: "Eliminar documentos adjuntos", link_note: "Vincular notas de ajuste",
+  approve_adjustment: "Aprobar o rechazar NC/ND según firmantes asignados",
   close: "Cerrar", reopen: "Reabrir según la regla de cierre", pay: "Marcar como pagado",
   configure: "Configurar gastos de viaje", schedule: "Programar viajes", request: "Gestionar solicitudes",
   approve: "Cambiar estado de solicitudes", advance: "Gestionar anticipos", voucher: "Gestionar comprobantes",

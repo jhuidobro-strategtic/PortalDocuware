@@ -46,6 +46,7 @@ import CommercialInvoice from "../components/CommercialInvoice";
 import { useDocumentDeletionPolicy } from "../services/useDocumentDeletionPolicy";
 import { getApiErrorMessage } from "../../../helpers/api-error-message";
 import PreOrderSignatureInbox from "../components/PreOrderSignatureInbox";
+import ExpedientAdjustments from "../../expedients/components/ExpedientAdjustments";
 import type { PreOrderSignatureActions } from "../components/PreOrderSignatureInbox";
 import PreOrderTableRow from "../components/PreOrderTableRow";
 import { filterPreOrderRows, mergeOrderRows } from "../services/unifiedOrderList";
@@ -1839,6 +1840,7 @@ const PurchaseOrderDetails = () => {
           />
 
           <PreOrderSignatureInbox ref={preOrderActions} embedded userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} onExportStateChange={setPreOrderExport} />
+          {hasPermission("expedients.approve_adjustment") && <ExpedientAdjustments />}
 
           <Card className="border-0 shadow-sm">
             <CardBody>
