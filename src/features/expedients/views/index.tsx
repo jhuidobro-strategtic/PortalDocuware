@@ -768,21 +768,27 @@ const Expedients = () => {
     try {
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
-      sheet.addRow(["Expediente", "Código de documento", "Factura", "Proveedor", "RUC", "Fecha de factura", "Moneda", "Subtotal", "IGV", "Total", "OC/OS / Nota", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders]);
+      sheet.addRow(["Fecha De Orden", "OS/OC", "Serie", "Numero", "MONEDA", "Monto", "Ruc", "Razón Social", "Fecha Documento", "Tipo Documento", "Documento (Serie - Numero)",
+        "Expediente", "Código de documento", "Subtotal", "IGV", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
-        sheet.addRow([item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? `${invoice.documentserial}-${invoice.documentnumber}` : "",
-          invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra), invoice?.suppliernumber || "",
-          invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", invoice?.currency || "",
-          invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, invoice ? Number(invoice.totalamount) : null,
-          item.ordencompra?.orderNo || item.reference_code || "", getPaymentStatus(item),
+        const series = invoice?.documentserial || item.adjustment_note_data?.series || "";
+        const number = invoice?.documentnumber || item.adjustment_note_data?.number || "";
+        const documentType = invoice?.documenttype?.tipo ||
+          ({ CREDIT: "Nota de crédito", NC: "Nota de crédito", DEBIT: "Nota de débito", ND: "Nota de débito" } as Record<string, string>)[item.adjustment_note_data?.kind || ""] || invoice?.sourceKind || "";
+        sheet.addRow([item.ordencompra?.createAt ? moment(item.ordencompra.createAt).format("DD/MM/YYYY") : "",
+          item.ordencompra?.orderNo || item.reference_code || "", String(series), String(number), invoice?.currency || "", invoice ? Number(invoice.totalamount) : null,
+          invoice?.suppliernumber || "", invoice?.suppliername || getPurchaseOrderSupplierLabel(item.ordencompra),
+          invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", documentType, [series, number].filter(Boolean).join(" - "),
+          item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, getPaymentStatus(item),
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice)]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
       sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } }; sheet.columns.forEach((column) => { column.width = 23; });
-      sheet.getColumn(2).numFmt = "@";
-      [8, 9, 10, 18, 19, 20, 21, 22].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
-      [15, 16].forEach((column) => { sheet.getColumn(column).numFmt = '0.00%'; });
+      [2, 3, 4, 7, 13].forEach((column) => { sheet.getColumn(column).numFmt = "@"; });
+      [6, 14, 15, 22, 23, 24, 25, 26].forEach((column) => { sheet.getColumn(column).numFmt = '#,##0.00'; });
+      [19, 20].forEach((column) => { sheet.getColumn(column).numFmt = '0.00%'; });
+      [8, 11].forEach((column) => { sheet.getColumn(column).width = 38; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
       const detailsSheet = workbook.addWorksheet("Detalle de facturas");
       detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`)]);
