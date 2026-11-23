@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import CreditReservationPicker from "../supplier-credits/CreditReservationPicker";
 import Select from "react-select";
 import { Button, Col, Form, Input, Label, Row, Spinner, Table } from "reactstrap";
 import type { SelectOption, SupplierOptionItem } from "../documents/types/orderC.types";
@@ -57,6 +58,7 @@ const PreOrderForm = ({ row, initialDraft, initialFile, onPreviewChange, extract
       onChange={(option: SelectOption | null) => update(Number(option?.value || 0))} menuPortalTarget={document.body}
       styles={{ menuPortal: (base: React.CSSProperties) => ({ ...base, zIndex: 1100 }) }} /></Col>;
   return <Form onSubmit={submit}>
+    <CreditReservationPicker ruc={options.suppliers.find(item => item.supplierID === draft.supplier_id)?.supplierNo || ""} />
     <h4 className="mb-4">{row?.status === "DRAFT" ? "Completar preorden" : row ? "Editar y enviar preorden" : "Nueva preorden"}</h4>
     <div>
       {error && <div className="alert alert-danger" role="alert" style={{ whiteSpace: "pre-line" }}>{error}</div>}

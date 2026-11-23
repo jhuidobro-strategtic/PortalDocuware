@@ -15,6 +15,7 @@ const PreOrders = lazy(() => import("../features/preorders"));
 const PreOrderFormView = lazy(() => import("../features/preorders/FormView"));
 const Suppliers = lazy(() => import("../features/suppliers/views"));
 const Expedients = lazy(() => import("../features/expedients/views"));
+const SupplierCredits = lazy(() => import("../features/supplier-credits"));
 const TravelTrips = lazy(() => import("../features/travel-expenses/views/Trips"));
 const TravelAddTrip = lazy(() => import("../features/travel-expenses/views/Trips/AddTrip"));
 const TravelAddExpense = lazy(() => import("../features/travel-expenses/views/AddExpense"));
@@ -49,6 +50,7 @@ const authProtectedRoutes = [
   { path: "/pre-orders/edit/:preOrderId", component: <PreOrderFormView /> },
   { path: "/suppliers", component: <Suppliers /> },
   { path: "/expedientes", component: <Expedients /> },
+  { path: "/supplier-credits", component: <SupplierCredits /> },
   { path: "/travel-expenses/trips", component: <TravelTrips /> },
   { path: "/travel-expenses/trips/new", component: <TravelAddTrip /> },
   { path: "/travel-expenses/trips/:id/edit", component: <TravelAddTrip /> },

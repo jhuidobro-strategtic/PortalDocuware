@@ -67,6 +67,7 @@ const Navdata = (t: (key: string) => string) => [
                 label: t("Expedient List"),
                 link: "/expedientes",
             },
+            { id: "supplier-credit-list", label: "Saldos a favor", link: "/supplier-credits" },
         ],
     },
     {

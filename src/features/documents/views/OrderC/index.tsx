@@ -1,4 +1,5 @@
 import React from "react";
+import CreditReservationPicker from "../../../supplier-credits/CreditReservationPicker";
 import { Link } from "react-router-dom";
 import Select from "react-select";
 import {
@@ -58,6 +59,7 @@ const DocumentOrderC = () => {
     isSunatSearchReady,
     handleSearchSunat,
     handleSubmit,
+    creditReservations, setCreditReservations,
   } = useOrderC();
 
   if (loading) {
@@ -212,6 +214,7 @@ const DocumentOrderC = () => {
             </div>
 
             <Form onSubmit={handleSubmit}>
+              <CreditReservationPicker ruc={values.suppliernumber || document.suppliernumber || ""} currency={document.currency || ""} value={creditReservations} onChange={setCreditReservations} disabled={submitting} />
               {document.sourceKind ? <div className="alert alert-info mb-4">
                 Los detalles se cargan desde el comprobante registrado. Revise los importes antes de generar la {document.sourceKind === "RH" ? "OS" : "OC/OS"}.
               </div> : <div className="mb-4">

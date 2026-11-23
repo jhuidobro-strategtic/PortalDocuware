@@ -5,6 +5,7 @@ import { getApiErrorMessage } from "../../../helpers/api-error-message";
 import { hasPermission } from "../../../helpers/portal-access";
 
 export interface FinancialSummary {
+  credit_received?: string; credit_transferred?: string; credit_refunded?: string; credit_reserved?: string; credit_available?: string; reserved_for_payment?: string; cash_due?: string;
   original_total: string; approved_debits: string; approved_credits: string; adjusted_total: string;
   adjusted_net: string; settled_amount: string; balance: string; pending_adjustments: number; payment_status: string;
 }
@@ -81,6 +82,7 @@ export default function ExpedientAdjustments({ expedientId, invoiceReference = "
     {summary && <div className="row g-3 mb-3">{[
       ["Factura original", summary.original_total], ["ND aprobadas (+)", summary.approved_debits], ["NC aprobadas (−)", summary.approved_credits],
       ["Total ajustado", summary.adjusted_total], ["Neto ajustado", summary.adjusted_net], ["Pagos registrados", summary.settled_amount], ["Saldo pendiente / a favor (−)", summary.balance],
+      ["Saldo aplicado de otros documentos", summary.credit_received || "0"], ["Saldo transferido a otras facturas", summary.credit_transferred || "0"], ["Dinero devuelto por proveedor", summary.credit_refunded || "0"],
     ].map(([label, value]) => <div key={label} className="col-6 col-lg-3"><div className="bg-light rounded p-3 h-100"><small className="text-muted d-block">{label}</small><strong>{money(value)}</strong></div></div>)}</div>}
     {payments.length > 0 && <details className="mb-3"><summary>Historial de pagos</summary><ul className="mt-2">{payments.map((payment, index) => <li key={index}>{money(payment.amount)} · {payment.actor} · {new Date(payment.created_at).toLocaleString("es-PE")}</li>)}</ul></details>}
     {loading ? <div role="status"><Spinner size="sm" /> Cargando ajustes…</div> : <>

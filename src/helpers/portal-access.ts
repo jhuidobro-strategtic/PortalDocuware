@@ -13,6 +13,7 @@ export const hasPermission = (permission: string): boolean =>
   portalSession()?.data?.effectivePermissions?.includes(permission) === true;
 
 const routes: [string, string][] = [
+  ["/supplier-credits", "credits.read"],
   ["/users/document-order", "documents.configure_order"],
   ["/users", "access.manage"], ["/documents/edit", "documents.edit"],
   ["/documents/order-c", "orders.create"], ["/documents", "documents.read"],
@@ -32,7 +33,7 @@ export const canVisit = (path: string): boolean => {
 };
 
 export function firstAllowedRoute(): string {
-  return ["/documents", "/document-details", "/purchase-order-details", "/pre-orders", "/expedientes",
+  return ["/documents", "/document-details", "/purchase-order-details", "/pre-orders", "/expedientes", "/supplier-credits",
     "/procesamiento-archivos", "/travel-expenses/my-schedule", "/suppliers", "/gestor-vehicular",
     "/document-programation", "/reports/rendiciones", "/users", "/users/document-order", "/profile"].find(canVisit) || "/profile";
 }

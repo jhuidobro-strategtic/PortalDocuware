@@ -45,10 +45,12 @@ import {
   buildPurchaseOrderPayload
 } from "../services/orderC.utils";
 import { getCurrentSessionUser, getOrderCFields } from "./orderC.form";
+import type { CreditPick } from "../../supplier-credits/service";
 
 const DOCUMENTS_FLASH_NOTIFICATION_KEY = "documents-flash-notification";
 
 export const useOrderC = () => {
+  const [creditReservations, setCreditReservations] = useState<CreditPick[]>([]);
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -601,7 +603,7 @@ export const useOrderC = () => {
       const response = await fetch(buildApiUrl("purchase-orders/"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, credit_reservations: creditReservations }),
       });
 
       const data = await response.json().catch(() => null);
@@ -659,5 +661,6 @@ export const useOrderC = () => {
     isSunatSearchReady,
     handleSearchSunat,
     handleSubmit,
+    creditReservations, setCreditReservations,
   };
 };

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ExpedientAdjustments, { FinancialSummary } from "../components/ExpedientAdjustments";
+import OrderCreditManager from "../../supplier-credits/OrderCreditManager";
+import CreditReservationPicker from "../../supplier-credits/CreditReservationPicker";
 import moment from "moment";
 import JSZip from "jszip";
 import { PDFDocument, PDFPage } from "pdf-lib";
@@ -596,6 +598,20 @@ const Expedients = () => {
   const numberLocale = getNumberLocale(i18n.language);
   const sessionUser = getCurrentSessionUser();
   const [paymentTarget, setPaymentTarget] = useState<Expedient | null>(null);
+  const [paymentPreview, setPaymentPreview] = useState<FinancialSummary | null>(null);
+  const [loadingPaymentPreview, setLoadingPaymentPreview] = useState(false);
+  const paymentPreviewId = paymentTarget?.expedienteid;
+  useEffect(() => {
+    setPaymentPreview(null);
+    if (!paymentPreviewId) { setLoadingPaymentPreview(false); return; }
+    const controller = new AbortController(); setLoadingPaymentPreview(true); setPaymentError("");
+    void fetch(buildApiUrl(`expedientes/${paymentPreviewId}/payment/`), { signal: controller.signal }).then(async response => {
+      const result = await response.json();
+      if (!response.ok || !result.financial_summary) throw new Error(result.detail || "No fue posible consultar el desembolso actual.");
+      if (!controller.signal.aborted) setPaymentPreview(result.financial_summary);
+    }).catch(failure => { if (!controller.signal.aborted) setPaymentError(failure.message); }).finally(() => { if (!controller.signal.aborted) setLoadingPaymentPreview(false); });
+    return () => controller.abort();
+  }, [paymentPreviewId]);
   const [adjustmentTarget, setAdjustmentTarget] = useState<Expedient | null>(null);
   const [adjustmentBusy, setAdjustmentBusy] = useState(false);
   const [paymentPassword, setPaymentPassword] = useState("");
@@ -670,15 +686,22 @@ const Expedients = () => {
     setPaymentError("");
   };
 
+  const refreshCreditBalances = async () => {
+    try {
+      const rows = await fetchExpedientsData(t); syncExpedientsCollection(rows);
+      setAdjustmentTarget(current => current ? rows.find(row => row.expedienteid === current.expedienteid) || null : null);
+    } catch { pushFloatingAlert("warning", "El movimiento se guardó. Recargue la lista para actualizar los saldos."); }
+  };
+
   const confirmPayment = async () => {
-    if (!paymentTarget || !sessionUser.id || !paymentPassword || confirmingPayment) return;
+    if (!paymentTarget || !sessionUser.id || !paymentPassword || confirmingPayment || !paymentPreview || loadingPaymentPreview) return;
     setConfirmingPayment(true);
     setPaymentError("");
     try {
       const response = await fetch(buildApiUrl(`expedientes/${paymentTarget.expedienteid}/payment/`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: sessionUser.id, password: paymentPassword }),
+        body: JSON.stringify({ user_id: sessionUser.id, password: paymentPassword, expected_cash_amount: paymentPreview.cash_due || paymentPreview.balance }),
       });
       const result = await response.json();
       if (!response.ok || !result.paid_at) {
@@ -777,7 +800,8 @@ const Expedients = () => {
       const workbook = new Workbook(); const sheet = workbook.addWorksheet("Expedientes");
       sheet.addRow(["Fecha De Orden", "OS/OC", "Serie", "Numero", "MONEDA", "Monto", "Ruc", "Razón Social", "Fecha Documento", "Tipo Documento", "Documento (Serie - Numero)",
         "Expediente", "Código de documento", "Subtotal", "IGV", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders,
-        "ND aprobadas", "NC aprobadas", "Total ajustado", "Neto ajustado", "Pagos registrados", "Saldo pendiente / a favor", "Ajustes pendientes"]);
+        "ND aprobadas", "NC aprobadas", "Total ajustado", "Neto ajustado", "Pagos registrados", "Saldo pendiente / a favor", "Ajustes pendientes",
+        "Saldo aplicado de otros documentos", "Saldo transferido", "Dinero devuelto por proveedor", "Reservado para este pago", "Desembolso pendiente"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         const series = invoice?.documentserial || item.adjustment_note_data?.series || "";
@@ -790,7 +814,7 @@ const Expedients = () => {
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", documentType, [series, number].filter(Boolean).join(" - "),
           item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, getPaymentStatus(item),
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice),
-          ...["approved_debits", "approved_credits", "adjusted_total", "adjusted_net", "settled_amount", "balance", "pending_adjustments"].map(key => item.financial_summary ? Number(item.financial_summary[key as keyof FinancialSummary]) : null)]);
+          ...["approved_debits", "approved_credits", "adjusted_total", "adjusted_net", "settled_amount", "balance", "pending_adjustments", "credit_received", "credit_transferred", "credit_refunded", "reserved_for_payment", "cash_due"].map(key => item.financial_summary ? Number(item.financial_summary[key as keyof FinancialSummary] || 0) : null)]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
       sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } }; sheet.columns.forEach((column) => { column.width = 23; });
@@ -820,7 +844,7 @@ const Expedients = () => {
       styleExcelWorksheet(sheet, { widths: [19, 23, 14, 18, 15, 20, 19, 45, 20, 29, 32, 15, 20, 20, 20, 25, 25, 16, 20, 20, 36, 22, 22, 22, 25, 22, 30], statusColumn: 16 });
       styleExcelWorksheet(detailsSheet, { widths: [15, 20, 14, 18, 20, 45, 19, 23, 24, 24, 24, 24, 64, 18, 18, 22, 20, 22, 22, 15, 24, 24, 36, 24, 24, 24, 27, 24, 32] });
       detailsSheet.getCell("U1").note = "Los descuentos y el neto son importes del comprobante completo, repetidos por ítem. No sume estas columnas por línea; use la hoja Expedientes.";
-      [28, 29, 30, 31, 32, 33].forEach(column => { sheet.getColumn(column).numFmt = "#,##0.00"; });
+      [28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 39].forEach(column => { sheet.getColumn(column).numFmt = "#,##0.00"; });
       const adjustmentsSheet = workbook.addWorksheet("Ajustes NC ND");
       adjustmentsSheet.addRow(["Expediente", "OC/OS original", "Documento afectado", "Tipo", "Documento", "Moneda", "Importe", "Neto", "Estado del ajuste", "Motivo", "Fecha de registro"]);
       filteredExpedients.forEach(item => (item.adjustments_data || []).forEach(adjustment => {
@@ -1736,7 +1760,7 @@ const Expedients = () => {
 
       <Offcanvas isOpen={Boolean(adjustmentTarget)} direction="end" style={{ width: "min(1200px, 96vw)" }} toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)} keyboard={!adjustmentBusy} backdrop>
         <OffcanvasHeader toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)}>Ajustes NC / ND · {adjustmentTarget?.ordencompra?.orderNo}</OffcanvasHeader>
-        <OffcanvasBody>{adjustmentTarget && <ExpedientAdjustments key={adjustmentTarget.expedienteid} expedientId={adjustmentTarget.expedienteid} invoiceReference={getInvoiceCode(adjustmentTarget.factura)} closed={isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => { void fetchExpedientsData(t).then(syncExpedientsCollection).catch(() => setFloatingAlerts(previous => [...previous, { id: "adjustment-refresh", type: "warning", message: "El ajuste se guardó. Recargue la lista para actualizar el saldo." }])); }} />}</OffcanvasBody>
+        <OffcanvasBody>{adjustmentTarget && <><ExpedientAdjustments key={adjustmentTarget.expedienteid} expedientId={adjustmentTarget.expedienteid} invoiceReference={getInvoiceCode(adjustmentTarget.factura)} closed={isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => { void fetchExpedientsData(t).then(syncExpedientsCollection).catch(() => setFloatingAlerts(previous => [...previous, { id: "adjustment-refresh", type: "warning", message: "El ajuste se guardó. Recargue la lista para actualizar el saldo." }])); }} />{adjustmentTarget.ordencompraid && <OrderCreditManager orderId={adjustmentTarget.ordencompraid} ruc={adjustmentTarget.factura?.suppliernumber || ""} currency={adjustmentTarget.factura?.currency || ""} locked={(Boolean(adjustmentTarget.paid_at) && Number(adjustmentTarget.financial_summary?.balance || "0") <= 0) || isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => void refreshCreditBalances()} />}</>}</OffcanvasBody>
       </Offcanvas>
 
       <div
@@ -2112,6 +2136,15 @@ const Expedients = () => {
           <ModalHeader toggle={confirmingPayment ? undefined : dismissPayment}>Marcar como pagado</ModalHeader>
           <ModalBody>
             <p>Confirma el pago del expediente {paymentTarget?.expedienteid} con tu contraseña.</p>
+            {paymentTarget && <>
+              <CreditReservationPicker ruc={paymentTarget.factura?.suppliernumber || ""} currency={paymentTarget.factura?.currency || ""} />
+              {loadingPaymentPreview ? <p><Spinner tag="span" size="sm" /> Consultando desembolso actual…</p> : paymentPreview && <>
+                <p>Saldo reservado para aplicar: <strong>{formatAmount(paymentPreview.reserved_for_payment || "0", numberLocale)}</strong></p>
+                <p>Desembolso pendiente: <strong>{formatAmount(paymentPreview.cash_due || paymentPreview.balance, numberLocale)}</strong></p>
+                {paymentPreview.pending_adjustments > 0 && <p className="text-warning">Complete la aprobación o rechazo de los ajustes pendientes antes de pagar.</p>}
+              </>}
+              <small className="text-muted d-block mb-3">Los importes se vuelven a validar en el servidor al confirmar el pago.</small>
+            </>}
             <Label for="expedient-payment-password">Contraseña</Label>
             <Input id="expedient-payment-password" type="password" autoComplete="current-password"
               value={paymentPassword} onChange={(event) => setPaymentPassword(event.target.value)}
@@ -2120,7 +2153,7 @@ const Expedients = () => {
           </ModalBody>
           <ModalFooter>
             <Button type="button" color="light" disabled={confirmingPayment} onClick={dismissPayment}>Cancelar</Button>
-            <Button type="submit" color="primary" disabled={!paymentPassword || confirmingPayment}>
+            <Button type="submit" color="primary" disabled={!paymentPassword || confirmingPayment || loadingPaymentPreview || !paymentPreview || Boolean(paymentPreview.pending_adjustments)}>
               {confirmingPayment ? "Confirmando…" : "Confirmar pago"}
             </Button>
           </ModalFooter>
