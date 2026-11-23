@@ -82,3 +82,15 @@ test('failed signatures keep the pre-order available for review', async () => {
   expect(await screen.findByText('La preorden ya no está pendiente.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Confirmar firma' })).not.toBeDisabled();
 });
+
+test('exports all filtered preorders, including rows beyond the visible page', async () => {
+  const rows = Array.from({ length: 12 }, (_, index) => ({ ...row, id: index + 1, title: `Solicitud única-${index + 1}` }));
+  (getPreOrderSignatureInbox as jest.Mock).mockResolvedValue(rows);
+  const onExportStateChange = jest.fn();
+  render(<MemoryRouter><PreOrderSignatureInbox userId={30} approvalRole="SENIOR" currencyLookup={{ 1: 'Soles' }} onExportStateChange={onExportStateChange} /></MemoryRouter>);
+  await screen.findByText('Solicitud única-1');
+  await waitFor(() => expect(onExportStateChange).toHaveBeenLastCalledWith({ rows, loading: false, error: '' }));
+  expect(screen.queryByText('Solicitud única-11')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Buscar preórdenes para firma'), { target: { value: 'única-11' } });
+  await waitFor(() => expect(onExportStateChange).toHaveBeenLastCalledWith({ rows: [rows[10]], loading: false, error: '' }));
+});

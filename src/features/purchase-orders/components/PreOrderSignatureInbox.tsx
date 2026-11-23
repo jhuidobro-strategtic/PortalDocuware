@@ -6,12 +6,13 @@ import { hasPermission } from '../../../helpers/portal-access';
 import { intelligentSearch } from '../../../helpers/search-utils';
 import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/services';
 import { PreOrder, stateLabels } from '../../preorders/types';
+import type { PreOrderExportState } from '../services/preOrderExcel';
 
-interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; }
+interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; onExportStateChange?: (state: PreOrderExportState) => void; }
 type ReviewAction = 'view' | 'approve' | 'reject';
 const number = (value: unknown) => Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function PreOrderSignatureInbox({ userId, approvalRole, currencyLookup }: Props) {
+export default function PreOrderSignatureInbox({ userId, approvalRole, currencyLookup, onExportStateChange }: Props) {
   const [rows, setRows] = useState<PreOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -56,6 +57,9 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
     ruc: row.supplier_ruc, creator: row.creator_name, junior: row.junior_name, senior: row.senior_name,
     tracking: row.tracking_number, status: stateLabels[row.status],
   }, search)), [rows, search]);
+  useEffect(() => {
+    onExportStateChange?.({ rows: filtered, loading: loading || busy, error });
+  }, [filtered, loading, busy, error, onExportStateChange]);
   const pages = Math.max(1, Math.ceil(filtered.length / 10));
   const currentPage = Math.min(page, pages);
   const open = (row: PreOrder, next: ReviewAction) => {
@@ -79,7 +83,7 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
     <Card className="border-0 shadow-sm mb-4" aria-label="Preórdenes enviadas a firma">
       <CardBody>
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
-          <div><h5 className="mb-1">Preórdenes enviadas a firma</h5><p className="text-muted mb-0">Revise los sustentos y registre las firmas antes de vincular el comprobante.</p></div>
+          <div><h5 className="mb-1">Preórdenes enviadas a firma</h5><p className="text-muted mb-0">Revise los sustentos y registre las firmas antes de vincular el comprobante.</p><small className="text-muted">El Excel de esta vista incluye todas las preórdenes que coinciden con esta búsqueda.</small></div>
           <div className="d-flex flex-wrap gap-2">
             <Input aria-label="Buscar preórdenes para firma" placeholder="Buscar preorden o proveedor" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
             <Button color="light" onClick={() => void refresh()} disabled={busy}>Actualizar preórdenes</Button>

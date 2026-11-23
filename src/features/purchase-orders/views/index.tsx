@@ -43,6 +43,8 @@ import OrderDocumentItem from "../components/OrderDocumentItem";
 import OrderDocumentUpload from "../components/OrderDocumentUpload";
 import CommercialInvoice from "../components/CommercialInvoice";
 import PreOrderSignatureInbox from "../components/PreOrderSignatureInbox";
+import { appendPreOrderExcelRows, orderExtraHeaders, signatureDate } from "../services/preOrderExcel";
+import type { PreOrderExportState } from "../services/preOrderExcel";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
 import "../../expedients/views/Expedients.css";
@@ -497,6 +499,7 @@ const getPurchaseStateDescription = (
 const PurchaseOrderDetails = () => {
   const { t, i18n } = useTranslation();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [preOrderExport, setPreOrderExport] = useState<PreOrderExportState>({ rows: [], loading: true, error: '' });
   const [documentsByAssociatedNo, setDocumentsByAssociatedNo] = useState<
     Record<string, Document>
   >({});
@@ -1135,9 +1138,11 @@ const PurchaseOrderDetails = () => {
   };
 
   const exportToExcel = async () => {
+    if (loading || preOrderExport.loading || exportingExcel) return;
     try {
       setExportingExcel(true);
       setActionError(null);
+      if (preOrderExport.error) throw new Error(preOrderExport.error);
 
       const { Workbook } = await import("exceljs");
       const workbook = new Workbook();
@@ -1158,7 +1163,7 @@ const PurchaseOrderDetails = () => {
 
       worksheet.mergeCells("E1:N2");
       const titleCell = worksheet.getCell("E1");
-      titleCell.value = "REPORTE DE ÓRDENES DE COMPRA";
+      titleCell.value = "REPORTE DE ÓRDENES Y PREÓRDENES";
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
       titleCell.font = { size: 14, bold: true };
       titleCell.fill = {
@@ -1190,6 +1195,7 @@ const PurchaseOrderDetails = () => {
         "Fecha",
         "Items",
         "Total Orden",
+        ...orderExtraHeaders,
       ];
 
       headers.forEach((header, index) => {
@@ -1251,6 +1257,9 @@ const PurchaseOrderDetails = () => {
           moment(purchaseOrder.createAt).format("DD/MM/YYYY"),
           purchaseOrder.details.length,
           getPurchaseOrderDisplayTotal(purchaseOrder),
+          'OC/OS', purchaseOrder.tipoorden === 'S' ? 'OS' : 'OC', supplierDetailsLookup[purchaseOrder.supplierID]?.supplierno || '', '',
+          userLookup[purchaseOrder.signature ?? 0] || '', signatureDate(purchaseOrder.approvals?.find((approval) => approval.approvalLevel === 'JR')?.signedAt),
+          userLookup[purchaseOrder.signature2 ?? 0] || '', signatureDate(purchaseOrder.approvals?.find((approval) => approval.approvalLevel === 'SENIOR')?.signedAt),
         ]);
 
         row.eachCell((cell, columnNumber) => {
@@ -1306,14 +1315,19 @@ const PurchaseOrderDetails = () => {
       ];
 
       const detailSheet = workbook.addWorksheet("Detalle de ítems");
-      detailSheet.addRow(["Número de orden", "Documento asociado", "Proveedor", "Código del ítem", "Descripción", "Cantidad", "Precio unitario", "Total", "Moneda"]);
+      detailSheet.addRow(["Número de orden", "Documento asociado / referencia", "Proveedor", "Código del ítem", "Descripción", "Cantidad", "Precio unitario", "Total", "Moneda", "Tipo de registro", "Tipo OC/OS"]);
       filteredPurchaseOrders.forEach((order) => order.details.forEach((detail) => {
         detailSheet.addRow([order.orderNo, order.documentAssociatedNo, order.supplierLabel || getLookupLabel(supplierLookup, order.supplierID),
           detail.item_code || "", detail.descriptionItem || "", Number(detail.quantity), Number(detail.unitPrice), Number(detail.total),
-          getCurrencyMeta(order.currency, t, order.currencyLabel || currencyLookup[order.currency]).label || ""]);
+          getCurrencyMeta(order.currency, t, order.currencyLabel || currencyLookup[order.currency]).label || "", 'OC/OS', order.tipoorden === 'S' ? 'OS' : 'OC']);
       }));
       detailSheet.getRow(1).font = { bold: true }; detailSheet.views = [{ state: "frozen", ySplit: 1 }];
-      detailSheet.autoFilter = { from: "A1", to: "I1" }; detailSheet.columns.forEach((column) => { column.width = 24; });
+      appendPreOrderExcelRows(worksheet, detailSheet, preOrderExport.rows, { payment: paymentConditionLookup, currency: currencyLookup, store: storeLookup });
+      worksheet.views = [{ state: 'frozen', ySplit: 3 }];
+      worksheet.autoFilter = { from: 'A3', to: 'V3' };
+      for (let column = 15; column <= 22; column++) worksheet.getColumn(column).width = column === 18 ? 48 : 26;
+      worksheet.getColumn(17).numFmt = '@';
+      detailSheet.autoFilter = { from: "A1", to: "K1" }; detailSheet.columns.forEach((column) => { column.width = 24; });
       detailSheet.getColumn(4).numFmt = "@"; detailSheet.getColumn(5).width = 65;
       detailSheet.getColumn(6).numFmt = "0.######"; [7, 8].forEach((column) => { detailSheet.getColumn(column).numFmt = "#,##0.00"; });
 
@@ -1788,7 +1802,7 @@ const PurchaseOrderDetails = () => {
             pageTitle="Order Generation"
           />
 
-          <PreOrderSignatureInbox userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} />
+          <PreOrderSignatureInbox userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} onExportStateChange={setPreOrderExport} />
 
           <Card className="border-0 shadow-sm">
             <CardBody>
@@ -1880,7 +1894,7 @@ const PurchaseOrderDetails = () => {
                       onClick={exportToExcel}
                       title={t("Export Excel")}
                       className="purchase-order-action-button"
-                      disabled={exportingExcel}
+                      disabled={exportingExcel || loading || preOrderExport.loading || !!preOrderExport.error}
                     >
                       {exportingExcel ? (
                         <>
