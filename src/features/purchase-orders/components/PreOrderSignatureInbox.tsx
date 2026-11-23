@@ -1,12 +1,14 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, Button, Card, CardBody, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, Table } from 'reactstrap';
+import { Alert, Button, Card, CardBody, Input, Label, Offcanvas, Spinner, Table } from 'reactstrap';
 import AppPagination from '../../../components/common/Pagination';
 import { hasPermission } from '../../../helpers/portal-access';
 import { intelligentSearch } from '../../../helpers/search-utils';
 import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/services';
 import { PreOrder, stateLabels } from '../../preorders/types';
 import type { PreOrderExportState } from '../services/preOrderExcel';
+import OrderDocumentItem from './OrderDocumentItem';
+import '../../expedients/views/Expedients.css';
 
 interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; onExportStateChange?: (state: PreOrderExportState) => void; embedded?: boolean; }
 export type ReviewAction = 'view' | 'approve' | 'reject';
@@ -117,27 +119,41 @@ export default forwardRef<PreOrderSignatureActions, Props>(function PreOrderSign
         </>}
       </CardBody>
     </Card>}
-    <Modal isOpen={!!selected} toggle={busy ? undefined : () => setSelected(null)} size="lg">
-      <ModalHeader toggle={busy ? undefined : () => setSelected(null)}>{action === 'approve' ? 'Firmar preorden' : action === 'reject' ? 'Rechazar preorden' : 'Revisar preorden'}</ModalHeader>
-      <ModalBody>{selected && <>
+    <Offcanvas isOpen={!!selected} direction="end" toggle={() => { if (!submitting.current) setSelected(null); }} keyboard={!busy}
+      backdrop aria-labelledby="preorder-documents-title" className="preorder-review-drawer" style={{ width: 'min(1400px, 96vw)' }}>
+      {selected && <div className="expedient-drawer-shell">
+      <div className="expedient-drawer-header">
+        <div><span className="expedient-drawer-kicker">Documentos de preorden · {selected.tracking_number || `PRE-PENDIENTE-${selected.id}`}</span>
+          <h4 id="preorder-documents-title" className="mb-1">{action === 'approve' ? 'Firmar preorden' : action === 'reject' ? 'Rechazar preorden' : 'Revisar preorden'}</h4>
+          <p className="text-muted mb-0">{selected.title}</p>
+        </div>
+        <button className="expedient-drawer-close" type="button" aria-label="Cerrar panel de preorden" disabled={busy} onClick={() => setSelected(null)}><i className="ri-close-line" /></button>
+      </div>
+      <div className="expedient-drawer-body">
         {actionError && <Alert color="danger">{actionError}</Alert>}
-        <h5>{selected.title}</h5><p>{selected.supplier_name} · {selected.supplier_ruc}</p>
-        <p className="text-muted">{selected.source_kind} {selected.source_reference} · {stateLabels[selected.status]}</p>
+        <div className="alert alert-info">{stateLabels[selected.status]}</div>
+        <p>{selected.supplier_name} · {selected.supplier_ruc}</p>
+        <p className="text-muted">{selected.source_kind} {selected.source_reference}</p>
         <p>Moneda: {currencyLookup[selected.order_data.currency] || selected.order_data.extraction?.currency || 'Pendiente de cargar'} · Solicitado por: {selected.order_data.requiredby || selected.creator_name}</p>
         <p>Creador: {selected.creator_name}<br />Junior: {selected.junior_name || 'No asignado'}{selected.junior_signed_at ? ' · firmado' : ''}<br />Senior: {selected.senior_name}{selected.approved_at ? ' · firmado' : ''}</p>
+        <h5>Documentos de sustento</h5>
+        <div className="expedient-drawer-list mb-4">
+          {selected.files.length ? selected.files.map((file, index) => <OrderDocumentItem key={`${selected.id}:${file.id}`} name={file.filename} type={selected.source_kind} url={file.url} createdAt={file.created_at} initiallyOpen={index === 0} />)
+            : <div className="expedient-drawer-empty"><i className="ri-file-pdf-line" aria-hidden="true" /><p className="text-muted mb-0">Sin documentos adjuntos.</p></div>}
+        </div>
+        <h5>Detalle de la preorden</h5>
         <div className="table-responsive"><Table size="sm"><thead><tr><th>Detalle</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th></tr></thead><tbody>
           {selected.order_data.details.map((line, index) => <tr key={index}><td>{line.descriptionItem}</td><td>{line.quantity}</td><td>{number(line.unitPrice)}</td><td>{number(line.total ?? Number(line.quantity) * Number(line.unitPrice))}</td></tr>)}
         </tbody></Table></div>
         <p>Subtotal: {number(selected.order_data.subtotal ?? selected.order_data.details.reduce((sum, line) => sum + Number(line.total ?? Number(line.quantity) * Number(line.unitPrice)), 0))} · Impuesto: {number(selected.order_data.tax_amount)}{selected.order_data.total && <> · Total: <strong>{number(selected.order_data.total)}</strong></>}</p>
-        <h6>Documentos de sustento</h6>
-        {selected.files.length ? <ul>{selected.files.map((file) => <li key={file.id}><a href={file.url} target="_blank" rel="noopener noreferrer">{file.filename}</a></li>)}</ul> : <p className="text-muted">Sin documentos adjuntos.</p>}
         {selected.events.length > 0 && <details className="mb-3"><summary>Historial de la preorden</summary><ul>{selected.events.map((event) => <li key={event.id}>{event.actor_name} · {event.action}{event.notes ? ` · ${event.notes}` : ''}</li>)}</ul></details>}
         {action !== 'view' && <><Label htmlFor="preorder-signature-notes">{action === 'reject' ? 'Motivo del rechazo *' : 'Observaciones de firma'}</Label><Input id="preorder-signature-notes" type="textarea" value={notes} disabled={busy} onChange={(event) => setNotes(event.target.value)} />
           {action === 'approve' && <p className="text-muted mt-2 mb-0">Se registrará su firma en esta preorden. La OC/OS definitiva se generará al vincular el comprobante.</p>}</>}
-      </>}</ModalBody>
-      <ModalFooter><Button color="light" disabled={busy} onClick={() => setSelected(null)}>Cerrar</Button>
+      </div>
+      <div className="preorder-review-drawer__footer"><Button color="light" disabled={busy} onClick={() => setSelected(null)}>Cerrar</Button>
         {action !== 'view' && <Button color={action === 'reject' ? 'danger' : 'primary'} disabled={busy || (action === 'reject' && !notes.trim())} onClick={() => void confirm()}>{busy && <Spinner size="sm" className="me-2" />}{action === 'reject' ? 'Confirmar rechazo' : 'Confirmar firma'}</Button>}
-      </ModalFooter>
-    </Modal>
+      </div>
+      </div>}
+    </Offcanvas>
   </>;
 });

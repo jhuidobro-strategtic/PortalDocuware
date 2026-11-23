@@ -32,7 +32,8 @@ test('reviews sustento and records Senior signature without creating an order', 
   (actOnPreOrder as jest.Mock).mockResolvedValue({ ...row, status: 'WAITING_INVOICE', approved_at: '2026-11-23', tracking_number: 'PRE-2026-0001' });
   show();
   fireEvent.click(await screen.findByRole('button', { name: 'Firmar como Senior' }));
-  expect(screen.getByRole('link', { name: 'cotizacion.pdf' })).toHaveAttribute('href', row.files[0].url);
+  expect(screen.getByRole('link', { name: /cotizacion.pdf/ })).toHaveAttribute('href', row.files[0].url);
+  expect(screen.getByTitle('cotizacion.pdf')).toHaveAttribute('src', row.files[0].url);
   expect(screen.getByText('Papel')).toBeInTheDocument();
   expect(screen.getByText(/Moneda: Soles/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Observaciones de firma'), { target: { value: 'Revisado' } });
@@ -121,4 +122,15 @@ test('the shared table action menu opens the review and records the assigned sig
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar firma' }));
   expect(await screen.findByText(/Firma Senior registrada/)).toBeInTheDocument();
   expect(actOnPreOrder).toHaveBeenCalledWith(7, 'approve', 30, { notes: '' });
+});
+
+test('reviews documents in a side panel and closes using its header action', async () => {
+  show();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ver preorden #7' }));
+  expect(screen.getByRole('heading', { name: 'Revisar preorden' })).toBeInTheDocument();
+  expect(document.querySelector('.preorder-review-drawer')).toBeInTheDocument();
+  expect(document.querySelector('.modal-dialog')).not.toBeInTheDocument();
+  expect(screen.getByTitle('cotizacion.pdf')).toHaveAttribute('src', row.files[0].url);
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar panel de preorden' }));
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Revisar preorden' })).not.toBeInTheDocument());
 });

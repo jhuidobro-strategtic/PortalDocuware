@@ -1,3 +1,14 @@
+.preorder-review-drawer__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e3e9f4;
+  background: var(--vz-secondary-bg, #fff);
+  flex-shrink: 0;
+}
+
 .purchase-order-table > :not(caption) > * > :nth-child(3) {
   width: 320px;
   min-width: 320px;
