@@ -43,6 +43,10 @@ import OrderDocumentItem from "../components/OrderDocumentItem";
 import OrderDocumentUpload from "../components/OrderDocumentUpload";
 import CommercialInvoice from "../components/CommercialInvoice";
 import PreOrderSignatureInbox from "../components/PreOrderSignatureInbox";
+import type { PreOrderSignatureActions } from "../components/PreOrderSignatureInbox";
+import PreOrderTableRow from "../components/PreOrderTableRow";
+import { filterPreOrderRows, mergeOrderRows } from "../services/unifiedOrderList";
+import { stateLabels as preOrderStateLabels } from "../../preorders/types";
 import { appendPreOrderExcelRows, orderExtraHeaders, signatureDate } from "../services/preOrderExcel";
 import type { PreOrderExportState } from "../services/preOrderExcel";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
@@ -499,6 +503,7 @@ const getPurchaseStateDescription = (
 const PurchaseOrderDetails = () => {
   const { t, i18n } = useTranslation();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const preOrderActions = useRef<PreOrderSignatureActions>(null);
   const [preOrderExport, setPreOrderExport] = useState<PreOrderExportState>({ rows: [], loading: true, error: '' });
   const [documentsByAssociatedNo, setDocumentsByAssociatedNo] = useState<
     Record<string, Document>
@@ -613,7 +618,9 @@ const PurchaseOrderDetails = () => {
       label:
         getPurchaseStateMeta(option.id, t, option.descripcion).label ||
         option.descripcion,
-    })).filter((option) => !option.label.toLowerCase().includes("temporal") && !option.label.toLowerCase().includes("temproral"));
+    })).filter((option) => !option.label.toLowerCase().includes("temporal") && !option.label.toLowerCase().includes("temproral")).concat(
+      ['PENDING', 'JR_SIGNED', 'WAITING_INVOICE'].map((state) => ({value: `pre:${state}`, label: `Preorden · ${preOrderStateLabels[state as keyof typeof preOrderStateLabels]}`}))
+    );
   }, [purchaseOrders, purchaseStateLookup, purchaseStateOptions, t]);
 
   const signerFilterOptions = useMemo(() => {
@@ -627,8 +634,9 @@ const PurchaseOrderDetails = () => {
         .map((signature) => String(signature))
     );
 
+    preOrderExport.rows.forEach((row) => [row.junior_id, row.senior_id].forEach((id) => { if (id) availableSignerIds.add(String(id)); }));
     return signerOptions.filter((option) => availableSignerIds.has(option.value));
-  }, [purchaseOrders, signerOptions]);
+  }, [purchaseOrders, signerOptions, preOrderExport.rows]);
 
   const selectedSignerFilterOption =
     signerFilterOptions.find((option) => option.value === signerFilter) ?? null;
@@ -688,11 +696,13 @@ const PurchaseOrderDetails = () => {
     ]
   );
 
-  const totalPages = Math.ceil(filteredPurchaseOrders.length / itemsPerPage);
-  const paginatedPurchaseOrders = filteredPurchaseOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const filteredPreOrders = useMemo(() => filterPreOrderRows(preOrderExport.rows, {
+    type: orderTypeFilter, state: purchaseStateFilter, signer: signerFilter, search: searchTerm,
+  }), [preOrderExport.rows, orderTypeFilter, purchaseStateFilter, signerFilter, searchTerm]);
+  const unifiedRows = useMemo(() => mergeOrderRows(filteredPurchaseOrders, filteredPreOrders), [filteredPurchaseOrders, filteredPreOrders]);
+  const totalPages = Math.ceil(unifiedRows.length / itemsPerPage);
+  const listPage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedPurchaseOrders = unifiedRows.slice((listPage - 1) * itemsPerPage, listPage * itemsPerPage);
   const floatingAlerts: FloatingAlertItem[] = [];
 
   if (error) {
@@ -1322,7 +1332,7 @@ const PurchaseOrderDetails = () => {
           getCurrencyMeta(order.currency, t, order.currencyLabel || currencyLookup[order.currency]).label || "", 'OC/OS', order.tipoorden === 'S' ? 'OS' : 'OC']);
       }));
       detailSheet.getRow(1).font = { bold: true }; detailSheet.views = [{ state: "frozen", ySplit: 1 }];
-      appendPreOrderExcelRows(worksheet, detailSheet, preOrderExport.rows, { payment: paymentConditionLookup, currency: currencyLookup, store: storeLookup });
+      appendPreOrderExcelRows(worksheet, detailSheet, filteredPreOrders, { payment: paymentConditionLookup, currency: currencyLookup, store: storeLookup });
       worksheet.views = [{ state: 'frozen', ySplit: 3 }];
       worksheet.autoFilter = { from: 'A3', to: 'V3' };
       for (let column = 15; column <= 22; column++) worksheet.getColumn(column).width = column === 18 ? 48 : 26;
@@ -1802,7 +1812,7 @@ const PurchaseOrderDetails = () => {
             pageTitle="Order Generation"
           />
 
-          <PreOrderSignatureInbox userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} onExportStateChange={setPreOrderExport} />
+          <PreOrderSignatureInbox ref={preOrderActions} embedded userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} onExportStateChange={setPreOrderExport} />
 
           <Card className="border-0 shadow-sm">
             <CardBody>
@@ -1834,6 +1844,7 @@ const PurchaseOrderDetails = () => {
                       </span>
                       <Input
                         type="select"
+                        aria-label="Tipo de registro"
                         value={orderTypeFilter}
                         onChange={(event) => {
                           setOrderTypeFilter(event.target.value);
@@ -1844,6 +1855,7 @@ const PurchaseOrderDetails = () => {
                         <option value="all">{t("All")}</option>
                         <option value="C">{t("Compra")}</option>
                         <option value="S">{t("Servicio")}</option>
+                        <option value="PRE">Pre-Órdenes</option>
                       </Input>
                     </div>
 
@@ -1853,6 +1865,7 @@ const PurchaseOrderDetails = () => {
                       </span>
                       <Input
                         type="select"
+                        aria-label="Estado de registro"
                         value={purchaseStateFilter}
                         onChange={(event) => {
                           setPurchaseStateFilter(event.target.value);
@@ -1912,13 +1925,13 @@ const PurchaseOrderDetails = () => {
                 </div>
               </div>
 
-              {loading && (
+              {(loading || preOrderExport.loading) && (
                 <div className="text-center my-5">
                   <Spinner color="primary" />
                 </div>
               )}
 
-              {!loading && !error && (
+              {!loading && !preOrderExport.loading && !error && (
                 <div className="table-responsive">
                   <Table className="table align-middle table-nowrap mb-0">
                     <thead className="table-light">
@@ -1952,7 +1965,11 @@ const PurchaseOrderDetails = () => {
                           </td>
                         </tr>
                       ) : (
-                        paginatedPurchaseOrders.map((purchaseOrder) => {
+                        paginatedPurchaseOrders.map((entry) => {
+                          if (entry.kind === 'preorder') return <PreOrderTableRow key={entry.key} row={entry.preorder} userId={sessionUser.id} approvalRole={sessionUser.approvalRole}
+                            payment={paymentConditionLookup} currency={currencyLookup} store={storeLookup} busy={preOrderExport.loading}
+                            onOpen={(row, action) => preOrderActions.current?.open(row, action)} />;
+                          const purchaseOrder = entry.order;
                           const relatedDocument =
                             documentsByAssociatedNo[purchaseOrder.documentAssociatedNo] ??
                             null;
@@ -1991,7 +2008,7 @@ const PurchaseOrderDetails = () => {
                             ).length === 0;
 
                           return (
-                            <tr key={purchaseOrder.purchaseOrderID}>
+                            <tr key={entry.key}>
                               <td
                                 className="text-center"
                                 style={{ whiteSpace: "nowrap" }}
@@ -2104,12 +2121,12 @@ const PurchaseOrderDetails = () => {
                 </div>
               )}
 
-              {!loading && !error && totalPages > 1 && (
+              {!loading && !preOrderExport.loading && !error && totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-4">
                   <AppPagination
-                    currentPage={currentPage}
+                    currentPage={listPage}
                     totalPages={totalPages}
-                    totalItems={filteredPurchaseOrders.length}
+                    totalItems={unifiedRows.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                   />

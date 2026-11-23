@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Card, CardBody, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, Table } from 'reactstrap';
 import AppPagination from '../../../components/common/Pagination';
@@ -8,11 +8,12 @@ import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/servic
 import { PreOrder, stateLabels } from '../../preorders/types';
 import type { PreOrderExportState } from '../services/preOrderExcel';
 
-interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; onExportStateChange?: (state: PreOrderExportState) => void; }
-type ReviewAction = 'view' | 'approve' | 'reject';
+interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; onExportStateChange?: (state: PreOrderExportState) => void; embedded?: boolean; }
+export type ReviewAction = 'view' | 'approve' | 'reject';
+export interface PreOrderSignatureActions { open: (row: PreOrder, action: ReviewAction) => void; }
 const number = (value: unknown) => Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function PreOrderSignatureInbox({ userId, approvalRole, currencyLookup, onExportStateChange }: Props) {
+export default forwardRef<PreOrderSignatureActions, Props>(function PreOrderSignatureInbox({ userId, approvalRole, currencyLookup, onExportStateChange, embedded = false }, ref) {
   const [rows, setRows] = useState<PreOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,13 +59,14 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
     tracking: row.tracking_number, status: stateLabels[row.status],
   }, search)), [rows, search]);
   useEffect(() => {
-    onExportStateChange?.({ rows: filtered, loading: loading || busy, error });
-  }, [filtered, loading, busy, error, onExportStateChange]);
+    onExportStateChange?.({ rows: embedded ? rows : filtered, loading: loading || busy, error });
+  }, [rows, filtered, embedded, loading, busy, error, onExportStateChange]);
   const pages = Math.max(1, Math.ceil(filtered.length / 10));
   const currentPage = Math.min(page, pages);
   const open = (row: PreOrder, next: ReviewAction) => {
     setSelected(row); setAction(next); setNotes(''); setActionError('');
   };
+  useImperativeHandle(ref, () => ({ open }));
   const confirm = async () => {
     if (!selected || !userId || submitting.current || action === 'view') return;
     if ((action === 'approve' && !canSign(selected)) || (action === 'reject' && !canReject(selected))) return;
@@ -80,7 +82,8 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
     } finally { submitting.current = false; setBusy(false); }
   };
   return <>
-    <Card className="border-0 shadow-sm mb-4" aria-label="Preórdenes enviadas a firma">
+    {embedded && <>{success && <Alert color="success">{success}</Alert>}{error && <Alert color="danger">{error}</Alert>}</>}
+    {!embedded && <Card className="border-0 shadow-sm mb-4" aria-label="Preórdenes enviadas a firma">
       <CardBody>
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
           <div><h5 className="mb-1">Preórdenes enviadas a firma</h5><p className="text-muted mb-0">Revise los sustentos y registre las firmas antes de vincular el comprobante.</p><small className="text-muted">El Excel de esta vista incluye todas las preórdenes que coinciden con esta búsqueda.</small></div>
@@ -113,7 +116,7 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
           {pages > 1 && <AppPagination currentPage={currentPage} totalPages={pages} totalItems={filtered.length} itemsPerPage={10} onPageChange={setPage} />}
         </>}
       </CardBody>
-    </Card>
+    </Card>}
     <Modal isOpen={!!selected} toggle={busy ? undefined : () => setSelected(null)} size="lg">
       <ModalHeader toggle={busy ? undefined : () => setSelected(null)}>{action === 'approve' ? 'Firmar preorden' : action === 'reject' ? 'Rechazar preorden' : 'Revisar preorden'}</ModalHeader>
       <ModalBody>{selected && <>
@@ -137,4 +140,4 @@ export default function PreOrderSignatureInbox({ userId, approvalRole, currencyL
       </ModalFooter>
     </Modal>
   </>;
-}
+});

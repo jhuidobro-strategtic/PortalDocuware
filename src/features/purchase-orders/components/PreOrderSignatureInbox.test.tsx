@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createRef } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import PreOrderSignatureInbox from './PreOrderSignatureInbox';
+import type { PreOrderSignatureActions } from './PreOrderSignatureInbox';
+import PreOrderTableRow from './PreOrderTableRow';
 import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/services';
 import { hasPermission } from '../../../helpers/portal-access';
 import { PreOrder } from '../../preorders/types';
@@ -93,4 +96,29 @@ test('exports all filtered preorders, including rows beyond the visible page', a
   expect(screen.queryByText('Solicitud única-11')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Buscar preórdenes para firma'), { target: { value: 'única-11' } });
   await waitFor(() => expect(onExportStateChange).toHaveBeenLastCalledWith({ rows: [rows[10]], loading: false, error: '' }));
+});
+
+test('embedded mode provides rows and review actions without rendering a separate list', async () => {
+  const onExportStateChange = jest.fn();
+  const ref = createRef<PreOrderSignatureActions>();
+  render(<MemoryRouter><PreOrderSignatureInbox ref={ref} embedded userId={30} approvalRole="SENIOR" currencyLookup={{ 1: 'Soles' }} onExportStateChange={onExportStateChange} /></MemoryRouter>);
+  await waitFor(() => expect(onExportStateChange).toHaveBeenLastCalledWith({ rows: [row], loading: false, error: '' }));
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  expect(screen.queryByText('Preórdenes enviadas a firma')).not.toBeInTheDocument();
+  expect(ref.current?.open).toEqual(expect.any(Function));
+});
+
+test('the shared table action menu opens the review and records the assigned signature', async () => {
+  const ref = createRef<PreOrderSignatureActions>();
+  (actOnPreOrder as jest.Mock).mockResolvedValue({ ...row, status: 'WAITING_INVOICE', approved_at: '2026-11-23' });
+  const { container } = render(<MemoryRouter>
+    <PreOrderSignatureInbox ref={ref} embedded userId={30} approvalRole="SENIOR" currencyLookup={{ 1: 'Soles' }} />
+    <table><tbody><PreOrderTableRow row={row} userId={30} approvalRole="SENIOR" payment={{}} currency={{ 1: 'Soles' }} store={{}} busy={false} onOpen={(selected, action) => ref.current?.open(selected, action)} /></tbody></table>
+  </MemoryRouter>);
+  fireEvent.click(container.querySelector('.table-actions-menu__trigger')!);
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Firmar como Senior' }));
+  expect(await screen.findByRole('heading', { name: 'Firmar preorden' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar firma' }));
+  expect(await screen.findByText(/Firma Senior registrada/)).toBeInTheDocument();
+  expect(actOnPreOrder).toHaveBeenCalledWith(7, 'approve', 30, { notes: '' });
 });
