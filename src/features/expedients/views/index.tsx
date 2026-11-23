@@ -799,8 +799,8 @@ const Expedients = () => {
       [19, 20].forEach((column) => { sheet.getColumn(column).numFmt = '0.00%'; });
       [8, 11].forEach((column) => { sheet.getColumn(column).width = 38; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
-      const detailsSheet = workbook.addWorksheet("Detalle de facturas");
-      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de factura", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`)]);
+      const detailsSheet = workbook.addWorksheet("Detalle de documentos");
+      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de documento", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`)]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         if (!invoice) return;
@@ -822,7 +822,7 @@ const Expedients = () => {
       detailsSheet.getCell("U1").note = "Los descuentos y el neto son importes del comprobante completo, repetidos por ítem. No sume estas columnas por línea; use la hoja Expedientes.";
       [28, 29, 30, 31, 32, 33].forEach(column => { sheet.getColumn(column).numFmt = "#,##0.00"; });
       const adjustmentsSheet = workbook.addWorksheet("Ajustes NC ND");
-      adjustmentsSheet.addRow(["Expediente", "OC/OS original", "Factura afectada", "Tipo", "Documento", "Moneda", "Importe", "Neto", "Estado del ajuste", "Motivo", "Fecha de registro"]);
+      adjustmentsSheet.addRow(["Expediente", "OC/OS original", "Documento afectado", "Tipo", "Documento", "Moneda", "Importe", "Neto", "Estado del ajuste", "Motivo", "Fecha de registro"]);
       filteredExpedients.forEach(item => (item.adjustments_data || []).forEach(adjustment => {
         adjustmentsSheet.addRow([item.expedienteid, item.ordencompra?.orderNo || "", adjustment.invoice_reference, adjustment.kind, adjustment.reference,
           adjustment.currency, Number(adjustment.amount), Number(adjustment.net_amount), ({ PENDING: "Pendiente", JR_SIGNED: "Firmado Junior · pendiente Senior", APPROVED: "Aprobado", REJECTED: "Rechazado" } as Record<string, string>)[adjustment.status] || adjustment.status, adjustment.reason, moment(adjustment.created_at).format("DD/MM/YYYY HH:mm")]);
