@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../../helpers/excel-styles";
 import { hasPermission } from "../../../helpers/portal-access";
 import AttachmentOrderList from "../../../components/common/AttachmentOrderList";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1347,6 +1348,8 @@ const PurchaseOrderDetails = () => {
       detailSheet.getColumn(4).numFmt = "@"; detailSheet.getColumn(5).width = 65;
       detailSheet.getColumn(6).numFmt = "0.######"; [7, 8].forEach((column) => { detailSheet.getColumn(column).numFmt = "#,##0.00"; });
 
+      styleExcelWorksheet(worksheet, { headerRow: 3, widths: [12, 28, 45, 30, 24, 18, 22, 24, 32, 35, 30, 20, 14, 22, 22, 18, 19, 48, 30, 25, 30, 25], statusColumn: 9 });
+      styleExcelWorksheet(detailSheet, { widths: [28, 32, 45, 24, 65, 18, 22, 22, 18, 24, 18] });
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
         new Blob([buffer], {

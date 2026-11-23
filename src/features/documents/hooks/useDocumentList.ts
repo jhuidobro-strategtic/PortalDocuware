@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../../helpers/excel-styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
@@ -353,6 +354,7 @@ export const useDocumentList = () => {
         { width: 15 }, { width: 15 }, { width: 10 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 15 },
       ];
 
+      styleExcelWorksheet(worksheet, { headerRow: 3, widths: [12, 14, 18, 19, 45, 28, 30, 20, 15, 22, 22, 22, 22], statusColumn: 13 });
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
         new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),

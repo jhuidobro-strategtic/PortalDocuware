@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../../../helpers/excel-styles";
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import moment from "moment";
@@ -217,6 +218,7 @@ const DocumentDetails: React.FC = () => {
       });
       worksheet.getCell("AH3").note = "Los totales de cabecera aparecen una vez por comprobante en las filas exportadas.";
 
+      styleExcelWorksheet(worksheet, { headerRow: 3 });
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
         new Blob([buffer], {

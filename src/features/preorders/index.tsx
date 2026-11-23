@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../helpers/excel-styles";
 import { hasPermission } from "../../helpers/portal-access";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -99,6 +100,7 @@ const PreOrders = () => {
       filtered.forEach((row) => sheet.addRow([row.tracking_number || `Pendiente #${row.id}`, row.title, row.source_kind, row.source_reference, row.supplier_ruc, row.supplier_name,
         row.order_type === "C" ? "OC" : "OS", stateLabels[row.status], row.creator_name, row.junior_name || "", row.senior_name, moment(row.created_at).format("DD/MM/YYYY HH:mm"), row.order_data.source_date ? moment(row.order_data.source_date).format("DD/MM/YYYY") : "", row.invoice_date ? moment(row.invoice_date).format("DD/MM/YYYY") : "", options.currency.find((option) => Number(option.value) === row.order_data.currency)?.label || "", row.order_data.subtotal ? Number(row.order_data.subtotal) : null, row.order_data.tax_amount ? Number(row.order_data.tax_amount) : null, row.order_data.total ? Number(row.order_data.total) : null, row.converted_order_number || ""]));
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }]; sheet.autoFilter = { from: "A1", to: "S1" }; [16, 17, 18].forEach((column) => { sheet.getColumn(column).numFmt = "#,##0.00"; }); sheet.columns.forEach((column) => { column.width = 25; });
+      styleExcelWorksheet(sheet, { widths: [24, 48, 22, 30, 19, 45, 14, 32, 30, 30, 30, 25, 25, 22, 18, 22, 22, 22, 24], statusColumn: 8 });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()]), `Preordenes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch { setError("No fue posible exportar el listado."); } finally { setExporting(false); }
   };

@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../../helpers/excel-styles";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useColumnWidths } from "../../../helpers/use-column-widths";
 import { Button, Card, CardBody, Container, Input, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, Table } from "reactstrap";
@@ -85,7 +86,7 @@ const VehicleManager = () => {
         { header: "Estado", key: "status", width: 14 }];
       filtered.forEach((vehicle) => sheet.addRow({ name: vehicle.no_vehiculo, plate: vehicle.placa || "", type: vehicle.tipo || "",
         description: vehicle.descripcion || "", center1: centerLabel(vehicle.centro_costo_1), center2: centerLabel(vehicle.centro_costo_2), status: vehicle.activo ? "Activo" : "Inactivo" }));
-      sheet.getRow(1).font = { bold: true };
+      styleExcelWorksheet(sheet, { statusColumn: 7 });
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
         `Vehiculos_${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch { setLoadError("No fue posible exportar el listado de vehículos."); }

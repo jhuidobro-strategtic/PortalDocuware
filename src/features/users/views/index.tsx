@@ -1,3 +1,4 @@
+import { styleExcelWorksheet } from "../../../helpers/excel-styles";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Select from "react-select";
@@ -618,6 +619,7 @@ const UsersPage = () => {
         { width: 18 },
       ];
 
+      styleExcelWorksheet(worksheet, { headerRow: 3, statusColumn: 6 });
       const buffer = await workbook.xlsx.writeBuffer();
       await downloadBlob(
         new Blob([buffer], {
