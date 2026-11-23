@@ -140,7 +140,9 @@ const PreOrders = () => {
             {row.status === "DRAFT" && !!row.missing_fields?.length && <small className="d-block text-muted mt-1" style={{ whiteSpace: "normal", maxWidth: 250 }}>Completar: {row.missing_fields.join(", ")}</small>}
             {row.invoice_job && row.status !== "CONVERTED" && <small className={`d-block mt-1 ${row.invoice_job.error ? "text-danger" : "text-muted"}`}>{row.invoice_job.error || `Comprobante: ${row.invoice_job.status}`}</small>}</td>
           <td><div>{row.creator_name}</div><small className="d-block text-muted">JR: {row.junior_name || "Sin asignar"}</small><small className="text-muted">Senior: {row.senior_name}</small></td><td>{moment(row.created_at).format("DD/MM/YYYY")}</td>
-          <td>{row.converted_order_number ? <Link to="/purchase-order-details">{row.converted_order_number}</Link> : "—"}</td>
+          <td>{row.converted_order_number ? <Link to="/purchase-order-details">{row.converted_order_number}</Link>
+            : hasPermission("orders.read") && ["PENDING", "JR_SIGNED", "WAITING_INVOICE"].includes(row.status)
+              ? <Link to="/purchase-order-details">Ver firmas en Órdenes</Link> : "—"}</td>
         </tr>)}</tbody></Table></div><AppPagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} totalItems={filtered.length} itemsPerPage={20} onPageChange={setPage} /></>}
     </CardBody></Card>
     {linkRow && <LinkInvoice row={linkRow} userId={userId} onClose={() => setLinkRow(null)} onConverted={converted} onUpdate={update} />}

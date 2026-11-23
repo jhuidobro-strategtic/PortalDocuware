@@ -9,6 +9,8 @@ export const api = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   return result.data ?? result;
 };
 export const getPreOrders = (userID: number) => api<PreOrder[]>(`pre-orders/?userID=${userID}`);
+export const getPreOrderSignatureInbox = (userID: number, signal?: AbortSignal) =>
+  api<PreOrder[]>(`pre-orders/?userID=${userID}&inbox=signatures`, { signal });
 export const savePreOrder = (draft: PreOrderDraft, file: File | null, userID: number, id?: number) => {
   const body = new FormData(); body.append("data", JSON.stringify(draft)); body.append("userID", String(userID));
   if (file) body.append("file", file);

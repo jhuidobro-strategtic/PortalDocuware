@@ -38,7 +38,7 @@ const PreOrderFormView = () => {
   }, [preOrderId, userId]);
   const save = async (draft: PreOrderDraft, file: File | null) => {
     await savePreOrder(draft, file, userId, row?.id);
-    navigate("/pre-orders", { replace: true, state: { message: "Preorden guardada y enviada a aprobación." } });
+    navigate("/pre-orders", { replace: true, state: { message: "Preorden guardada y enviada a firma. Los firmantes pueden revisarla en Generación de órdenes." } });
   };
   return <div className="page-content"><Container fluid>
     <BreadCrumb title={preOrderId ? "Editar preorden" : "Nueva preorden"} pageTitle="Pre-Órdenes" />

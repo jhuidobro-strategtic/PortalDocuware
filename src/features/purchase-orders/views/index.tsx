@@ -42,6 +42,7 @@ import { intelligentSearch } from "../../../helpers/search-utils";
 import OrderDocumentItem from "../components/OrderDocumentItem";
 import OrderDocumentUpload from "../components/OrderDocumentUpload";
 import CommercialInvoice from "../components/CommercialInvoice";
+import PreOrderSignatureInbox from "../components/PreOrderSignatureInbox";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
 import "./PurchaseOrderDetails.css";
 import "../../expedients/views/Expedients.css";
@@ -1786,6 +1787,8 @@ const PurchaseOrderDetails = () => {
             title="Order Generation"
             pageTitle="Order Generation"
           />
+
+          <PreOrderSignatureInbox userId={sessionUser.id} approvalRole={sessionUser.approvalRole} currencyLookup={currencyLookup} />
 
           <Card className="border-0 shadow-sm">
             <CardBody>
