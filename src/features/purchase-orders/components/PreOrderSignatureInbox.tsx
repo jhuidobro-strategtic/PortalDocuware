@@ -4,10 +4,11 @@ import { Alert, Button, Card, CardBody, Input, Label, Offcanvas, Spinner, Table 
 import AppPagination from '../../../components/common/Pagination';
 import { hasPermission } from '../../../helpers/portal-access';
 import { intelligentSearch } from '../../../helpers/search-utils';
-import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/services';
+import { actOnPreOrder, getPreOrderSignatureInbox, removePreOrderFile } from '../../preorders/services';
 import { PreOrder, stateLabels } from '../../preorders/types';
 import type { PreOrderExportState } from '../services/preOrderExcel';
 import OrderDocumentItem from './OrderDocumentItem';
+import { useDocumentDeletionPolicy } from '../services/useDocumentDeletionPolicy';
 import '../../expedients/views/Expedients.css';
 
 interface Props { userId: number | null; approvalRole: string | null; currencyLookup: Record<number, string>; onExportStateChange?: (state: PreOrderExportState) => void; embedded?: boolean; }
@@ -17,6 +18,7 @@ const number = (value: unknown) => Number(value || 0).toLocaleString('es-PE', { 
 
 export default forwardRef<PreOrderSignatureActions, Props>(function PreOrderSignatureInbox({ userId, approvalRole, currencyLookup, onExportStateChange, embedded = false }, ref) {
   const [rows, setRows] = useState<PreOrder[]>([]);
+  const allowsDeletion = useDocumentDeletionPolicy();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -138,7 +140,12 @@ export default forwardRef<PreOrderSignatureActions, Props>(function PreOrderSign
         <p>Creador: {selected.creator_name}<br />Junior: {selected.junior_name || 'No asignado'}{selected.junior_signed_at ? ' · firmado' : ''}<br />Senior: {selected.senior_name}{selected.approved_at ? ' · firmado' : ''}</p>
         <h5>Documentos de sustento</h5>
         <div className="expedient-drawer-list mb-4">
-          {selected.files.length ? selected.files.map((file, index) => <OrderDocumentItem key={`${selected.id}:${file.id}`} name={file.filename} type={selected.source_kind} url={file.url} createdAt={file.created_at} initiallyOpen={index === 0} />)
+          {selected.files.length ? selected.files.map((file, index) => <OrderDocumentItem key={`${selected.id}:${file.id}`} name={file.filename} type={selected.source_kind} url={file.url} createdAt={file.created_at} initiallyOpen={index === 0}
+            onDelete={hasPermission('preorders.remove_attachment') && allowsDeletion('support') && ['DRAFT', 'PENDING', 'REJECTED'].includes(selected.status) && !selected.junior_signed_at && !selected.approved_at && !selected.converted_order_id ? async () => {
+              const updated = await removePreOrderFile(selected.id, file.id);
+              setSelected(updated); setRows((previous) => previous.map((row) => row.id === updated.id ? updated : row));
+            } : undefined}
+            onDeleteBusyChange={(value) => { submitting.current = value; setBusy(value); }} />)
             : <div className="expedient-drawer-empty"><i className="ri-file-pdf-line" aria-hidden="true" /><p className="text-muted mb-0">Sin documentos adjuntos.</p></div>}
         </div>
         <h5>Detalle de la preorden</h5>

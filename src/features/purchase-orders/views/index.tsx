@@ -42,6 +42,8 @@ import { intelligentSearch } from "../../../helpers/search-utils";
 import OrderDocumentItem from "../components/OrderDocumentItem";
 import OrderDocumentUpload from "../components/OrderDocumentUpload";
 import CommercialInvoice from "../components/CommercialInvoice";
+import { useDocumentDeletionPolicy } from "../services/useDocumentDeletionPolicy";
+import { getApiErrorMessage } from "../../../helpers/api-error-message";
 import PreOrderSignatureInbox from "../components/PreOrderSignatureInbox";
 import type { PreOrderSignatureActions } from "../components/PreOrderSignatureInbox";
 import PreOrderTableRow from "../components/PreOrderTableRow";
@@ -68,6 +70,7 @@ interface PurchaseOrderDetail {
 }
 
 interface OrderAttachment {
+  parentClosed?: boolean;
   ordering_category?: string;
   createat?: string;
   expedientedocid: number;
@@ -79,6 +82,8 @@ interface OrderAttachment {
 }
 
 interface OrderExpedient {
+  estado?: boolean;
+  paid_at?: string | null;
   ordencompraid?: number;
   ordencompra?: { purchaseOrderID?: number };
   expediente_documentos?: OrderAttachment[];
@@ -502,6 +507,7 @@ const getPurchaseStateDescription = (
 
 const PurchaseOrderDetails = () => {
   const { t, i18n } = useTranslation();
+  const allowsDeletion = useDocumentDeletionPolicy();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const preOrderActions = useRef<PreOrderSignatureActions>(null);
   const [preOrderExport, setPreOrderExport] = useState<PreOrderExportState>({ rows: [], loading: true, error: '' });
@@ -1027,7 +1033,7 @@ const PurchaseOrderDetails = () => {
                   expedient.ordencompra?.purchaseOrderID
               ) === order.purchaseOrderID
           )
-          .flatMap((expedient) => expedient.expediente_documentos ?? []);
+          .flatMap((expedient) => (expedient.expediente_documentos ?? []).map((file: OrderAttachment) => ({ ...file, parentClosed: expedient.estado === false || !!expedient.paid_at })));
 
         setAttachments(files.filter((file) => file.estado !== false));
       }
@@ -1355,6 +1361,23 @@ const PurchaseOrderDetails = () => {
       setExportingExcel(false);
     }
   };
+
+  const removeOrderAttachment = async (file: OrderAttachment) => {
+    if (!attachmentOrder) return;
+    const response = await fetch(buildApiUrl(`purchase-orders/${attachmentOrder.purchaseOrderID}/attachments/${file.expedientedocid}/`), { method: 'DELETE' });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.success) throw new Error(getApiErrorMessage(payload, 'No fue posible eliminar el adjunto.'));
+    setAttachments((rows) => rows.filter((item) => item.expedientedocid !== file.expedientedocid));
+    const update = (order: PurchaseOrder) => ({ ...order, attachment_order: order.attachment_order?.filter((key) => key !== String(file.expedientedocid)) });
+    setAttachmentOrder((order) => order ? update(order) : order);
+    setPurchaseOrders((rows) => rows.map((order) => order.purchaseOrderID === attachmentOrder.purchaseOrderID ? update(order) : order));
+  };
+  const canRemoveOrderAttachment = (file: OrderAttachment, category: string) => !!attachmentOrder &&
+    hasPermission('orders.remove_attachment') && allowsDeletion(category) && !file.parentClosed && !attachmentOrder.isCancelled &&
+    attachmentOrder.approvalStatus === 'PENDING' && !attachmentOrder.hasSeniorApproval &&
+    (!attachmentOrder.approvals || attachmentOrder.approvals.length === 0) &&
+    (hasPermission('access.manage') || [attachmentOrder.createdBy, attachmentOrder.signature, attachmentOrder.signature2].includes(sessionUser.id as number));
+  const attachmentDeletionBusy = (busy: boolean) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); };
 
   const handleConfirmOrderState = async () => {
     if (!orderModal || selectedState === null) return;
@@ -2339,7 +2362,7 @@ const PurchaseOrderDetails = () => {
                       return;
                     }
                     setAttachments(rows.filter((row) => Number(row.ordencompraid ?? row.ordencompra?.purchaseOrderID) === attachmentOrder.purchaseOrderID)
-                      .flatMap((row) => row.expediente_documentos ?? []).filter((file: OrderAttachment) => file.estado !== false));
+                      .flatMap((row) => (row.expediente_documentos ?? []).map((file: OrderAttachment) => ({ ...file, parentClosed: row.estado === false || !!row.paid_at }))).filter((file: OrderAttachment) => file.estado !== false));
                     setAttachmentError("");
                   }} />}
                 <div className="expedient-drawer-list">
@@ -2359,6 +2382,7 @@ const PurchaseOrderDetails = () => {
                       url={invoiceUrl}
                       createdAt={invoiceCreatedAt}
                       disabled={uploadingAttachment || loadingAttachments}
+                      onDelete={existingInvoiceAttachment && canRemoveOrderAttachment(existingInvoiceAttachment, 'invoice') ? () => removeOrderAttachment(existingInvoiceAttachment) : undefined}
                       canReplace={!attachmentOrder.isCancelled && attachmentOrder.approvalStatus === "PENDING" &&
                         !attachmentOrder.hasSeniorApproval && !!sessionUser.id}
                       onBusyChange={(busy) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); }}
@@ -2373,7 +2397,7 @@ const PurchaseOrderDetails = () => {
                         }
                         const rows: OrderExpedient[] = payload.data;
                         setAttachments(rows.filter((row) => Number(row.ordencompraid ?? row.ordencompra?.purchaseOrderID) === attachmentOrder.purchaseOrderID)
-                          .flatMap((row) => row.expediente_documentos ?? []).filter((file) => file.estado !== false));
+                          .flatMap((row) => (row.expediente_documentos ?? []).map((file: OrderAttachment) => ({ ...file, parentClosed: row.estado === false || !!row.paid_at }))).filter((file) => file.estado !== false));
                       }}
                     />
                         ) }] : []),
@@ -2386,6 +2410,8 @@ const PurchaseOrderDetails = () => {
                     url={orderDocUrl}
                     path={orderDocPath}
                     createdAt={orderDocCreatedAt}
+                    onDelete={existingOrderAttachment && canRemoveOrderAttachment(existingOrderAttachment, 'order') ? () => removeOrderAttachment(existingOrderAttachment) : undefined}
+                    onDeleteBusyChange={attachmentDeletionBusy}
                     loading={loadingOrderPreviewPdf && !orderDocUrl}
                   />
                         ) },
@@ -2397,6 +2423,8 @@ const PurchaseOrderDetails = () => {
                         type={Number(file.tipodocumentoid) === 1 ? t("Invoice") : t("Supporting Document")}
                         url={getAttachmentUrl(file)}
                         createdAt={file.createat}
+                        onDelete={canRemoveOrderAttachment(file, file.ordering_category || 'support') ? () => removeOrderAttachment(file) : undefined}
+                        onDeleteBusyChange={attachmentDeletionBusy}
                       />
                           ),
                         })),

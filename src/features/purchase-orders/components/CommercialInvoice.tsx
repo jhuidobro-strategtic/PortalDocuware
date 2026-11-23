@@ -16,10 +16,11 @@ interface Props {
   disabled?: boolean;
   onBusyChange: (busy: boolean) => void;
   onReplaced: (document: Document) => Promise<void>;
+  onDelete?: () => Promise<void>;
 }
 
 const CommercialInvoice = ({ orderId, invoiceId, userId, name, url, createdAt,
-  canReplace, disabled = false, onBusyChange, onReplaced }: Props) => {
+  canReplace, disabled = false, onBusyChange, onReplaced, onDelete }: Props) => {
   const [editing, setEditing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -64,7 +65,7 @@ const CommercialInvoice = ({ orderId, invoiceId, userId, name, url, createdAt,
   };
 
   return <section aria-label="Factura comercial">
-    <OrderDocumentItem name={name} type="Factura comercial" url={url} createdAt={createdAt}
+    <OrderDocumentItem name={name} type="Factura comercial" url={url} createdAt={createdAt} onDelete={onDelete} onDeleteBusyChange={onBusyChange}
       previewLabel="Ver factura comercial" />
     <div className="d-flex flex-wrap align-items-center gap-2 my-3">
       <Button type="button" color="light" disabled={disabled || busy || !canReplace || !invoiceId}

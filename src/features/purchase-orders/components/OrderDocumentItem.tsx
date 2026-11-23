@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import moment from "moment";
 import { useTranslation } from "react-i18next";
 import { getPreviewUrl } from "../../documents/services/document.utils";
@@ -12,6 +12,8 @@ interface OrderDocumentItemProps {
   loading?: boolean;
   initiallyOpen?: boolean;
   previewLabel?: string;
+  onDelete?: () => Promise<void>;
+  onDeleteBusyChange?: (busy: boolean) => void;
 }
 
 const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
@@ -23,9 +25,22 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
   loading = false,
   initiallyOpen = false,
   previewLabel,
+  onDelete, onDeleteBusyChange,
 }) => {
   const { t } = useTranslation();
   const [previewOpen, setPreviewOpen] = useState(initiallyOpen);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const deleteInProgress = useRef(false);
+  const deleteDocument = async () => {
+    if (!onDelete || deleteInProgress.current) return;
+    deleteInProgress.current = true;
+    setDeleting(true); onDeleteBusyChange?.(true); setDeleteError('');
+    try { await onDelete(); setConfirmDelete(false); }
+    catch (error) { setDeleteError(error instanceof Error ? error.message : 'No fue posible eliminar el documento.'); }
+    finally { deleteInProgress.current = false; setDeleting(false); onDeleteBusyChange?.(false); }
+  };
   const displayPath = path || url || "-";
 
   return (
@@ -50,6 +65,7 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
             )}
           </span>
           <div className="expedient-document-card-actions">
+        {onDelete && <button type="button" className="expedient-document-delete-button" disabled={deleting || loading} title="Eliminar documento" aria-label={`Eliminar documento: ${name}`} onClick={() => { setDeleteError(''); setConfirmDelete(true); }}><i className="ri-delete-bin-line" aria-hidden="true" /></button>}
         <button type="button" className={`${previewLabel ? "expedient-document-card-link btn btn-link p-0" : "expedient-document-icon-button"} ${previewOpen ? "is-active" : ""}`}
           disabled={!url || loading} onClick={() => setPreviewOpen((open) => !open)} aria-expanded={previewOpen}
           title={previewLabel || t("Preview PDF")} aria-label={`${previewLabel || t("Preview PDF")}: ${name}`}>
@@ -68,6 +84,11 @@ const OrderDocumentItem: React.FC<OrderDocumentItemProps> = ({
         </div>
       </div>
     </div>
+    {confirmDelete && <div className="expedient-upload-panel mb-3" role="group" aria-label={`Confirmar eliminación de ${name}`}>
+      <p>¿Eliminar definitivamente <strong>{name}</strong>? Esta acción elimina el adjunto guardado.</p>
+      {deleteError && <p className="text-danger" role="alert">{deleteError}</p>}
+      <div className="d-flex gap-2"><button type="button" className="btn btn-danger" disabled={deleting} onClick={() => void deleteDocument()}>{deleting ? 'Eliminando…' : 'Confirmar eliminación'}</button><button type="button" className="btn btn-light" disabled={deleting} onClick={() => setConfirmDelete(false)}>Cancelar</button></div>
+    </div>}
     {previewOpen && url && <div className="expedient-inline-preview">
       <div className="expedient-inline-preview-header">
         <h6 className="mb-0 text-break">{name}</h6>

@@ -8,7 +8,8 @@ import { actOnPreOrder, getPreOrderSignatureInbox } from '../../preorders/servic
 import { hasPermission } from '../../../helpers/portal-access';
 import { PreOrder } from '../../preorders/types';
 
-jest.mock('../../preorders/services', () => ({ actOnPreOrder: jest.fn(), getPreOrderSignatureInbox: jest.fn() }));
+jest.mock('../../preorders/services', () => ({ actOnPreOrder: jest.fn(), getPreOrderSignatureInbox: jest.fn(), removePreOrderFile: jest.fn() }));
+jest.mock('../services/useDocumentDeletionPolicy', () => ({ useDocumentDeletionPolicy: () => () => true }));
 jest.mock('../../../helpers/portal-access', () => ({ hasPermission: jest.fn() }));
 
 const row: PreOrder = {

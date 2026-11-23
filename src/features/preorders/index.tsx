@@ -12,7 +12,8 @@ import { matchesDateRange, matchesName } from "../../helpers/document-list-filte
 import { downloadBlob } from "../../helpers/download-blob";
 import { fetchCatalog, fetchCategorizedSigners, fetchSuppliers } from "../documents/services/orderC.service";
 import OrderDocumentItem from "../purchase-orders/components/OrderDocumentItem";
-import { actOnPreOrder, attachPreOrderFile, fetchPreOrderCostCenters, getPreOrders } from "./services";
+import { actOnPreOrder, attachPreOrderFile, fetchPreOrderCostCenters, getPreOrders, removePreOrderFile } from "./services";
+import { useDocumentDeletionPolicy } from '../purchase-orders/services/useDocumentDeletionPolicy';
 import { makeConvertedOrderPdf, makePreOrderPdf } from "./pdf";
 import type { PreOrderOptions } from "./PreOrderForm";
 import LinkInvoice from "./LinkInvoice";
@@ -22,8 +23,9 @@ import "./PreOrders.css";
 
 const emptyOptions: PreOrderOptions = { suppliers: [], seniors: [], payment: [], currency: [], stores: [] };
 const eventNames: Record<string, string> = { IMPORTED: "Archivo registrado automáticamente como borrador", CREATED: "Creada y enviada a aprobación", UPDATED: "Actualizada y enviada a aprobación", APPROVED: "Firmada por Senior", JR_SIGNED: "Firmada por Junior",
-  REJECTED: "Rechazada", CANCELLED: "Anulada", FILE_ADDED: "Sustento agregado", INVOICE_UPLOADED: "Comprobante enviado a procesamiento", CONVERTED: "Convertida en OC/OS", CONVERSION_FAILED: "Conversión pendiente de corrección" };
+  REJECTED: "Rechazada", CANCELLED: "Anulada", FILE_ADDED: "Sustento agregado", FILE_REMOVED: "Sustento eliminado", INVOICE_UPLOADED: "Comprobante enviado a procesamiento", CONVERTED: "Convertida en OC/OS", CONVERSION_FAILED: "Conversión pendiente de corrección" };
 const PreOrders = () => {
+  const allowsDeletion = useDocumentDeletionPolicy();
   const navigate = useNavigate(); const location = useLocation();
   const userId = Number(getPreferenceUserId());
   const [rows, setRows] = useState<PreOrder[]>([]); const [options, setOptions] = useState(emptyOptions);
@@ -160,7 +162,9 @@ const PreOrders = () => {
         <div className="expedient-drawer-body"><div className="alert alert-info">{stateLabels[drawer.status]}{drawer.converted_order_number && ` · ${drawer.converted_order_number}`}</div>
           {!["CANCELLED", "CONVERTED"].includes(drawer.status) && <div className="expedient-upload-panel"><Label htmlFor="pre-extra-file">Agregar sustento PDF</Label><div className="d-flex gap-2 flex-wrap"><Input id="pre-extra-file" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(event) => setAttachment(event.target.files?.[0] ?? null)} />
             <Button color="primary" disabled={busy || !attachment} onClick={async () => { if (!attachment) return; setBusy(true); try { update(await attachPreOrderFile(drawer.id, userId, attachment)); setAttachment(null); setSuccess("Sustento agregado."); } catch (failure) { setError(failure instanceof Error ? failure.message : "No fue posible adjuntar."); } finally { setBusy(false); } }}>Subir documento</Button></div></div>}
-          <div className="expedient-drawer-list">{drawer.files.map((file) => <OrderDocumentItem key={file.id} name={file.filename} type={drawer.source_kind} url={file.url} createdAt={file.created_at} />)}
+          <div className="expedient-drawer-list">{drawer.files.map((file) => <OrderDocumentItem key={file.id} name={file.filename} type={drawer.source_kind} url={file.url} createdAt={file.created_at}
+            onDelete={hasPermission('preorders.remove_attachment') && allowsDeletion('support') && ['DRAFT', 'PENDING', 'REJECTED'].includes(drawer.status) && !drawer.junior_signed_at && !drawer.approved_at && !drawer.converted_order_id ? async () => { update(await removePreOrderFile(drawer.id, file.id)); } : undefined}
+            onDeleteBusyChange={setBusy} />)}
             <OrderDocumentItem key={`pre-pdf-${drawer.id}`} name={drawer.tracking_number || `Preorden #${drawer.id}`} type="Preorden" url={previewUrl} loading={previewLoading} initiallyOpen />
           </div><h5 className="mt-4">Historial</h5>{drawer.events.map((event) => <div key={event.id} className="border-bottom py-2"><strong>{eventNames[event.action] || event.action}</strong> · {event.actor_name}<small className="d-block text-muted">{moment(event.created_at).format("DD/MM/YYYY HH:mm")}</small>{event.notes && <p className="mb-0">{event.notes}</p>}</div>)}
         </div></div>}

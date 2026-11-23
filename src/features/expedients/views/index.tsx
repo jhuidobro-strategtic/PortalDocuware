@@ -25,6 +25,7 @@ import BreadCrumb from "../../../components/common/BreadCrumb";
 import FloatingAlerts, {
   FloatingAlertItem,
 } from "../../../components/common/FloatingAlerts";
+import { useDocumentDeletionPolicy } from "../../purchase-orders/services/useDocumentDeletionPolicy";
 import { hasPermission } from "../../../helpers/portal-access";
 import AttachmentOrderList, { arrangeAttachments } from "../../../components/common/AttachmentOrderList";
 import TableActionsMenu from "../../../components/common/TableActionsMenu";
@@ -96,6 +97,10 @@ interface ExpedientPurchaseOrderDetail {
 }
 
 interface ExpedientPurchaseOrder {
+  hasSeniorApproval?: boolean;
+  isCancelled?: boolean;
+  approvalStatus?: string;
+  approvals?: unknown[];
   purchaseOrderID: number;
   orderNo: string;
   supplierID: ExpedientSupplierReference | number | null;
@@ -540,6 +545,7 @@ const formatFileSize = (size: number, t: (key: string) => string) => {
 };
 
 const Expedients = () => {
+  const allowsDeletion = useDocumentDeletionPolicy();
   const { t, i18n } = useTranslation();
   const [expedients, setExpedients] = useState<Expedient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1962,7 +1968,9 @@ const Expedients = () => {
                                 <i className="ri-external-link-line" />
                                 {t("Open PDF")}
                               </a>
-                              <button
+                              {hasPermission('expedients.remove_attachment') && !isSelectedExpedientClosed && !selectedExpedient.paid_at && !selectedExpedient.ordencompra?.isCancelled && !selectedExpedient.ordencompra?.hasSeniorApproval && (!selectedExpedient.ordencompra?.approvalStatus || selectedExpedient.ordencompra.approvalStatus === 'PENDING') && !selectedExpedient.ordencompra?.approvals?.length && allowsDeletion(
+                                Number(file.tipodocumentoid) === 1 ? 'invoice' : Number(file.tipodocumentoid) === 2 ? 'order' : Number(file.tipodocumentoid) === 7 ? 'credit' : Number(file.tipodocumentoid) === 8 ? 'debit' : 'support'
+                              ) && (                              <button
                                 type="button"
                                 className="expedient-document-delete-button"
                                 onClick={() =>
@@ -1982,7 +1990,7 @@ const Expedients = () => {
                                 ) : (
                                   <i className="ri-delete-bin-line" />
                                 )}
-                              </button>
+                              </button>)}
                             </div>
                           </div>
                         </div>
