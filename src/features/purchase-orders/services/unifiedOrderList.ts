@@ -9,7 +9,7 @@ export function filterPreOrderRows(rows: PreOrder[], filters: PreOrderFilters) {
     if (row.converted_order_id || !['PENDING', 'JR_SIGNED', 'WAITING_INVOICE'].includes(row.status)) return false;
     if (filters.state !== 'all' && filters.state !== `pre:${row.status}`) return false;
     if (filters.signer !== 'all' && ![row.junior_id, row.senior_id].some((id) => String(id) === filters.signer)) return false;
-    return intelligentSearch({ ...row, stateLabel: stateLabels[row.status], recordType: 'Pre-Órdenes Preorden' }, filters.search);
+    return intelligentSearch({ ...row, displayReference: row.tracking_number || `PRE-PENDIENTE-${row.id}`, stateLabel: stateLabels[row.status], recordType: 'Pre-Órdenes Preorden' }, filters.search);
   });
 }
 

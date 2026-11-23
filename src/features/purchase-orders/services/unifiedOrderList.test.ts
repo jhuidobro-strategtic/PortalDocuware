@@ -19,6 +19,9 @@ test('combines search, pre-order state and either assigned signer', () => {
   expect(filterPreOrderRows(rows, { ...defaults, signer: '10', search: 'cotizacion almacen' })).toEqual([rows[0]]);
   expect(filterPreOrderRows(rows, { ...defaults, state: '1' })).toEqual([]);
 });
+test('finds the displayed reference of pending preorders without a tracking number', () => {
+  expect(filterPreOrderRows(rows, { ...defaults, search: 'PRE-PENDIENTE-1' })).toEqual([rows[0]]);
+});
 test('excludes converted preorders to avoid duplicate definitive orders', () => {
   expect(filterPreOrderRows([{ ...rows[0], converted_order_id: 99 }, { ...rows[1], status: 'CONVERTED' }], defaults)).toEqual([]);
 });
