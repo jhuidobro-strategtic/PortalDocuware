@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { hasPermission } from "../../../helpers/portal-access";
 import {
   Card,
   CardBody,
@@ -644,7 +645,7 @@ const Folders = () => {
                         Detalles
                       </DropdownItem>
                       <DropdownItem divider />
-                      <DropdownItem className="text-danger">Eliminar</DropdownItem>
+                      {hasPermission("documents.delete") && <DropdownItem className="text-danger">Eliminar</DropdownItem>}
                     </DropdownMenu>
                   </UncontrolledDropdown>
                 </div>

@@ -4,6 +4,7 @@ export const modules: Record<string, string> = {
   suppliers: "Proveedores", vehicles: "Vehículos y conductores", schedule: "Programación diaria",
   travel: "Gastos de viaje",
 };
+export const isProtectedPermission = (key: string) => key === "expedients.close" || key === "expedients.reopen" || key.endsWith(".delete") || key.endsWith(".remove_attachment");
 const actions: Record<string, string> = {
   configure_order: "Configurar orden y protección de documentos",
   reorder_documents: "Reordenar documentos y restablecer el estándar",

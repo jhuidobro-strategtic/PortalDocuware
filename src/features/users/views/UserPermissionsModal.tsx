@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import { buildApiUrl } from "../../../helpers/api-url";
-import { modules, permissionLabel, roleName, searchable } from "./accessLabels";
+import { modules, permissionLabel, roleName, searchable, isProtectedPermission } from "./accessLabels";
 import "./Roles.css";
 
 interface UserPermissions {
@@ -9,6 +9,8 @@ interface UserPermissions {
   role: { name: string; full_access: boolean; permissions: string[] };
   permissions: string[];
   extra_permissions: string[];
+  fixed_permissions?: string[];
+  can_manage_protected_operations?: boolean;
 }
 
 export default function UserPermissionsModal({ userId, onClose, onSaved }: {
@@ -19,11 +21,12 @@ export default function UserPermissionsModal({ userId, onClose, onSaved }: {
   const url = buildApiUrl(`users/${userId}/permissions/`);
   const [record, setRecord] = useState<UserPermissions>();
   const [selection, setSelection] = useState<string[]>([]);
+  const [protectedAuthorization, setProtectedAuthorization] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const dirty = !!record && (record.extra_permissions.length !== selection.length ||
+  const dirty = !!record && (Boolean(record.can_manage_protected_operations) !== protectedAuthorization || record.extra_permissions.length !== selection.length ||
     record.extra_permissions.some((permission) => !selection.includes(permission)));
 
   useEffect(() => {
@@ -35,6 +38,7 @@ export default function UserPermissionsModal({ userId, onClose, onSaved }: {
       if (controller.signal.aborted) return;
       setRecord(data);
       setSelection(data.extra_permissions);
+      setProtectedAuthorization(Boolean(data.can_manage_protected_operations));
     }).catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
   }, [url, attempt]);
@@ -51,7 +55,7 @@ export default function UserPermissionsModal({ userId, onClose, onSaved }: {
     try {
       const response = await fetch(url, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissions: selection }),
+        body: JSON.stringify({ permissions: selection, can_manage_protected_operations: protectedAuthorization }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "No se pudieron guardar los permisos individuales.");
@@ -81,6 +85,14 @@ export default function UserPermissionsModal({ userId, onClose, onSaved }: {
         <p className="text-muted">Rol actual · {roleName(record.role.name)}</p>
         {record.role.full_access ? <p>Esta cuenta ya tiene acceso completo.</p> : <>
           <p>Los permisos del rol ya están habilitados. Selecciona las facultades adicionales para esta cuenta.</p>
+          <div className="border rounded bg-light p-3 mb-3">
+            <label className="d-flex align-items-start gap-2 mb-2" htmlFor="protected-operations-authorization">
+              <Input id="protected-operations-authorization" type="checkbox" checked={protectedAuthorization} disabled={saving}
+                onChange={event => setProtectedAuthorization(event.target.checked)} />
+              <span className="fw-semibold">Autorizar cierre, reapertura y eliminación</span>
+            </label>
+            <p className="text-muted mb-0">Permite cerrar y reabrir expedientes y eliminar registros o adjuntos en las vistas a las que tenga acceso. Solo un Superadmin puede cambiar esta autorización. El cambio queda registrado en auditoría.</p>
+          </div>
           <Input type="search" aria-label="Buscar permiso" placeholder="Buscar permiso…" value={search}
             onChange={(event) => setSearch(event.target.value)} className="mb-3" />
           {!groups.length && <p>No hay permisos que coincidan con la búsqueda.</p>}
@@ -90,13 +102,15 @@ export default function UserPermissionsModal({ userId, onClose, onSaved }: {
               {keys.map((key) => {
                 const inherited = record.role.permissions.includes(key);
                 const checked = selection.includes(key);
+                const protectedPermission = isProtectedPermission(key);
+                const fixed = protectedPermission && protectedAuthorization;
                 return <label key={key} className="access-roles-permission">
-                  <Input type="checkbox" checked={inherited || checked} disabled={inherited && !checked}
+                  <Input type="checkbox" checked={Boolean(fixed || inherited || checked)} disabled={protectedPermission || (inherited && !checked)}
                     onChange={(event) => {
                       const enable = event.target.checked;
                       setSelection((current) => enable ? [...current, key] : current.filter((item) => item !== key));
                     }} />
-                  <span>{permissionLabel(key)} {inherited && <small className="d-block text-muted">
+                  <span>{permissionLabel(key)} {protectedPermission && <small className="d-block text-muted">{fixed ? "Incluido en la autorización de esta cuenta" : "Requiere autorización de cierre, reapertura y eliminación"}</small>}{inherited && <small className="d-block text-muted">
                     {checked ? "Del rol y adicional" : "Del rol"}
                   </small>}</span>
                 </label>;

@@ -1589,7 +1589,7 @@ const Expedients = () => {
                                         label: "Reabrir expediente",
                                         icon: "ri-folder-open-line",
                                         tone: "primary",
-                                        hidden: !hasPermission("expedients.reopen") || !isExpedientClosedByStatus || expedient.closed_by !== sessionUser.id,
+                                        hidden: !hasPermission("expedients.reopen") || !isExpedientClosedByStatus,
                                         onClick: () => handleOpenCloseExpedientModal(expedient, "reopen"),
                                       },
                                       {
@@ -1604,7 +1604,8 @@ const Expedients = () => {
                                         label: t("Close Expedient"),
                                         icon: "ri-folder-close-line",
                                         tone: "danger",
-                                        disabled: isExpedientClosedByStatus || !hasPermission("expedients.close"),
+                                        hidden: !hasPermission("expedients.close"),
+                                        disabled: isExpedientClosedByStatus,
                                         onClick: () =>
                                           handleOpenCloseExpedientModal(expedient),
                                       },

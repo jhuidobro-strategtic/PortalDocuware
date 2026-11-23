@@ -1379,8 +1379,7 @@ const PurchaseOrderDetails = () => {
   const canRemoveOrderAttachment = (file: OrderAttachment, category: string) => !!attachmentOrder &&
     hasPermission('orders.remove_attachment') && allowsDeletion(category) && !file.parentClosed && !attachmentOrder.isCancelled &&
     attachmentOrder.approvalStatus === 'PENDING' && !attachmentOrder.hasSeniorApproval &&
-    (!attachmentOrder.approvals || attachmentOrder.approvals.length === 0) &&
-    (hasPermission('access.manage') || [attachmentOrder.createdBy, attachmentOrder.signature, attachmentOrder.signature2].includes(sessionUser.id as number));
+    (!attachmentOrder.approvals || attachmentOrder.approvals.length === 0);
   const attachmentDeletionBusy = (busy: boolean) => { uploadingAttachmentRef.current = busy; setUploadingAttachment(busy); };
 
   const handleConfirmOrderState = async () => {

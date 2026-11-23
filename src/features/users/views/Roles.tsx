@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Alert, Button, Container, Input, Table } from "reactstrap";
 import { Link } from "react-router-dom";
 import "./Roles.css";
-import { modules, permissionLabel, roleName, searchable } from "./accessLabels";
+import { modules, permissionLabel, roleName, searchable, isProtectedPermission } from "./accessLabels";
 import { buildApiUrl } from "../../../helpers/api-url";
 
 interface Role { id: number; name: string; full_access: boolean; permissions: string[] }
-interface History { id: number; action: string; target: string; actor__fullname: string; created_at: string; before: { permissions?: string[] }; after: { permissions?: string[] } }
+interface PermissionSnapshot { permissions?: string[]; can_manage_protected_operations?: boolean; }
+interface History { id: number; action: string; target: string; actor__fullname: string; created_at: string; before: PermissionSnapshot; after: PermissionSnapshot }
 
 async function call<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), options);
@@ -43,7 +44,7 @@ export default function Roles() {
     setError("");
     void call<{ roles: Role[]; permissions: string[] }>("users/roles/").then((data) => {
       setRoles(data.roles);
-      setPermissionKeys(data.permissions);
+      setPermissionKeys(data.permissions.filter(key => !isProtectedPermission(key)));
       const role = data.roles.find((item) => !item.full_access) ?? data.roles[0];
       setChosenId(role?.id);
       setSelection(role?.permissions || []);
@@ -123,6 +124,7 @@ export default function Roles() {
     </nav>
 
     {panel === "permissions" ? <>
+      <p className="text-muted">Cerrar, reabrir expedientes y eliminar requieren autorización individual de un Superadmin, desde Usuarios → Permisos individuales. No se asignan por rol.</p>
       {loading && <p className="access-roles-surface p-4" role="status">Cargando roles…</p>}
       {!loading && !selected && <div className="access-roles-surface p-4">
         <p role="status">{error || "No hay roles registrados."}</p>
@@ -239,6 +241,8 @@ export default function Roles() {
             <td>{row.action === "role.permissions" ? "Permisos del rol" : row.action === "user.permissions" ? "Permisos individuales" : row.action === "user.create" ? "Alta de usuario" : "Actualización de usuario"}</td>
             <td><details><summary>{role ? roleName(role.name) : `Usuario ${row.target}`}</summary>
               {(row.action === "role.permissions" || row.action === "user.permissions") ? <ul className="mb-0 ps-3">
+                {row.before.can_manage_protected_operations !== row.after.can_manage_protected_operations && row.after.can_manage_protected_operations !== undefined &&
+                  <li>{row.after.can_manage_protected_operations ? "Activada" : "Retirada"} · Autorización de cierre, reapertura y eliminación</li>}
                 {[...added.map((key) => [key, "Activado"]), ...revoked.map((key) => [key, "Retirado"])].map(([key, action]) =>
                   <li key={key}>{action} · {modules[key.split(".")[0]]} · {permissionLabel(key)}</li>
                 )}

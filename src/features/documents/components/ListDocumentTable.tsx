@@ -211,7 +211,8 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Delete"),
                             icon: "ri-delete-bin-line",
                             tone: "danger",
-                            disabled: hasApprovedPurchaseOrder || !hasPermission("documents.delete"),
+                            hidden: !hasPermission("documents.delete"),
+                            disabled: hasApprovedPurchaseOrder,
                             onClick: () => onDelete(doc),
                           },
                         ]}
