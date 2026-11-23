@@ -32,6 +32,7 @@ import TableActionsMenu from "../../../components/common/TableActionsMenu";
 import { API_BASE_URL, buildApiUrl } from "../../../helpers/api-url";
 import { getNumberLocale } from "../../../common/locale";
 import { fetchExpedientInvoiceDetails } from "../invoiceDetailsExport";
+import { styleExpedientWorksheet } from "../excelStyles";
 import { accountingExportHeaders, accountingExportValues, documentExportCode } from "../accountingExport";
 import { downloadBlob } from "../../../helpers/download-blob";
 import { matchesDateRange, matchesName } from "../../../helpers/document-list-filters";
@@ -808,10 +809,8 @@ const Expedients = () => {
       detailsSheet.getColumn(13).width = 65;
       detailsSheet.getColumn(15).numFmt = "0.######"; [16, 17, 18, 19, 24, 25, 26, 27, 28].forEach((column) => { detailsSheet.getColumn(column).numFmt = "#,##0.00"; });
       [21, 22].forEach((column) => { detailsSheet.getColumn(column).numFmt = "0.00%"; });
-      [sheet, detailsSheet].forEach((worksheet) => {
-        worksheet.getRow(1).alignment = { vertical: "middle", wrapText: true };
-        worksheet.getRow(1).height = 60;
-      });
+      styleExpedientWorksheet(sheet, [19, 23, 14, 18, 15, 20, 19, 45, 20, 29, 32, 15, 20, 20, 20, 25, 25, 16, 20, 20, 36, 22, 22, 22, 25, 22, 30], 16);
+      styleExpedientWorksheet(detailsSheet, [15, 20, 14, 18, 20, 45, 19, 23, 24, 24, 24, 24, 64, 18, 18, 22, 20, 22, 22, 15, 24, 24, 36, 24, 24, 24, 27, 24, 32]);
       detailsSheet.getCell("U1").note = "Los descuentos y el neto son importes del comprobante completo, repetidos por ítem. No sume estas columnas por línea; use la hoja Expedientes.";
       await downloadBlob(new Blob([await workbook.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Expedientes_${moment().format("YYYYMMDD")}.xlsx`);
     } catch (failure) { setFloatingAlerts((previous) => [...previous.filter((alert) => alert.id !== "exp-export-error"), { id: "exp-export-error", type: "danger", message: failure instanceof Error ? failure.message : "No fue posible exportar los expedientes." }]); }
