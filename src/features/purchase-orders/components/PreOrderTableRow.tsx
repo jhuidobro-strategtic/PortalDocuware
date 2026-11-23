@@ -24,7 +24,7 @@ export default function PreOrderTableRow({ row, userId, approvalRole, payment, c
       ...(senior && hasPermission('preorders.reject') && ['PENDING', 'JR_SIGNED'].includes(row.status) ? [{ id: `pre-reject-${row.id}`, label: 'Rechazar preorden', icon: 'ri-close-circle-line', tone: 'danger' as const, onClick: () => onOpen(row, 'reject') }] : []),
       ...(row.status === 'WAITING_INVOICE' && hasPermission('preorders.read') ? [{ id: `pre-link-${row.id}`, label: 'Vincular comprobante', icon: 'ri-file-add-line', onClick: () => navigate('/pre-orders') }] : []),
     ]} /></td>
-    <td>#{row.id}</td><td><span className="badge bg-info-subtle text-info mb-1">Pre-Orden · {row.order_type === 'S' ? 'OS' : 'OC'}</span><div>{row.tracking_number || `PRE-PENDIENTE-${row.id}`}</div><small className="text-muted d-block" style={{ whiteSpace: 'normal', maxWidth: 260 }}>{row.title}</small></td>
+    <td>#{row.id}</td><td><span className="badge bg-info-subtle text-info mb-1">Pre-Orden · {row.order_type === 'S' ? 'OS' : 'OC'}</span><div>{row.tracking_number || `PRE-PENDIENTE-${row.id}`}</div><small className="text-muted d-block purchase-order-table__subject">{row.title}</small></td>
     <td>{row.supplier_name}<small className="d-block text-muted">{row.supplier_ruc}</small></td><td>{row.source_reference || '—'}</td>
     <td>{payment[data.paymentCondition] || '—'}</td><td>{currency[data.currency] || data.extraction?.currency || '—'}</td><td>{data.guideNo || '—'}</td><td>{store[data.store] || '—'}</td>
     <td><span className={`badge ${row.status === 'WAITING_INVOICE' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}`}>{stateLabels[row.status]}</span>

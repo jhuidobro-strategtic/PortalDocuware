@@ -1933,7 +1933,7 @@ const PurchaseOrderDetails = () => {
 
               {!loading && !preOrderExport.loading && !error && (
                 <div className="table-responsive">
-                  <Table className="table align-middle table-nowrap mb-0">
+                  <Table className="table align-middle table-nowrap mb-0 purchase-order-table">
                     <thead className="table-light">
                       <tr>
                         <th

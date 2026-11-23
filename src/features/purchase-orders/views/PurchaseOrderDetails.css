@@ -1,3 +1,20 @@
+.purchase-order-table > :not(caption) > * > :nth-child(3) {
+  width: 320px;
+  min-width: 320px;
+}
+
+.purchase-order-table > :not(caption) > * > :nth-child(10) {
+  width: 420px;
+  min-width: 420px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.purchase-order-table .purchase-order-table__subject {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .purchase-order-filters-toolbar {
   display: flex;
   flex-direction: column;
