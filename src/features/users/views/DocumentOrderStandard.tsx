@@ -12,18 +12,20 @@ const names: Record<string, string> = {
 export default function DocumentOrderStandard() {
   const [saved, setSaved] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [protectedCategories, setProtectedCategories] = useState<string[]>([]);
+  const [savedProtected, setSavedProtected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const dirty = saved.some((key, index) => key !== categories[index]);
+  const dirty = saved.some((key, index) => key !== categories[index]) || JSON.stringify([...savedProtected].sort()) !== JSON.stringify([...protectedCategories].sort());
   useEffect(() => {
     const controller = new AbortController();
     setError("");
     void fetch(buildApiUrl("document-order-standard/"), { signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error("No se pudo cargar el orden estándar.");
       const data = await response.json();
-      if (!controller.signal.aborted) { setSaved(data.categories); setCategories(data.categories); }
+      if (!controller.signal.aborted) { setSaved(data.categories); setCategories(data.categories); setProtectedCategories(data.protected_categories); setSavedProtected(data.protected_categories); }
     }).catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
   }, [attempt]);
@@ -33,18 +35,18 @@ export default function DocumentOrderStandard() {
     try {
       const response = await fetch(buildApiUrl("document-order-standard/"), {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categories }),
+        body: JSON.stringify({ categories, protected_categories: protectedCategories }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(typeof result.detail === "string" ? result.detail : "No se pudo guardar el estándar.");
-      setSaved(result.categories); setCategories(result.categories); setNotice("Orden estándar guardado.");
+      setSaved(result.categories); setCategories(result.categories); setProtectedCategories(result.protected_categories); setSavedProtected(result.protected_categories); setNotice("Orden y protección documental guardados.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "No se pudo guardar."); }
     finally { setSaving(false); }
   };
 
   return <Container fluid className="page-content access-roles document-standard">
     <header className="access-roles-heading">
-      <div><h1>Orden documental</h1><p>Define cómo se presentan los documentos de las nuevas órdenes y expedientes.</p></div>
+      <div><h1>Orden documental</h1><p>Define la secuencia de los documentos y qué tipos no se pueden eliminar.</p></div>
     </header>
     {error && <Alert color="danger" role="alert">{error} <Button color="link" onClick={() => setAttempt((count) => count + 1)}>Reintentar</Button></Alert>}
     {notice && <Alert color="success" role="status">{notice}</Alert>}
@@ -54,11 +56,14 @@ export default function DocumentOrderStandard() {
         <div><h2>Secuencia estándar</h2><p>Mueve cada tipo con las flechas.</p></div>
       </div>
       {!saved.length && !error && <p role="status">Cargando estándar…</p>}
+      <div className="document-standard-columns" aria-hidden="true"><span>Tipo de documento</span><span>Prohibir eliminación</span><span>Orden</span></div>
       <ol className="document-standard-list">
         {categories.map((key, index) => <li key={key} className="document-standard-row">
           <span className="document-standard-position">{index + 1}</span>
           <i className={key === "order" ? "ri-file-list-3-line document-standard-icon" : key === "support" ? "ri-attachment-line document-standard-icon" : "ri-file-text-line document-standard-icon"} aria-hidden="true" />
           <span className="document-standard-name">{names[key]}</span>
+          <div className="document-standard-protection"><input type="checkbox" className="form-check-input" checked={protectedCategories.includes(key)} disabled={saving}
+            aria-label={`Prohibir eliminación de ${names[key]}`} onChange={(event) => { setNotice(''); setProtectedCategories((previous) => event.target.checked ? [...previous, key] : previous.filter((value) => value !== key)); }} /></div>
           <div className="document-standard-controls">
           {([-1, 1] as const).map((direction) => <Button key={direction} color="outline-secondary" size="sm"
             disabled={saving || index + direction < 0 || index + direction >= categories.length}
@@ -74,7 +79,7 @@ export default function DocumentOrderStandard() {
       <div className="access-roles-footer">
         <span className="small" role="status">{dirty ? "Cambios sin guardar" : "Estándar al día"}</span>
         <div className="access-roles-footer-actions">
-          {dirty && <Button color="light" disabled={saving} onClick={() => { setCategories(saved); setNotice(""); }}>Descartar</Button>}
+          {dirty && <Button color="light" disabled={saving} onClick={() => { setCategories(saved); setProtectedCategories(savedProtected); setNotice(""); }}>Descartar</Button>}
           <Button color="primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Guardando…" : "Guardar estándar"}</Button>
         </div>
       </div>
@@ -85,6 +90,7 @@ export default function DocumentOrderStandard() {
       <h3>Registros existentes</h3>
       <p>Para aplicarles esta secuencia, abre <strong>Ver documentos → Ordenar documentos</strong> y pulsa <strong>Restablecer orden estándar</strong>.</p>
       <p>Los registros con un orden personalizado lo conservan hasta que decidas restablecerlo.</p>
+      <h3>Protección contra eliminación</h3><p>Los tipos marcados quedan protegidos en órdenes, preórdenes y expedientes existentes y nuevos. Esta regla prevalece sobre los permisos de eliminación.</p><p>Desmarcar un tipo permite retirarlo únicamente a usuarios con el permiso asignado y mientras el registro admita cambios.</p>
     </aside>
     </div>
   </Container>;

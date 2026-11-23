@@ -5,14 +5,14 @@ export const modules: Record<string, string> = {
   travel: "Gastos de viaje",
 };
 const actions: Record<string, string> = {
-  configure_order: "Configurar el orden estándar de documentos",
+  configure_order: "Configurar orden y protección de documentos",
   reorder_documents: "Reordenar documentos y restablecer el estándar",
   read: "Consultar", edit: "Editar", delete: "Eliminar", report: "Consultar reportes y exportar",
   import: "Importar comprobantes", import_read: "Consultar lotes", import_retry: "Reintentar importaciones",
   import_review: "Revisar comprobantes importados", create: "Crear", sign: "Firmar según facultad y asignación",
   reject: "Rechazar", cancel: "Anular", link: "Vincular comprobante", status: "Cambiar estado operativo",
   replace_invoice: "Sustituir factura comercial", attach: "Adjuntar archivos",
-  remove_attachment: "Retirar adjuntos", link_note: "Vincular notas de ajuste",
+  remove_attachment: "Eliminar documentos adjuntos", link_note: "Vincular notas de ajuste",
   close: "Cerrar", reopen: "Reabrir según la regla de cierre", pay: "Marcar como pagado",
   configure: "Configurar gastos de viaje", schedule: "Programar viajes", request: "Gestionar solicitudes",
   approve: "Cambiar estado de solicitudes", advance: "Gestionar anticipos", voucher: "Gestionar comprobantes",

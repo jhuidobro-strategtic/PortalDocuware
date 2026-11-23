@@ -6,6 +6,10 @@
   max-width: 76rem;
 }
 .document-standard-editor { overflow: hidden; }
+.document-standard-columns { display: grid; grid-template-columns: minmax(0, 1fr) 140px 80px; gap: .9rem; padding: 1rem 1.25rem .5rem; font-weight: 600; font-size: .8rem; border-bottom: 1px solid var(--role-line); }
+.document-standard-columns span:nth-child(2) { text-align: center; }
+.document-standard-protection { width: 140px; flex-shrink: 0; display: flex; justify-content: center; }
+.document-standard-protection input { width: 1.2rem; height: 1.2rem; cursor: pointer; }
 .document-standard-list {
   list-style: none;
   padding: .4rem 1.25rem;
@@ -37,9 +41,12 @@
   .document-standard-help { padding-inline: .8rem; }
 }
 @media (max-width: 480px) {
+  .document-standard-columns { grid-template-columns: minmax(0, 1fr) 84px; padding-inline: .8rem; }
+  .document-standard-columns span:last-child { display: none; }
+  .document-standard-protection { grid-column: 3; grid-row: 1; width: 84px; justify-content: center; }
   .document-standard-list { padding-inline: .8rem; }
-  .document-standard-row { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr); gap: .5rem; min-height: 4.5rem; }
+  .document-standard-row { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr) 84px; gap: .5rem; min-height: 4.5rem; }
   .document-standard-icon { display: none; }
   .document-standard-name { font-size: .85rem; }
-  .document-standard-controls { grid-column: 2; justify-self: end; }
+  .document-standard-controls { grid-column: 2 / 4; justify-self: end; }
 }
