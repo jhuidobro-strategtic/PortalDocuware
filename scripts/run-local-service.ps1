@@ -41,6 +41,11 @@ switch ($Service) {
     }
     { $_ -in 'api', 'worker' } {
         Set-Location $django
+        $localSettings = Join-Path $portal '.local/local_backend_settings.py'
+        if (Test-Path -LiteralPath $localSettings) {
+            $env:PYTHONPATH = Join-Path $portal '.local'
+            $env:DJANGO_SETTINGS_MODULE = 'local_backend_settings'
+        }
         $env:DEBUG = 'true'
         $env:OCR_API_URL = 'http://127.0.0.1:5001/process-document'
         $env:LOCAL_INVOICE_PROCESSING = 'true'
