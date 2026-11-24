@@ -799,6 +799,7 @@ const PurchaseOrderDetails = () => {
       return [];
     }
     const currentStateKind = getPurchaseStateKind(currentState, currentStateLabel);
+    if (currentStateKind === "rejected") return [];
 
     return modalStateOptions.filter((option) => {
       const normalizedLabel = option.label.toLowerCase();
@@ -2117,8 +2118,9 @@ const PurchaseOrderDetails = () => {
                               <td>
                                 {purchaseOrder.isCancelled ? <span className="badge bg-danger" title={purchaseOrder.cancellationReason}>Anulada</span> : <span className={purchaseState.className}>
                                   <i className={purchaseState.icon} />
-                                  <span>{purchaseState.label}</span>
+                                  <span>{getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) === "rejected" ? "Rechazada · pendiente de anulación Senior" : purchaseState.label}</span>
                                 </span>}
+                                {!purchaseOrder.isCancelled && getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) === "rejected" && <div className="small text-danger mt-1">Debe anularla el Senior asignado: {userLookup[purchaseOrder.signature2 ?? 0] || `Usuario #${purchaseOrder.signature2}`}</div>}
                                 {getOrderSignerStatus(purchaseOrder, userLookup, purchaseOrder.isCancelled || getPurchaseStateKind(purchaseOrder.purchaseState, purchaseOrder.purchaseStateLabel) === "rejected").map((signer) => (
                                   <div key={signer.level} className={`small mt-1 ${signer.signed ? "text-success" : "text-muted"}`} style={{ whiteSpace: "normal", minWidth: 200 }}>
                                     <i className={`${signer.signed ? "ri-checkbox-circle-line" : "ri-time-line"} me-1`} aria-hidden="true" />{signer.label}
