@@ -12,7 +12,8 @@ export function portalSession() {
 export const hasPermission = (permission: string): boolean =>
   portalSession()?.data?.effectivePermissions?.includes(permission) === true;
 
-const routes: [string, string][] = [
+const routes: [string, string | string[]][] = [
+  ["/expedientes/sin-orden", ["expedients.send_without_order", "expedients.approve_without_order"]],
   ["/supplier-credits", "credits.read"],
   ["/users/document-order", "documents.configure_order"],
   ["/users", "access.manage"], ["/documents/edit", "documents.edit"],
@@ -29,11 +30,11 @@ const routes: [string, string][] = [
 
 export const canVisit = (path: string): boolean => {
   const route = routes.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`));
-  return !route || hasPermission(route[1]);
+  return !route || (Array.isArray(route[1]) ? route[1].some(hasPermission) : hasPermission(route[1]));
 };
 
 export function firstAllowedRoute(): string {
-  return ["/documents", "/document-details", "/purchase-order-details", "/pre-orders", "/expedientes", "/supplier-credits",
+  return ["/documents", "/document-details", "/purchase-order-details", "/pre-orders", "/expedientes", "/expedientes/sin-orden", "/supplier-credits",
     "/procesamiento-archivos", "/travel-expenses/my-schedule", "/suppliers", "/gestor-vehicular",
     "/document-programation", "/reports/rendiciones", "/users", "/users/document-order", "/profile"].find(canVisit) || "/profile";
 }

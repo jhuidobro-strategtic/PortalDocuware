@@ -24,6 +24,7 @@ interface DocumentTableProps {
   onOrderC: (doc: Document) => void;
   onEdit: (doc: Document) => void;
   onDelete: (doc: Document) => void;
+  onDirectExpedient?: (doc: Document) => void;
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -49,6 +50,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   onOrderC,
   onEdit,
   onDelete,
+  onDirectExpedient,
   currentPage,
   totalPages,
   totalItems,
@@ -195,7 +197,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: t("Order Generation"),
                             icon: "ri-file-list-3-line",
                             tone: "neutral",
-                            disabled: hasApprovedPurchaseOrder || !hasPermission("orders.create"),
+                            disabled: hasApprovedPurchaseOrder || Boolean(doc.direct_admission) || !hasPermission("orders.create"),
                             onClick: () => onOrderC(doc),
                           },
                           {
@@ -203,7 +205,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             label: hasApprovedPurchaseOrder ? "Editar (bloqueado por OC/OS)" : t("Edit"),
                             icon: "ri-edit-line",
                             tone: "neutral",
-                            disabled: hasApprovedPurchaseOrder || !hasPermission("documents.edit"),
+                            disabled: hasApprovedPurchaseOrder || Boolean(doc.direct_admission) || !hasPermission("documents.edit"),
                             onClick: () => onEdit(doc),
                           },
                           {
@@ -212,9 +214,12 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                             icon: "ri-delete-bin-line",
                             tone: "danger",
                             hidden: !hasPermission("documents.delete"),
-                            disabled: hasApprovedPurchaseOrder,
+                            disabled: hasApprovedPurchaseOrder || Boolean(doc.direct_admission),
                             onClick: () => onDelete(doc),
                           },
+                          { id: `direct-${doc.documentid}`, label: doc.direct_admission ? "Ver envío sin OC/OS" : "Enviar a Expedientes sin OC/OS", icon: "ri-folder-shared-line", tone: "primary",
+                            hidden: !onDirectExpedient || !hasPermission("expedients.send_without_order") || !getTipoDocumentoNombre(doc.documenttype).toUpperCase().startsWith("FACTURA"),
+                            disabled: hasApprovedPurchaseOrder, onClick: () => onDirectExpedient?.(doc) },
                         ]}
                       />
                     </div>

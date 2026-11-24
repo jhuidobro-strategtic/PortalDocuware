@@ -42,7 +42,7 @@ const InvoiceWithoutOrder = ({ document, onClose }: Props) => {
     finally { setBusy(false); }
   };
   return <Offcanvas isOpen direction="end" toggle={busy ? undefined : onClose} backdrop={busy ? "static" : true} keyboard={!busy} style={{ width: "min(900px, 96vw)" }}>
-    <OffcanvasHeader toggle={busy ? undefined : onClose}>Factura sin orden</OffcanvasHeader>
+    <OffcanvasHeader toggle={busy ? undefined : onClose}>Vincular NC/ND sin OC/OS</OffcanvasHeader>
     <OffcanvasBody>
       <p className="fw-semibold">Factura {document.documentserial}-{document.documentnumber} · {document.suppliername}</p>
       {result ? <><div className="alert alert-success" role="status">Factura y nota vinculadas en el expediente <strong>{result.reference_code}</strong>. Se anexaron ambos PDF sin generar OC/OS.</div><Link to="/expedientes" className="btn btn-primary">Ver Expedientes</Link></> : <>

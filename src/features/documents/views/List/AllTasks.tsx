@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import DirectExpedientDrawer from "../../../expedients/components/DirectExpedientDrawer";
+import type { Document } from "../../types/list.types";
 import { Card, CardBody, Col, Container, Row, Spinner } from "reactstrap";
 import "./Documents.css";
 import FloatingAlerts from "../../../../components/common/FloatingAlerts";
@@ -11,13 +13,14 @@ import { getDocumentSourceUrl, getDownloadUrl, getPreviewUrl } from "../../servi
 import { useDocumentList, getDocumentAssociatedNo } from "../../hooks/useDocumentList";
 
 const DocumentList: React.FC = () => {
+  const [directDocument, setDirectDocument] = useState<Document | null>(null);
   const {
     loading, initialLoading, error, selectedDoc, rotation, searchTerm, statusFilter, orderFilter, setOrderFilter, dateRange,
     deleteModal, documentToDelete, currentPage, notifications, approvedOrderDocumentNos, columnWidths,
     setSearchTerm, setStatusFilter, setDateRange, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
     paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount,
     handleResize, handleDelete, confirmDelete, handleViewDocument, handleClosePreview, handleOpenOrderC,
-    handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre
+    handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre, refreshDocuments
   } = useDocumentList();
 
   if (initialLoading) {
@@ -89,6 +92,7 @@ const DocumentList: React.FC = () => {
                 onOrderC={handleOpenOrderC}
                 onEdit={handleEditClick}
                 onDelete={(doc) => handleDelete(doc.documentid)}
+                onDirectExpedient={setDirectDocument}
                 currentPage={currentPage}
                 totalPages={totalPages}
                 totalItems={filteredDocumentsCount}
@@ -121,6 +125,7 @@ const DocumentList: React.FC = () => {
         onConfirm={confirmDelete}
         documentId={documentToDelete}
       />
+      {directDocument && <DirectExpedientDrawer document={directDocument} onClose={() => setDirectDocument(null)} onChanged={refreshDocuments} />}
     </Container>
   );
 };

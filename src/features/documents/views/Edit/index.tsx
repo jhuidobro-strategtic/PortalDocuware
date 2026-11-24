@@ -16,6 +16,8 @@ import { useTranslation } from "react-i18next";
 import BreadCrumb from "../../../../components/common/BreadCrumb";
 import Notifications from "../../components/ListNotifications";
 import InvoiceWithoutOrder from "../../components/InvoiceWithoutOrder";
+import DirectExpedientDrawer from "../../../expedients/components/DirectExpedientDrawer";
+import { hasPermission } from "../../../../helpers/portal-access";
 import DocumentEditorForm from "../../components/DocumentEditorForm";
 import { buildApiUrl } from "../../../../helpers/api-url";
 import { getApiErrorMessage } from "../../../../helpers/api-error-message";
@@ -239,6 +241,7 @@ const DocumentEditPage: React.FC = () => {
     locationState?.document ? normalizeDocumentForForm(locationState.document) : null
   );
   const [showInvoiceWithoutOrder, setShowInvoiceWithoutOrder] = useState(false);
+  const [showDirectExpedient, setShowDirectExpedient] = useState(false);
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [centrosCostos, setCentrosCostos] = useState<CentroCosto[]>([]);
   const [centrosCostos2, setCentrosCostos2] = useState<CentroCosto[]>([]);
@@ -452,6 +455,9 @@ const DocumentEditPage: React.FC = () => {
         }
 
         const normalizedDocument = normalizeDocumentForForm(resolvedDocument);
+        if (normalizedDocument.direct_admission) {
+          setError("La factura tiene un envío sin OC/OS pendiente o aprobado. Revise el envío desde Gestión de documentos o desde la bandeja de Expedientes."); return;
+        }
         if (normalizedDocument.hasActiveOrder || normalizedDocument.activeOrder) {
           setError("El comprobante tiene una OC/OS vigente enviada a firma. Sus datos y detalles están bloqueados.");
           return;
@@ -856,7 +862,8 @@ const DocumentEditPage: React.FC = () => {
                   onSearchDocument={handleSearchDocument}
                   onSave={handleSave}
                   onCancel={() => navigate("/documents")}
-                  onInvoiceWithoutOrder={tiposDocumento.find((type) => type.tipoid === (typeof editDoc.documenttype === "object" ? editDoc.documenttype?.tipoid : editDoc.documenttype))?.tipo.toUpperCase() === "FACTURA" ? () => setShowInvoiceWithoutOrder(true) : undefined}
+                  onInvoiceWithoutOrder={hasPermission("expedients.link_note") && tiposDocumento.find((type) => type.tipoid === (typeof editDoc.documenttype === "object" ? editDoc.documenttype?.tipoid : editDoc.documenttype))?.tipo.toUpperCase().startsWith("FACTURA") ? () => setShowInvoiceWithoutOrder(true) : undefined}
+                  onDirectExpedient={hasPermission("expedients.send_without_order") && tiposDocumento.find((type) => type.tipoid === (typeof editDoc.documenttype === "object" ? editDoc.documenttype?.tipoid : editDoc.documenttype))?.tipo.toUpperCase().startsWith("FACTURA") ? () => setShowDirectExpedient(true) : undefined}
                 />
               </CardBody>
             </Card>
@@ -893,6 +900,7 @@ const DocumentEditPage: React.FC = () => {
         </Row>
 
         {showInvoiceWithoutOrder && <InvoiceWithoutOrder document={editDoc} onClose={() => setShowInvoiceWithoutOrder(false)} />}
+        {showDirectExpedient && <DirectExpedientDrawer document={editDoc} onClose={() => setShowDirectExpedient(false)} onChanged={() => navigate("/documents")} />}
         <Modal
           isOpen={showGenerateOrderModal}
           toggle={handleSkipOrderGeneration}

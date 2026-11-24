@@ -68,6 +68,7 @@ const Navdata = (t: (key: string) => string) => [
                 link: "/expedientes",
             },
             { id: "supplier-credit-list", label: "Saldos a favor", link: "/supplier-credits" },
+            { id: "direct-expedient-inbox", label: "Envíos sin OC/OS", link: "/expedientes/sin-orden" },
         ],
     },
     {

@@ -7,6 +7,7 @@ export const modules: Record<string, string> = {
 };
 export const isProtectedPermission = (key: string) => key === "expedients.close" || key === "expedients.reopen" || key.endsWith(".delete") || key.endsWith(".remove_attachment");
 const actions: Record<string, string> = {
+  send_without_order: "Enviar facturas a aprobación sin OC/OS", approve_without_order: "Aprobar envíos sin OC/OS según asignación",
   reserve: "Reservar saldos a favor", reverse: "Liberar o revertir aplicaciones y devoluciones", refund: "Registrar devolución recibida del proveedor",
   configure_order: "Configurar orden y protección de documentos",
   reorder_documents: "Reordenar documentos y restablecer el estándar",

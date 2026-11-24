@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ExpedientAdjustments, { FinancialSummary } from "../components/ExpedientAdjustments";
+import DirectExpedientInbox from "../components/DirectExpedientInbox";
 import OrderCreditManager from "../../supplier-credits/OrderCreditManager";
 import CreditReservationPicker from "../../supplier-credits/CreditReservationPicker";
 import moment from "moment";
@@ -139,6 +140,7 @@ interface ExpedientDocument {
 }
 
 interface Expedient {
+  direct_admission?: { id: number; status: string; reason: string; created_at: string } | null;
   financial_summary?: FinancialSummary;
   adjustments_data?: { id: number; kind: string; reference: string; invoice_reference: string; currency: string; amount: string; net_amount: string; reason: string; status: string; created_at: string }[];
   attachment_order?: string[];
@@ -559,6 +561,7 @@ const Expedients = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [nameFilter, setNameFilter] = useState("");
+  const [entryFilter, setEntryFilter] = useState("");
   const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
   const [exporting, setExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -781,6 +784,7 @@ const Expedients = () => {
     const term = searchTerm.trim().toLowerCase();
 
     return expedients.filter((expedient) => {
+      if ((entryFilter === "WITH_ORDER" && !expedient.ordencompraid) || (entryFilter === "WITHOUT_ORDER" && expedient.ordencompraid)) return false;
       if (!matchesDateRange(expedient.factura?.documentdate, dateFrom, dateTo) ||
           !matchesName([expedient.factura?.suppliername, getPurchaseOrderSupplierLabel(expedient.ordencompra)], nameFilter)) return false;
       if (!term) return true;
@@ -791,7 +795,7 @@ const Expedients = () => {
         statusLabel.toLowerCase().includes(term)
       );
     });
-  }, [expedients, searchTerm, nameFilter, dateFrom, dateTo]);
+  }, [expedients, searchTerm, nameFilter, dateFrom, dateTo, entryFilter]);
 
   const exportExcel = async () => {
     setExporting(true);
@@ -801,7 +805,7 @@ const Expedients = () => {
       sheet.addRow(["Fecha De Orden", "OS/OC", "Serie", "Numero", "MONEDA", "Monto", "Ruc", "Razón Social", "Fecha Documento", "Tipo Documento", "Documento (Serie - Numero)",
         "Expediente", "Código de documento", "Subtotal", "IGV", "Estado", "Fecha de registro", "Documentos", ...accountingExportHeaders,
         "ND aprobadas", "NC aprobadas", "Total ajustado", "Neto ajustado", "Pagos registrados", "Saldo pendiente / a favor", "Ajustes pendientes",
-        "Saldo aplicado de otros documentos", "Saldo transferido", "Dinero devuelto por proveedor", "Reservado para este pago", "Desembolso pendiente"]);
+        "Saldo aplicado de otros documentos", "Saldo transferido", "Dinero devuelto por proveedor", "Reservado para este pago", "Desembolso pendiente", "Origen del expediente", "Motivo sin OC/OS"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         const series = invoice?.documentserial || item.adjustment_note_data?.series || "";
@@ -814,7 +818,7 @@ const Expedients = () => {
           invoice?.documentdate ? moment(invoice.documentdate).format("DD/MM/YYYY") : "", documentType, [series, number].filter(Boolean).join(" - "),
           item.expedienteid, documentExportCode(invoice, item.adjustment_note_data?.kind), invoice ? Number(invoice.amount) : null, invoice ? Number(invoice.taxamount) : null, getPaymentStatus(item),
           moment(item.createat).format("DD/MM/YYYY HH:mm"), item.expediente_documentos?.length || 0, ...accountingExportValues(invoice),
-          ...["approved_debits", "approved_credits", "adjusted_total", "adjusted_net", "settled_amount", "balance", "pending_adjustments", "credit_received", "credit_transferred", "credit_refunded", "reserved_for_payment", "cash_due"].map(key => item.financial_summary ? Number(item.financial_summary[key as keyof FinancialSummary] || 0) : null)]);
+          ...["approved_debits", "approved_credits", "adjusted_total", "adjusted_net", "settled_amount", "balance", "pending_adjustments", "credit_received", "credit_transferred", "credit_refunded", "reserved_for_payment", "cash_due"].map(key => item.financial_summary ? Number(item.financial_summary[key as keyof FinancialSummary] || 0) : null), item.ordencompraid ? "Con OC/OS" : "Sin OC/OS", item.direct_admission?.reason || ""]);
       });
       sheet.getRow(1).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }];
       sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } }; sheet.columns.forEach((column) => { column.width = 23; });
@@ -824,7 +828,7 @@ const Expedients = () => {
       [8, 11].forEach((column) => { sheet.getColumn(column).width = 38; });
       const invoiceDetails = await fetchExpedientInvoiceDetails(filteredExpedients.flatMap((item) => item.factura ? [item.factura] : []));
       const detailsSheet = workbook.addWorksheet("Detalle de documentos");
-      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de documento", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`)]);
+      detailsSheet.addRow(["Expediente", "Código de documento", "Serie", "Número", "Fecha de documento", "Proveedor", "RUC", "OC/OS / Nota", "Código del ítem (proveedor)", "Cuenta contable", "Código centro de costo 1", "Código centro de costo 2", "Descripción", "Unidad", "Cantidad", "Valor unitario", "IGV", "Valor de venta", "Total con IGV", "Moneda", ...accountingExportHeaders.map((header) => `${header} del comprobante`), "Origen del expediente", "Motivo sin OC/OS"]);
       filteredExpedients.forEach((item) => {
         const invoice = item.factura;
         if (!invoice) return;
@@ -832,7 +836,7 @@ const Expedients = () => {
           detailsSheet.addRow([item.expedienteid, documentExportCode(invoice), invoice.documentserial, invoice.documentnumber, moment(invoice.documentdate).format("DD/MM/YYYY"),
             invoice.suppliername, invoice.suppliernumber, item.ordencompra?.orderNo || item.reference_code || "", detail.item_code || "", detail.accounting_code || "", detail.centro_costo_1?.centrocodigo || "", detail.centro_costo_2?.centrocodigo || "", detail.description || "",
             detail.unit_measure_description || "", Number(detail.quantity), Number(detail.unit_value), Number(detail.tax_value),
-            Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || "", ...accountingExportValues(invoice)]);
+            Number(detail.total_value), Number(detail.total_value) + Number(detail.tax_value), invoice.currency || "", ...accountingExportValues(invoice), item.ordencompraid ? "Con OC/OS" : "Sin OC/OS", item.direct_admission?.reason || ""]);
         });
       });
       detailsSheet.getRow(1).font = { bold: true }; detailsSheet.views = [{ state: "frozen", ySplit: 1 }];
@@ -1423,6 +1427,7 @@ const Expedients = () => {
           onRemove={handleRemoveFloatingAlert}
         />
         <BreadCrumb title="Expedient List" pageTitle="Expedients" />
+        {(hasPermission("expedients.send_without_order") || hasPermission("expedients.approve_without_order")) && <DirectExpedientInbox onChanged={() => void refreshCreditBalances()} />}
 
         <Card className="border-0 shadow-sm">
           <CardBody>
@@ -1490,9 +1495,10 @@ const Expedients = () => {
 
             <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
               <div><Label htmlFor="exp-name">Nombre del proveedor</Label><Input id="exp-name" placeholder="Buscar por nombre..." value={nameFilter} onChange={(event) => { setNameFilter(event.target.value); setCurrentPage(1); }} /></div>
+              <div><Label htmlFor="exp-entry-type">Origen</Label><Input id="exp-entry-type" type="select" value={entryFilter} onChange={event => { setEntryFilter(event.target.value); setCurrentPage(1); }}><option value="">Todos</option><option value="WITH_ORDER">Con OC/OS</option><option value="WITHOUT_ORDER">Sin OC/OS</option></Input></div>
               <div><Label htmlFor="exp-date-from">Fecha de factura desde</Label><Input id="exp-date-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setCurrentPage(1); }} /></div>
               <div><Label htmlFor="exp-date-to">Fecha de factura hasta</Label><Input id="exp-date-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setCurrentPage(1); }} /></div>
-              {(nameFilter || dateFrom || dateTo || searchTerm) && <Button color="light" onClick={() => { setNameFilter(""); setDateFrom(""); setDateTo(""); setSearchTerm(""); setCurrentPage(1); }}>Limpiar filtros</Button>}
+              {(nameFilter || dateFrom || dateTo || searchTerm || entryFilter) && <Button color="light" onClick={() => { setNameFilter(""); setDateFrom(""); setDateTo(""); setSearchTerm(""); setEntryFilter(""); setCurrentPage(1); }}>Limpiar filtros</Button>}
             </div>
             {dateFrom && dateTo && dateFrom > dateTo && <div className="alert alert-warning" role="alert">La fecha inicial debe ser anterior o igual a la fecha final.</div>}
             {loading && (
@@ -1620,7 +1626,7 @@ const Expedients = () => {
                                         id: `adjustments-${expedient.expedienteid}`,
                                         label: "Ajustes NC / ND",
                                         icon: "ri-exchange-dollar-line",
-                                        hidden: !expedient.ordencompraid || !expedient.facturaid || !hasPermission("expedients.read"),
+                                        hidden: (!expedient.ordencompraid && !expedient.direct_admission) || !expedient.facturaid || !hasPermission("expedients.read"),
                                         onClick: () => setAdjustmentTarget(expedient),
                                       },
                                       {
@@ -1667,7 +1673,7 @@ const Expedients = () => {
                                   {expedient.ordencompra?.orderNo || expedient.reference_code ||
                                     (expedient.ordencompraid
                                       ? `#${expedient.ordencompraid}`
-                                      : "-")}
+                                      : "Sin OC/OS")}
                                 </div>
                                 {expedient.adjustment_note_data && <div className="text-muted small">{expedient.adjustment_note_data.series}-{expedient.adjustment_note_data.number}</div>}
                                 {expedient.ordencompra && (
@@ -1760,7 +1766,7 @@ const Expedients = () => {
 
       <Offcanvas isOpen={Boolean(adjustmentTarget)} direction="end" style={{ width: "min(1200px, 96vw)" }} toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)} keyboard={!adjustmentBusy} backdrop>
         <OffcanvasHeader toggle={adjustmentBusy ? undefined : () => setAdjustmentTarget(null)}>Ajustes NC / ND · {adjustmentTarget?.ordencompra?.orderNo}</OffcanvasHeader>
-        <OffcanvasBody>{adjustmentTarget && <><ExpedientAdjustments key={adjustmentTarget.expedienteid} expedientId={adjustmentTarget.expedienteid} invoiceReference={getInvoiceCode(adjustmentTarget.factura)} closed={isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => { void fetchExpedientsData(t).then(syncExpedientsCollection).catch(() => setFloatingAlerts(previous => [...previous, { id: "adjustment-refresh", type: "warning", message: "El ajuste se guardó. Recargue la lista para actualizar el saldo." }])); }} />{adjustmentTarget.ordencompraid && <OrderCreditManager orderId={adjustmentTarget.ordencompraid} ruc={adjustmentTarget.factura?.suppliernumber || ""} currency={adjustmentTarget.factura?.currency || ""} locked={(Boolean(adjustmentTarget.paid_at) && Number(adjustmentTarget.financial_summary?.balance || "0") <= 0) || isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => void refreshCreditBalances()} />}</>}</OffcanvasBody>
+        <OffcanvasBody>{adjustmentTarget && <><ExpedientAdjustments key={adjustmentTarget.expedienteid} expedientId={adjustmentTarget.expedienteid} invoiceReference={getInvoiceCode(adjustmentTarget.factura)} closed={isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => { void fetchExpedientsData(t).then(syncExpedientsCollection).catch(() => setFloatingAlerts(previous => [...previous, { id: "adjustment-refresh", type: "warning", message: "El ajuste se guardó. Recargue la lista para actualizar el saldo." }])); }} />{(adjustmentTarget.ordencompraid || adjustmentTarget.direct_admission) && <OrderCreditManager orderId={adjustmentTarget.ordencompraid || undefined} expedientId={adjustmentTarget.expedienteid} ruc={adjustmentTarget.factura?.suppliernumber || ""} currency={adjustmentTarget.factura?.currency || ""} locked={(Boolean(adjustmentTarget.paid_at) && Number(adjustmentTarget.financial_summary?.balance || "0") <= 0) || isExpedientClosed(adjustmentTarget, locallyClosedExpedientIds)} onBusyChange={setAdjustmentBusy} onChanged={() => void refreshCreditBalances()} />}</>}</OffcanvasBody>
       </Offcanvas>
 
       <div

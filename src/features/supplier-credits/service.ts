@@ -7,7 +7,7 @@ export interface CreditSource {
   notes: { reference: string; amount: string; net_amount: string }[];
 }
 export interface CreditPick { source_id: number; amount: string; reason: string; }
-export interface CreditApplication { id: number; source_id: number; order_id: number; order: string; target_id: number | null; amount: string; status: string; reason: string; created_by: string; created_at: string; events: CreditEvent[]; }
+export interface CreditApplication { id: number; source_id: number; order_id: number | null; order: string; target_id: number | null; amount: string; status: string; reason: string; created_by: string; created_at: string; events: CreditEvent[]; }
 export interface CreditEvent { action: string; reason: string; actor: string; date: string; }
 export interface CreditDetail extends CreditSource { applications: CreditApplication[]; refunds: { id: number; amount: string; reference: string; reason: string; active: boolean; actor: string; date: string; events: CreditEvent[] }[]; }
 export const money = (value: string | number) => Number(value).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

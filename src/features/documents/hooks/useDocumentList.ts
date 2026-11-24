@@ -373,6 +373,7 @@ export const useDocumentList = () => {
     setDateRange: (value: Date[]) => { setDateRange(value); setCurrentPage(1); }, setNotifications, setDeleteModal, setDocumentToDelete, setCurrentPage,
     paginatedDocuments, totalPages, itemsPerPage, filteredDocumentsCount: totalCount,
     handleResize, handleDelete, confirmDelete, handleViewDocument, handleClosePreview, handleOpenOrderC,
-    handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre
+    handleEditClick, handleExtract, exportToExcel, rotateLeft, rotateRight, getTipoDocumentoNombre,
+    refreshDocuments: () => void fetchInitialData(false),
   };
 };
