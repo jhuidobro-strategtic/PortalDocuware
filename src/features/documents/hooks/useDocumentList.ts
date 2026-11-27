@@ -11,6 +11,7 @@ import { ColumnWidths, Document, Notification, TipoDocumento } from "../types/li
 import { DOCUMENTS_FLASH_NOTIFICATION_KEY } from "../services/document.utils";
 import { downloadBlob } from "../../../helpers/download-blob";
 import LogoDocuware from "../../../assets/images/LogoDocuware.png";
+import { readDocumentResponse } from "../services/document-response";
 
 type ImportSummary = { documents_created?: number; documents_updated?: number; details_created?: number; duplicates_skipped?: number; };
 type ExtractDocumentsResultPayload = { message?: string; items?: unknown[]; import_summary?: ImportSummary | null; };
@@ -126,7 +127,7 @@ export const useDocumentList = () => {
     setError(null);
     try {
       const response = await fetch(buildApiUrl(`documents/?${filterQuery}&page=${currentPage}&page_size=${itemsPerPage}`), { headers: getAuthHeaders(), signal: controller.signal });
-      const payload = await response.json();
+      const payload = await readDocumentResponse(response);
       if (controller.signal.aborted || version !== requestVersion.current) return;
       if (!response.ok || !payload.success || !Array.isArray(payload.data) || !payload.pagination) throw new Error(payload.message || t("Error getting documents"));
       setDocuments(payload.data);
@@ -297,7 +298,7 @@ export const useDocumentList = () => {
       const query = new URLSearchParams(filterQuery);
       query.set("search", searchTerm);
       const response = await fetch(buildApiUrl(`documents/?${query}`), { headers: getAuthHeaders() });
-      const payload = await response.json();
+      const payload = await readDocumentResponse(response);
       if (!response.ok || !payload.success || !Array.isArray(payload.data)) throw new Error("Export failed");
       const filteredDocuments = payload.data as Document[];
       const { Workbook } = await import("exceljs");
